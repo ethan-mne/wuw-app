@@ -1,0 +1,440 @@
+.MainCon {
+  --dash-sidebar-width: 248px;
+  --dash-nav-height: 74px;
+  --dash-accent: #a8957e;
+  --dash-accent-soft: #b8a58f;
+  --dash-bg: #f5f2ee;
+  --dash-panel: #ffffff;
+  --dash-border: #e9e1d7;
+  --dash-text: #2f2923;
+  --dash-muted: #756a5f;
+
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+  background:
+    radial-gradient(circle at 0% 0%, #f0ebe5 0%, transparent 52%),
+    radial-gradient(circle at 100% 0%, #f8f5f1 0%, transparent 36%),
+    var(--dash-bg);
+  color: var(--dash-text);
+}
+
+.Dashboard {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  width: var(--dash-sidebar-width);
+  height: 100vh;
+  padding: 18px 12px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(180deg, var(--dash-accent-soft) 0%, #968067 100%);
+  color: rgba(255, 255, 255, 0.78);
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 12px 0 32px rgba(72, 57, 41, 0.22);
+}
+
+.sidebarHeader {
+  padding: 0 12px 14px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.sidebarHeader p {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.menusWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.Dashmenus {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.menuCategory {
+  display: block;
+  margin: 0;
+  padding: 0 10px 6px;
+  font-size: 0.63rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  font-weight: 700;
+}
+
+.Menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.76);
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.Menu > span {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.Menu p {
+  margin: 0;
+  font-size: 0.87rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.Menu:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateX(2px);
+}
+
+.MenuActive {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.MenuActive::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 11px;
+  bottom: 11px;
+  width: 3px;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.logo {
+  display: flex;
+  justify-content: center;
+  padding-top: 14px;
+  margin-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.logo img {
+  filter: brightness(0) invert(1);
+  opacity: 0.95;
+}
+
+.Nav {
+  position: fixed;
+  top: 0;
+  left: var(--dash-sidebar-width);
+  right: 0;
+  z-index: 120;
+  height: var(--dash-nav-height);
+  padding: 0 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(10px);
+  background: rgba(245, 241, 236, 0.88);
+  border-bottom: 1px solid var(--dash-border);
+}
+
+.navLeft {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.searchContainer {
+  position: relative;
+  width: min(420px, 100%);
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 11px;
+  transform: translateY(-50%);
+  color: #7f7468;
+}
+
+.searchContainer :global(input) {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--dash-border);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.searchContainer :global(input:focus) {
+  border-color: #ccbba8;
+  box-shadow: 0 0 0 3px rgba(168, 149, 126, 0.12);
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 0;
+}
+
+.dashBody {
+  width: calc(100% - var(--dash-sidebar-width));
+  min-height: 100vh;
+  margin-left: var(--dash-sidebar-width);
+  padding-top: calc(var(--dash-nav-height) + 18px);
+}
+
+.Body {
+  width: min(1540px, 100%);
+  margin: 0 auto;
+  padding: 0 24px 26px;
+}
+
+.Body :global(.MuiCard-root) {
+  border: 1px solid var(--dash-border);
+  border-radius: 16px;
+  box-shadow: 0 6px 22px rgba(54, 41, 30, 0.09);
+  background: linear-gradient(180deg, #ffffff 0%, #fffdfb 100%);
+}
+
+.Body :global(.MuiCardContent-root) {
+  padding: 22px;
+}
+
+.Body :global(.apexcharts-canvas),
+.Body :global(.apexcharts-svg) {
+  position: relative;
+  z-index: 1;
+}
+
+.DashCompsMain {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  width: 100%;
+}
+
+.dashCompsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.dashGridItem,
+.dashWatchesGridItem {
+  width: calc(50% - 0.625rem);
+  height: fit-content;
+  border: 1px solid var(--dash-border);
+  border-radius: 16px;
+  padding: 24px;
+  background: var(--dash-panel);
+  box-shadow: 0 8px 24px rgba(67, 49, 31, 0.08);
+}
+
+.dashGridItemTop {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.dashGridItemTop p {
+  margin: 0;
+  color: var(--dash-muted);
+  font-size: 0.9rem;
+}
+
+.dashGridItem h2 {
+  margin: 0;
+  color: var(--dash-text);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.dashGridItemBot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--dash-border);
+}
+
+.dashGridItemBot div {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dashWatchGridDet {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.WatchGridIMG {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.WatchGridIMG img {
+  border-radius: 10px;
+}
+
+.dashCompsTopHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dashCompsTopHeader h1 {
+  margin: 0;
+  color: var(--dash-text);
+  font-size: clamp(1.35rem, 2.1vw, 1.95rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.dashCompsTopHeader button {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #b09b82 0%, #9a866f 100%);
+  box-shadow: 0 6px 14px rgba(94, 74, 53, 0.24);
+}
+
+.LoaderWrapper {
+  width: 100%;
+  height: 50vh;
+  display: grid;
+  place-items: center;
+}
+
+@media (max-width: 1200px) {
+  .MainCon {
+    --dash-sidebar-width: 222px;
+  }
+
+  .Body {
+    padding-inline: 18px;
+  }
+}
+
+@media (max-width: 992px) {
+  .MainCon {
+    --dash-sidebar-width: 86px;
+  }
+
+  .Dashboard {
+    padding-inline: 8px;
+  }
+
+  .sidebarHeader p,
+  .menuCategory,
+  .Menu p {
+    display: none;
+  }
+
+  .Menu {
+    justify-content: center;
+    padding: 0;
+    border-radius: 11px;
+  }
+
+  .MenuActive::before {
+    display: none;
+  }
+
+  .logo {
+    padding-top: 8px;
+  }
+
+  .logo img {
+    width: 34px;
+    height: auto;
+  }
+
+  .Nav {
+    padding-inline: 14px;
+  }
+
+  .searchContainer {
+    width: min(290px, 100%);
+  }
+
+  .Body {
+    padding-inline: 14px;
+  }
+
+  .dashGridItem,
+  .dashWatchesGridItem {
+    width: 100%;
+    padding: 18px;
+  }
+
+  .dashGridItemTop {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .MainCon {
+    --dash-sidebar-width: 72px;
+    --dash-nav-height: 66px;
+  }
+
+  .Nav {
+    padding-inline: 10px;
+  }
+
+  .searchContainer :global(input) {
+    height: 38px;
+  }
+
+  .navRight {
+    gap: 6px;
+  }
+
+  .Body {
+    padding: 0 10px 16px;
+  }
+
+  .dashCompsTopHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 620px) {
+  .searchContainer {
+    width: 180px;
+  }
+
+  .searchContainer :global(input) {
+    font-size: 0.82rem;
+  }
+}
