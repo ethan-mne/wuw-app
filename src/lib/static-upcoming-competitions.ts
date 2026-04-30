@@ -76,11 +76,7 @@ const static_competitions: CompetitionInterface[] = imagePaths.map(
       updatedAt: new Date('2024-03-01'),
       images_url: [
         {
-          id: `img-${index + 1}`,
           url: image.url,
-          WatchesId: `watch-${index + 1}`,
-          createdAt: new Date('2024-01-02'),
-          updatedAt: new Date('2024-03-02'),
         },
       ],
     },

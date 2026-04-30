@@ -5,6 +5,7 @@ import { env } from '@/env';
 import { db } from '@/server/db';
 import { getPaypalAccessToken } from '@/app/[locale]/competitions/[id]/actions';
 import { HandelConfirmedORder } from '../lib';
+import { isPaymentMethodEnabled } from '@/lib/payment-methods';
 
 const payeeSchema = z
   .object({
@@ -258,6 +259,10 @@ async function handlePaypalPaymentCaptureCompleted(
 }
 
 export async function POST(request: Request) {
+  if (!isPaymentMethodEnabled('PAYPAL')) {
+    return NextResponse.json({ error: 'PayPal is not active' }, { status: 404 });
+  }
+
   try {
     console.log('🎯 Webhook received at:', new Date().toISOString());
     const { body, headers } = await validatePayPalWebhook(request);

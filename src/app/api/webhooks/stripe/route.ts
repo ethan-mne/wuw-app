@@ -10,6 +10,7 @@ import {
   StripeWebhookVerificationError,
   verifyStripeWebhookEvent,
 } from './webhook-verification';
+import { isPaymentMethodEnabled } from '@/lib/payment-methods';
 
 /** Returns the correct Stripe SDK instance for a given account */
 function getStripeInstance(account: StripeAccountType) {
@@ -88,6 +89,10 @@ async function cancelOrderByPaymentIntent(
  * - Reliability: Works seamlessly with multiple accounts sharing one endpoint
  */
 export async function POST(request: Request) {
+  if (!isPaymentMethodEnabled('STRIPE')) {
+    return new Response('Stripe is not active', { status: 404 });
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const body = await request.text();
   const signature = headers().get('stripe-signature');

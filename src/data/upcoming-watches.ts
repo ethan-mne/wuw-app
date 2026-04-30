@@ -32,18 +32,10 @@ export const UpcomingCompetitions: CompetitionInterface[] = [
       updatedAt: new Date(),
       images_url: [
         {
-          id: '1',
           url: '/new-images/rolex-submariner.webp',
-          WatchesId: '1',
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
-          id: '2',
           url: '/new-images/rolex-submariner.webp',
-          WatchesId: '1',
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
       ],
     },
@@ -78,18 +70,10 @@ export const UpcomingCompetitions: CompetitionInterface[] = [
       updatedAt: new Date(),
       images_url: [
         {
-          id: '3',
           url: '/new-images/rolex-submariner.webp',
-          WatchesId: '2',
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
-          id: '4',
           url: '/new-images/rolex-submariner.webp',
-          WatchesId: '2',
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
       ],
     },
@@ -124,18 +108,10 @@ export const UpcomingCompetitions: CompetitionInterface[] = [
       updatedAt: new Date(),
       images_url: [
         {
-          id: '5',
           url: '/new-images/rolex-submariner.webp',
-          WatchesId: '3',
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
-          id: '6',
           url: '/new-images/rolex-submariner.webp',
-          WatchesId: '3',
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
       ],
     },

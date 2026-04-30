@@ -10,12 +10,13 @@ datasource db {
 }
 
 model ImagesUrl {
-  id        String   @id @default(cuid())
-  url       String   @db.VarChar(255)
+  id        String              @id @default(cuid())
+  url       String              @db.VarChar(255)
   WatchesId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  Watches   Watches  @relation(fields: [WatchesId], references: [id])
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  provider  images_url_provider @default(S3)
+  Watches   Watches             @relation(fields: [WatchesId], references: [id])
 
   @@index([WatchesId])
   @@map("images_url")
@@ -23,21 +24,26 @@ model ImagesUrl {
 
 model Watches {
   id                  String       @id @default(cuid())
-  brand               String
-  model               String
-  reference_number    String
-  movement            String
-  Bracelet_material   String
-  year_of_manifacture Int
-  caliber_grear       Int
-  number_of_stones    Int
-  glass               String
-  bezel_material      String
+  brand               String       @default("")
+  model               String       @default("")
+  reference_number    String       @default("")
+  movement            String       @default("")
+  Bracelet_material   String       @default("")
+  year_of_manifacture Int          @default(0)
+  caliber_grear       Int          @default(0)
+  number_of_stones    Int          @default(0)
+  glass               String       @default("")
+  bezel_material      String       @default("")
   has_box             Boolean      @default(false)
   has_certificate     Boolean      @default(false)
   condition           String
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
+  dimensions          String?
+  fineness            Float?
+  metal_type          String?
+  origin_country      String?
+  weight_grams        Float?
   images_url          ImagesUrl[]
   Competition         Competition?
 
@@ -46,7 +52,7 @@ model Watches {
 }
 
 model Competition {
-  id                       String            @id @default(cuid())
+  id                       String                           @id @default(cuid())
   name                     String
   max_watch_number         Int
   max_space_in_final_draw  Int
@@ -58,59 +64,59 @@ model Competition {
   remaining_tickets        Int
   ticket_price             Float
   total_tickets            Int
-  cash_alternative         Float?
-  max_winners              Int               @default(1)
   location                 String
   price                    Float
   status                   CompetitionStatus
   winner                   String?
   second_reward            String?
-  createdAt                DateTime          @default(now())
-  updatedAt                DateTime          @updatedAt
-  watchesId                String            @unique
-  showtickets              Boolean           @default(false)
-  comp_image_url           String?           @db.Text
-  Watches                  Watches?          @relation(fields: [watchesId], references: [id])
+  createdAt                DateTime                         @default(now())
+  updatedAt                DateTime                         @updatedAt
+  watchesId                String                           @unique
+  showtickets              Boolean                          @default(false)
+  comp_image_url           String?                          @db.Text
+  max_winners              Int                              @default(1)
+  cash_alternative         Float?
+  is_gold                  Boolean                          @default(false)
+  comp_image_provider      competition_comp_image_provider?
+  Watches                  Watches?                         @relation(fields: [watchesId], references: [id])
   Ticket                   Ticket[]
   Affiliation              Affiliation[]
 
-  @@index([end_date])
   @@index([id])
   @@map("competition")
 }
 
 model Order {
-  id                String              @id @default(cuid())
-  first_name        String?
-  last_name         String?
-  country           String?
-  address           String?
-  town              String?
-  zip               String?
-  phone             String
-  email             String
-  date              DateTime?
-  paymentMethod     order_paymentMethod @default(STRIPE)
-  checkedEmail      Boolean             @default(false)
-  checkedTerms      Boolean             @default(false)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  totalPrice        Float               @default(0)
-  status            order_status        @default(INCOMPLETE)
-  paymentId         String?
-  intentId          String?
-  affiliationId     String?
-  runUpPrizeId      String?
-  coupon            String?             @db.VarChar(8)
-  utm               String?             @db.Text
-  challenge_answer  Boolean             @default(true)
-  Ticket            Ticket[]
-  Affiliated        Affiliation?        @relation(fields: [affiliationId], references: [id])
+  id               String              @id @default(cuid())
+  first_name       String?
+  last_name        String?
+  country          String?
+  address          String?
+  town             String?
+  zip              String?
+  phone            String
+  email            String
+  date             DateTime?
+  paymentMethod    order_paymentMethod @default(STRIPE)
+  checkedEmail     Boolean             @default(false)
+  checkedTerms     Boolean             @default(false)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  totalPrice       Float               @default(0)
+  status           order_status        @default(INCOMPLETE)
+  paymentId        String?
+  intentId         String?
+  affiliationId    String?
+  runUpPrizeId     String?
+  coupon           String?             @db.VarChar(8)
+  utm              String?             @db.Text
+  challenge_answer Boolean             @default(true)
+  Ticket           Ticket[]
+  Affiliated       Affiliation?        @relation(fields: [affiliationId], references: [id])
 
   @@index([affiliationId, id])
   @@index([intentId], map: "idx_order_on_intentId")
   @@index([paymentId], map: "idx_order_on_paymentId")
-  @@index([status], map: "idx_order_on_status")
   @@map("order")
 }
 
@@ -128,7 +134,6 @@ model Ticket {
   RunUpPrize            RunUpPrize[]
 
   @@index([competitionId])
-  @@index([competitionId, orderId], map: "idx_tickets_competition_order")
   @@index([orderId])
   @@map("tickets")
 }
@@ -155,8 +160,6 @@ model Winner {
   src        String?   @db.Text
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
-
-  @@index([date])
 }
 
 model answer {
@@ -214,19 +217,20 @@ model RunUpPrize {
 }
 
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String    @id @default(cuid())
+  userId                String
+  provider              String
+  providerAccountId     String
+  refresh_token         String?   @db.Text
+  access_token          String?   @db.Text
+  scope                 String?
+  id_token              String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  createdAt             DateTime  @default(now())
+  password              String?
+  refreshTokenExpiresAt DateTime?
+  updatedAt             DateTime  @default(now())
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -237,6 +241,10 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  createdAt    DateTime @default(now())
+  ipAddress    String?
+  updatedAt    DateTime
+  userAgent    String?
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -267,32 +275,27 @@ model GlobalSettings {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  firstName     String?
-  lastName      String?
-  country       String?
-  zipCode       String?
-  address       String?
-  city          String?
-  phone         String?
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  wincoin       Int       @default(0)
-  utm           String?   @db.Text
-  is_admin      Boolean   @default(false)
-  accounts      Account[]
-  sessions      Session[]
-  OTP           OTP[]
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
+  id                String    @id @default(cuid())
+  firstName         String?
+  lastName          String?
+  country           String?
+  zipCode           String?
+  address           String?
+  city              String?
+  phone             String?
+  name              String?
+  email             String    @unique
+  emailVerified     DateTime?
+  image             String?
+  wincoin           Int       @default(0)
+  utm               String?   @db.Text
+  is_admin          Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  emailVerifiedBool Boolean   @default(false)
+  updatedAt         DateTime  @default(now())
+  accounts          Account[]
+  sessions          Session[]
+  OTP               OTP[]
 }
 
 model gift {
@@ -307,6 +310,15 @@ model referrals {
   user_id       String @unique(map: "referrals_UN") @db.VarChar(36)
   discount_rate Float  @default(0.15) @db.Float
   usage_counter Int    @default(0)
+}
+
+model verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
 }
 
 enum CompetitionStatus {
@@ -324,6 +336,11 @@ enum order_status {
   ATTEMPTED
 }
 
+enum images_url_provider {
+  FIREBASE
+  S3
+}
+
 enum order_paymentMethod {
   PAYPAL
   STRIPE
@@ -333,5 +350,9 @@ enum order_paymentMethod {
   AUREAVIA
   WORLDCARD
   VOUCH_LAB
-  TWELVE
+}
+
+enum competition_comp_image_provider {
+  FIREBASE
+  S3
 }

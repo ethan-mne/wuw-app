@@ -17,6 +17,7 @@ import { UsersRouter } from './routers/users';
 import { AmountWon, winners } from './routers/winners';
 import { otherRouter } from './routers/other';
 import { paymentsRouter } from './routers/payments';
+import { lightweightRouter } from './routers/lightweight';
 /**
  * This is the primary router for your server.
  *
@@ -41,6 +42,7 @@ export const appRouter = createTRPCRouter({
   winners,
   other: otherRouter,
   payments: paymentsRouter,
+  lightweight: lightweightRouter,
 });
 
 // export type definition of API

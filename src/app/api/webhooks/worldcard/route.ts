@@ -10,8 +10,13 @@ import {
 import { getStatusCode } from '@/lib/worldcard/service';
 import { HandelConfirmedORder } from '../lib';
 import { env } from '@/env';
+import { isPaymentMethodEnabled } from '@/lib/payment-methods';
 
 export async function POST(request: Request) {
+  if (!isPaymentMethodEnabled('WORLDCARD')) {
+    return new NextResponse('Worldcard is not active', { status: 404 });
+  }
+
   // console.log('⏩ Webhook received at:', new Date().toISOString());
   // console.log('🔒 Raw request headers:', Object.fromEntries(request.headers));
   // console.log('🔒 Raw request body:', body);

@@ -5,6 +5,7 @@ import {
   verifyAureaviaSignature,
   ParsingAureaviaNotification,
 } from '@/lib/aureavia';
+import { isPaymentMethodEnabled } from '@/lib/payment-methods';
 
 export async function POST(
   req: Request,
@@ -16,6 +17,10 @@ export async function POST(
     };
   },
 ) {
+  if (!isPaymentMethodEnabled('AUREAVIA')) {
+    return NextResponse.json({ error: 'Aureavia is not active' }, { status: 404 });
+  }
+
   try {
     const { orderid } = params;
     const formData = await req.formData();
