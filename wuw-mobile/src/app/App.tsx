@@ -13,8 +13,6 @@ import { CompetitionDetailPage } from '../pages/competitions/CompetitionDetailPa
 import { CompetitionsPage } from '../pages/competitions/CompetitionsPage';
 import { ConfirmationPage } from '../pages/competitions/ConfirmationPage';
 import { PaymentErrorPage } from '../pages/competitions/PaymentErrorPage';
-import { FeedArticlePage } from '../pages/feed/FeedArticlePage';
-import { FeedPage } from '../pages/feed/FeedPage';
 import { HomePage } from '../pages/HomePage';
 import { LegalPage } from '../pages/legal/LegalPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -43,8 +41,6 @@ export default function App() {
         <Route path="account/history" element={<AccountHistoryPage />} />
         <Route path="account/referrals" element={<AccountReferralsPage />} />
         <Route path="winners" element={<WinnersPage />} />
-        <Route path="feed" element={<FeedPage />} />
-        <Route path="feed/:slug" element={<FeedArticlePage />} />
         {supportPages.map((page) => (
           <Route
             key={page.path}

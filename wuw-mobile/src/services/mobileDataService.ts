@@ -5,6 +5,11 @@ type ApiDataResponse<T> = {
   data: T;
 };
 
+export type ListWinnersResponse = {
+  data: Winner[];
+  hasMore: boolean;
+};
+
 export const mobileDataService = {
   listCompetitions: async (): Promise<Competition[]> => {
     const response = await apiClient<ApiDataResponse<Competition[]>>(
@@ -33,8 +38,20 @@ export const mobileDataService = {
     );
     return response.data;
   },
-  listWinners: async (): Promise<Winner[]> => {
-    const response = await apiClient<ApiDataResponse<Winner[]>>('/api/mobile/winners');
-    return response.data;
+  listWinners: async (params?: {
+    skip?: number;
+    take?: number;
+  }): Promise<ListWinnersResponse> => {
+    const search = new URLSearchParams();
+    if (params?.skip != null) {
+      search.set('skip', String(params.skip));
+    }
+    if (params?.take != null) {
+      search.set('take', String(params.take));
+    }
+    const query = search.toString();
+    return apiClient<ListWinnersResponse>(
+      `/api/mobile/winners${query ? `?${query}` : ''}`,
+    );
   },
 };

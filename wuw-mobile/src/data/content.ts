@@ -1,32 +1,3 @@
-import type { Article } from '../types';
-
-export const articles: Article[] = [
-  {
-    slug: 'article-1',
-    title: 'How Winuwatch competitions work',
-    excerpt: 'A short guide to tickets, draws and winner confirmation.',
-    category: 'How to play',
-    publishedAt: '2024-04-10',
-    readTime: '3 min',
-  },
-  {
-    slug: 'article-2',
-    title: 'Choosing your first luxury watch',
-    excerpt: 'A mobile-friendly overview of key watch details to compare.',
-    category: 'Guide',
-    publishedAt: '2024-04-04',
-    readTime: '4 min',
-  },
-  {
-    slug: 'article-3',
-    title: 'What happens after a draw',
-    excerpt: 'Confirmation, delivery and next steps for competition winners.',
-    category: 'Winners',
-    publishedAt: '2024-03-21',
-    readTime: '2 min',
-  },
-];
-
 export const supportPages = [
   {
     path: 'about-us',

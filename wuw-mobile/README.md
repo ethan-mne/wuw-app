@@ -80,8 +80,6 @@ Routes principales reprises du projet source :
 - `/{locale}/account/history` -> Account history
 - `/{locale}/account/referrals` -> Account referrals
 - `/{locale}/winners` -> Winners
-- `/{locale}/feed` -> Feed
-- `/{locale}/feed/:slug` -> Feed article
 
 Routes support et legales conservees en skeletons :
 

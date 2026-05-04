@@ -5,7 +5,6 @@ import { defaultLocale, isLocale, withLocale } from '../routes/locales';
 const footerNav = [
   ['How to play', 'howtoplay'],
   ['Winners', 'winners'],
-  ['Feed', 'feed'],
   ['FAQ', 'faq'],
   ['About', 'about-us'],
 ] as const;

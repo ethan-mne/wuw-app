@@ -11,6 +11,7 @@ type CompetitionWithWatch = Competition & {
 export type MobileCompetitionDto = {
   id: string;
   name: string;
+  startDate: string;
   totalTickets: number;
   remainingTickets: number;
   ticketPrice: number;
@@ -58,6 +59,7 @@ export function mapCompetitionToMobileDto(
   return {
     id: competition.id,
     name: competition.name,
+    startDate: competition.start_date.toISOString(),
     totalTickets: competition.total_tickets,
     remainingTickets,
     ticketPrice: competition.ticket_price,

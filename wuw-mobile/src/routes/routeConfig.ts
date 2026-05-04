@@ -2,7 +2,6 @@ export const coreRoutes = [
   { label: 'Home', path: '' },
   { label: 'Competitions', path: 'competitions' },
   { label: 'Account', path: 'account/dashboard' },
-  { label: 'Feed', path: 'feed' },
 ] as const;
 
 export const sourceRouteMap = [
@@ -19,6 +18,4 @@ export const sourceRouteMap = [
   ['/{locale}/account/history', 'AccountHistoryPage'],
   ['/{locale}/account/referrals', 'AccountReferralsPage'],
   ['/{locale}/winners', 'WinnersPage'],
-  ['/{locale}/feed', 'FeedPage'],
-  ['/{locale}/feed/:slug', 'FeedArticlePage'],
 ] as const;

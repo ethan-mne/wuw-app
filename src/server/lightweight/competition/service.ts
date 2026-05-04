@@ -6,6 +6,9 @@ import {
 
 export async function listCompetitionsForMobile(): Promise<MobileCompetitionDto[]> {
   const competitions = await db.competition.findMany({
+    where: {
+      is_gold: false,
+    },
     include: {
       Watches: {
         include: {
@@ -54,6 +57,10 @@ export async function getCompetitionForMobileById(id: string) {
       },
     },
   });
+
+  if (competition?.is_gold) {
+    return null;
+  }
 
   return competition ? mapCompetitionToMobileDto(competition) : null;
 }

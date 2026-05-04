@@ -24,6 +24,7 @@ export interface Watch {
 export interface Competition {
   id: string;
   name: string;
+  startDate: string;
   totalTickets: number;
   remainingTickets: number;
   ticketPrice: number;
@@ -42,15 +43,6 @@ export interface Winner {
   location: string;
   imageUrl: string;
   drawDate: string;
-}
-
-export interface Article {
-  slug: string;
-  title: string;
-  excerpt: string;
-  category: string;
-  publishedAt: string;
-  readTime: string;
 }
 
 export interface OrderSummary {

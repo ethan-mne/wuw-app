@@ -7,7 +7,6 @@ import type { Locale } from '../types';
 const menuLinks = [
   ['Winners', 'winners'],
   ['How to play', 'howtoplay'],
-  ['Feed', 'feed'],
   ['FAQ', 'faq'],
   ['About', 'about-us'],
   ['Contact us', 'contact-us'],
