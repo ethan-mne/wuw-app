@@ -1,19 +1,14 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import { sendOTPmail } from '@/app/[locale]/(auth)/login/actions';
-
-const bodySchema = z.object({
-  email: z.string().email(),
-});
+import { sendMobileOtp, sendOtpSchema } from '@/server/mobile/otp.service';
 
 export async function POST(request: Request) {
   const json = (await request.json()) as unknown;
-  const parsed = bodySchema.safeParse(json);
+  const parsed = sendOtpSchema.safeParse(json);
 
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
 
-  const result = await sendOTPmail(parsed.data.email);
+  const result = await sendMobileOtp(parsed.data.email);
   return NextResponse.json(result);
 }

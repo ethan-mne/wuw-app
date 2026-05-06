@@ -1,8 +1,29 @@
 import { CompetitionStatus } from '@/lib/prisma-enums';
-import type { Competition, Watches } from '@prisma/client';
 
-type CompetitionWithWatch = Competition & {
-  Watches: (Watches & { images_url: Array<{ url: string }> }) | null;
+type CompetitionWithWatch = {
+  id: string;
+  name: string;
+  start_date: Date;
+  total_tickets: number;
+  ticket_price: number;
+  price: number;
+  cash_alternative?: number | null;
+  max_winners?: number;
+  end_date: Date;
+  status: CompetitionStatus;
+  Watches: {
+    id: string;
+    brand: string;
+    model: string;
+    reference_number: string;
+    movement: string;
+    Bracelet_material: string;
+    year_of_manifacture: number;
+    condition: string;
+    has_box: boolean;
+    has_certificate: boolean;
+    images_url: Array<{ url: string }>;
+  } | null;
   _count: {
     Ticket: number;
   };
@@ -36,7 +57,7 @@ export type MobileCompetitionDto = {
 };
 
 function mapStatus(
-  status: Competition['status'],
+  status: CompetitionStatus,
   remainingTickets: number,
 ): MobileCompetitionDto['status'] {
   if (status === CompetitionStatus.COMPLETED || remainingTickets <= 0) {
@@ -64,8 +85,8 @@ export function mapCompetitionToMobileDto(
     remainingTickets,
     ticketPrice: competition.ticket_price,
     price: competition.price,
-    cashAlternative: competition.cash_alternative,
-    maxWinners: competition.max_winners,
+    cashAlternative: competition.cash_alternative ?? null,
+    maxWinners: competition.max_winners ?? 1,
     endDate: competition.end_date.toISOString(),
     status: mapStatus(competition.status, remainingTickets),
     watch: {
