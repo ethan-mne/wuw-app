@@ -2,10 +2,64 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { Card } from '../../components/ui';
-import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { Competition } from '../../types';
+
+type CountdownParts = {
+  day: string;
+  hour: string;
+  min: string;
+  sec: string;
+};
+
+function toTwoDigits(value: number) {
+  return String(value).padStart(2, '0');
+}
+
+function getCountdownParts(endDate: string, nowMs: number): CountdownParts {
+  const endMs = new Date(endDate).getTime();
+  const remainingMs = Math.max(endMs - nowMs, 0);
+  const totalSeconds = Math.floor(remainingMs / 1000);
+
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return {
+    day: toTwoDigits(days),
+    hour: toTwoDigits(hours),
+    min: toTwoDigits(minutes),
+    sec: toTwoDigits(seconds),
+  };
+}
+
+function formatCurrencyCompact(value: number) {
+  if (Math.abs(value) >= 1000) {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP',
+      notation: 'compact',
+      maximumFractionDigits: 0,
+    })
+      .format(value)
+      .replace('K', 'k');
+  }
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatDrawDate(value: string) {
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(value));
+}
 
 export function CompetitionDetailPage() {
   const params = useParams();
@@ -14,6 +68,8 @@ export function CompetitionDetailPage() {
   const [competition, setCompetition] = useState<Competition | undefined>();
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const ticketPrice = competition?.ticketPrice ?? 0;
   const totalPrice = useMemo(() => (ticketPrice * quantity).toFixed(2), [ticketPrice, quantity]);
 
@@ -30,8 +86,20 @@ export function CompetitionDetailPage() {
       });
   }, [params.id]);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   if (!competition && loading) {
-    return <p>Loading competition...</p>;
+    return (
+      <div className="home-competitions-loading" role="status" aria-live="polite">
+        <span className="home-competitions-loading-spinner" aria-hidden />
+        <span className="sr-only">Loading competition...</span>
+      </div>
+    );
   }
 
   if (!competition && !loading) {
@@ -53,7 +121,21 @@ export function CompetitionDetailPage() {
   }
 
   const watchName = `${competition.watch.brand} ${competition.watch.model}`.trim();
-  const imageUrl = competition.watch.images[0]?.url ?? '';
+  const images =
+    competition.watch.images.length > 0
+      ? competition.watch.images
+      : [{ url: '', alt: watchName || 'Competition watch' }];
+  const selectedImage = images[selectedImageIndex] ?? images[0];
+  const countdown = getCountdownParts(competition.endDate, nowMs);
+  const ticketOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const vipPackSizes = [15, 20, 25, 50];
+  const getDiscount = (size: number) => {
+    if (size >= 50) return 25;
+    if (size >= 25) return 20;
+    if (size >= 20) return 15;
+    return 10;
+  };
+  const chanceDenominator = (size: number) => Math.max(1, Math.ceil(competition.totalTickets / size));
   const onContinue = () => {
     navigate(withLocale(locale, `competitions/${competition.id}/question`), {
       state: {
@@ -64,64 +146,125 @@ export function CompetitionDetailPage() {
   };
 
   return (
-    <section className="checkout-flow-page">
-      <Card>
-        <div className="checkout-flow-eyebrow">Competition detail</div>
-        <h2 className="checkout-flow-title">Win the {watchName}</h2>
-
-        <div className="checkout-flow-hero">
-          {imageUrl ? (
-            <img src={imageUrl} alt={watchName} className="checkout-flow-hero-image" />
-          ) : (
-            <div className="checkout-flow-hero-image checkout-flow-hero-image--placeholder">
-              {competition.watch.model}
-            </div>
-          )}
+    <section className="competition-detail-page">
+      <div className="competition-detail-countdown" role="timer" aria-live="off">
+        <div>
+          <strong>{countdown.day}</strong>
+          <span>DAY</span>
         </div>
+        <div>
+          <strong>{countdown.hour}</strong>
+          <span>HOUR</span>
+        </div>
+        <div>
+          <strong>{countdown.min}</strong>
+          <span>MIN</span>
+        </div>
+        <div>
+          <strong>{countdown.sec}</strong>
+          <span>SEC</span>
+        </div>
+      </div>
+      <p className="competition-detail-countdown-note">
+        or until all tickets are sold out. But never after the draw date
+      </p>
 
-        <div className="checkout-flow-meta">
+      <div className="competition-detail-steps" aria-hidden>
+        <div className="active">
+          1. <span>Select your ticket</span>
+          <i />
+        </div>
+        <div>
+          2.
+          <i />
+        </div>
+        <div>
+          3.
+          <i />
+        </div>
+      </div>
+
+      <div className="competition-detail-gallery">
+        {selectedImage?.url ? (
+          <img src={selectedImage.url} alt={selectedImage.alt || watchName} className="competition-detail-main-image" />
+        ) : (
+          <div className="competition-detail-main-image competition-detail-main-image--placeholder">
+            {competition.watch.model}
+          </div>
+        )}
+        <div className="competition-detail-thumbs" role="list">
+          {images.slice(0, 4).map((image, index) => (
+            <button
+              key={`${image.url}-${index}`}
+              type="button"
+              className={index === selectedImageIndex ? 'active' : ''}
+              onClick={() => setSelectedImageIndex(index)}
+              aria-label={`View image ${index + 1}`}
+            >
+              {image.url ? <img src={image.url} alt={image.alt || watchName} /> : <span>{index + 1}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="competition-detail-content">
+        <p className="competition-detail-eyebrow">Win the</p>
+        <h1 className="competition-detail-title">{competition.name.toUpperCase()}</h1>
+
+        <div className="competition-detail-meta">
           <div>
+            <strong>{formatCurrencyCompact(competition.price)}</strong>
             <span>Watch Value</span>
-            <strong>GBP {competition.price.toFixed(2)}</strong>
           </div>
           <div>
+            <strong>{formatCurrencyCompact(competition.ticketPrice)}</strong>
             <span>Entry Price</span>
-            <strong>GBP {competition.ticketPrice.toFixed(2)}</strong>
           </div>
-          <div>
-            <span>Draw Date</span>
-            <strong>{formatDrawDateDdMmYyyy(competition.endDate)}</strong>
+        </div>
+        <div className="competition-detail-draw">
+          <strong>{formatDrawDate(competition.endDate)}</strong>
+          <span>Draw Date</span>
+          <p>or until all tickets are sold out. But never after the draw date</p>
+        </div>
+
+        <div className="competition-detail-select">
+          <h2>How many Tickets would you like ?</h2>
+          <div className="competition-detail-ticket-grid" role="group" aria-label="Ticket quantity">
+            {ticketOptions.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={quantity === option ? 'active' : ''}
+                onClick={() => setQuantity(option)}
+              >
+                {option}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="checkout-flow-select-header">
-          <h3>Select your ticket</h3>
-          <p>How many tickets would you like?</p>
+        <div className="competition-detail-vip">
+          <h3>VIP Pack</h3>
+          <div className="competition-detail-vip-grid">
+            {vipPackSizes.map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => setQuantity(size)}
+                className={quantity === size ? 'active' : ''}
+              >
+                <strong>{size}</strong>
+                <span>{getDiscount(size)} % off</span>
+                <small>1/{chanceDenominator(size)} chance to win</small>
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="checkout-flow-quantity-picker" role="group" aria-label="Ticket quantity">
-          <button
-            type="button"
-            onClick={() => setQuantity((value) => Math.max(1, value - 1))}
-            aria-label="Decrease quantity"
-          >
-            -
-          </button>
-          <strong>{quantity}</strong>
-          <button
-            type="button"
-            onClick={() => setQuantity((value) => Math.min(50, value + 1))}
-            aria-label="Increase quantity"
-          >
-            +
-          </button>
-        </div>
-        <p className="checkout-flow-quantity-note">Maximum 50 tickets per player.</p>
-        <div className="checkout-flow-total">Current total: GBP {totalPrice}</div>
 
         <button type="button" className="checkout-flow-button" onClick={onContinue}>
-          Continue to the next step
+          Continue · GBP {totalPrice}
         </button>
-      </Card>
+      </div>
     </section>
   );
 }

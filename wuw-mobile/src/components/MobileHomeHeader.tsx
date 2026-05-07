@@ -9,8 +9,8 @@ export function MobileHomeHeader() {
   return (
     <header className="site-header">
       <div className="apple-pay-banner">
-        <span className="apple-pay-badge">Apple Pay</span>
-        <span>is available on winuwatch!</span>
+        <span className="apple-pay-badge">APPLE PAY</span>
+        <span>IS AVAILABLE ON WINUWATCH!</span>
       </div>
 
       <div className="site-header-bar">

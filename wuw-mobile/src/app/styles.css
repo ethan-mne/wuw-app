@@ -37,6 +37,17 @@ button {
   font: inherit;
 }
 
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.site-header a:visited,
+.mobile-footer a:visited,
+.bottom-nav a:visited {
+  color: inherit;
+}
+
 .mobile-shell {
   display: flex;
   min-height: 100dvh;
@@ -63,7 +74,7 @@ button {
 .eyebrow,
 .status-label {
   margin: 0 0 0.35rem;
-  color: #2563eb;
+  color: #4b5563;
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -154,8 +165,8 @@ button {
 
 .feature-pill {
   border-radius: 999px;
-  background: #e0ebff;
-  color: #1e3a8a;
+  background: #e5e7eb;
+  color: #111827;
   font-size: 0.8rem;
   font-weight: 700;
   padding: 0.65rem 0.5rem;
@@ -229,8 +240,8 @@ button {
 }
 
 .action-link.secondary {
-  background: #e0ebff;
-  color: #1e3a8a;
+  background: #e5e7eb;
+  color: #111827;
 }
 
 .bottom-nav {
@@ -243,29 +254,37 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.35rem;
   margin: 0 auto;
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 1rem 3rem rgba(15, 23, 42, 0.15);
-  padding: 0.35rem;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.06), transparent 45%),
+    linear-gradient(160deg, #0a0a0a, #121212 58%, #090909 100%);
+  box-shadow:
+    0 0.85rem 2.6rem rgba(2, 6, 23, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 0.3rem;
   backdrop-filter: blur(16px);
 }
 
 .bottom-nav-link,
 .segment {
   border-radius: 999px;
-  color: #64748b;
-  font-size: 0.75rem;
+  color: #9ca3af;
+  font-size: 0.78rem;
   font-weight: 800;
   padding: 0.65rem 0.35rem;
   text-align: center;
   text-decoration: none;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .bottom-nav-link.active,
 .segment.active {
-  background: #111827;
+  background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 
 .segmented-nav {
@@ -320,7 +339,7 @@ button {
   border-radius: 1.25rem;
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.2), transparent 35%),
-    linear-gradient(135deg, #0f172a, #1d4ed8);
+    linear-gradient(135deg, #111827, #030712);
   color: #ffffff;
   font-size: 1.5rem;
   font-weight: 900;
@@ -375,7 +394,7 @@ button {
   place-items: center;
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.2), transparent 35%),
-    linear-gradient(135deg, #0f172a, #1d4ed8);
+    linear-gradient(135deg, #111827, #030712);
   color: #ffffff;
   font-size: 1.35rem;
   font-weight: 900;
@@ -676,6 +695,302 @@ button {
   gap: 0.55rem;
 }
 
+.competition-detail-page {
+  display: grid;
+  gap: 0;
+  margin: 0 -0.75rem;
+}
+
+.competition-detail-countdown {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+  align-items: start;
+  background: #121316;
+  color: #ffffff;
+  padding: 0.7rem 1rem 0.4rem;
+}
+
+.competition-detail-countdown > div {
+  position: relative;
+  display: grid;
+  justify-items: center;
+}
+
+.competition-detail-countdown > div:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  left: -0.28rem;
+  top: 0.18rem;
+  width: 1px;
+  height: 1.4rem;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.competition-detail-countdown strong {
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.competition-detail-countdown span {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.competition-detail-countdown-note {
+  margin: 0;
+  background: #121316;
+  color: #ffffff;
+  font-size: 0.64rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.35;
+  padding: 0 1rem 0.55rem;
+}
+
+.competition-detail-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  border-top: 1px solid #d1d5db;
+  border-bottom: 1px solid #d1d5db;
+  background: #f3f4f6;
+  padding: 0.6rem 0.85rem 0.3rem;
+}
+
+.competition-detail-steps > div {
+  position: relative;
+  color: #6b7280;
+  font-size: 0.76rem;
+  font-weight: 900;
+  padding-bottom: 0.5rem;
+}
+
+.competition-detail-steps > div.active {
+  color: #111827;
+}
+
+.competition-detail-steps > div span {
+  font-size: 0.92rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.competition-detail-steps > div i {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #bfc4cc;
+}
+
+.competition-detail-steps > div i::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #6b7280;
+}
+
+.competition-detail-gallery {
+  background: #ffffff;
+}
+
+.competition-detail-main-image {
+  display: block;
+  width: 100%;
+  max-height: 25rem;
+  object-fit: cover;
+}
+
+.competition-detail-main-image--placeholder {
+  display: grid;
+  min-height: 18rem;
+  place-items: center;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.2), transparent 35%),
+    linear-gradient(135deg, #111827, #030712);
+  color: #ffffff;
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+.competition-detail-thumbs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.12rem;
+}
+
+.competition-detail-thumbs button {
+  border: 0;
+  padding: 0;
+  background: #e5e7eb;
+  min-height: 4.9rem;
+  overflow: hidden;
+}
+
+.competition-detail-thumbs button.active {
+  box-shadow: inset 0 0 0 2px #0f6b42;
+}
+
+.competition-detail-thumbs img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.competition-detail-content {
+  display: grid;
+  gap: 0.9rem;
+  background: #f3f4f6;
+  padding: 0.9rem 0.85rem 1.1rem;
+}
+
+.competition-detail-eyebrow {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.84rem;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+
+.competition-detail-title {
+  margin: -0.35rem 0 0;
+  color: #111827;
+  font-size: clamp(0.92rem, 4.1vw, 1.15rem);
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.competition-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.competition-detail-meta div,
+.competition-detail-draw {
+  border-left: 2px solid #6ba789;
+  padding-left: 0.5rem;
+}
+
+.competition-detail-meta strong,
+.competition-detail-draw strong {
+  display: block;
+  color: #111827;
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.competition-detail-meta span,
+.competition-detail-draw span {
+  display: block;
+  margin-top: 0.1rem;
+  color: #6b7280;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.competition-detail-draw p {
+  margin: 0.15rem 0 0;
+  color: #4b5563;
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.competition-detail-select h2 {
+  margin: 0.35rem 0 0.55rem;
+  color: #111827;
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.competition-detail-ticket-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.competition-detail-ticket-grid button {
+  min-height: 2.4rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.22rem;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.competition-detail-ticket-grid button.active {
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
+}
+
+.competition-detail-vip h3 {
+  margin: 0.5rem 0 0.55rem;
+  color: #6b7280;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.competition-detail-vip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.competition-detail-vip-grid button {
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.22rem;
+  background: #f8fafc;
+  color: #111827;
+  min-height: 4.25rem;
+  padding: 0.5rem 0.35rem;
+}
+
+.competition-detail-vip-grid button.active {
+  border-color: #0f6b42;
+  background: #ecfdf5;
+}
+
+.competition-detail-vip-grid strong {
+  font-size: 0.9rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.competition-detail-vip-grid span {
+  color: #6b7280;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.competition-detail-vip-grid small {
+  color: #64748b;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
 .site-header {
   position: sticky;
   top: 0;
@@ -698,8 +1013,9 @@ button {
 
 .apple-pay-badge {
   border-radius: 999px;
-  background: #ffffff;
-  color: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: #000000;
+  color: #ffffff;
   padding: 0.1rem 0.45rem;
 }
 
@@ -717,9 +1033,13 @@ button {
 .footer-logo {
   color: #111111;
   font-size: 1.35rem;
-  font-weight: 950;
+  font-weight: 800;
   letter-spacing: -0.08em;
   text-decoration: none;
+}
+
+.brand-mark {
+  font-weight: 700;
 }
 
 .header-actions {
@@ -1671,6 +1991,28 @@ button {
   background: #1a1a1f;
 }
 
+.home-competitions-loading {
+  display: grid;
+  justify-items: center;
+  padding: 1.1rem 0.75rem 1.35rem;
+  color: #6b7280;
+}
+
+.home-competitions-loading-spinner {
+  width: 1.45rem;
+  height: 1.45rem;
+  border: 2px solid #d1d5db;
+  border-top-color: #111827;
+  border-radius: 999px;
+  animation: home-competitions-spin 0.85s linear infinite;
+}
+
+@keyframes home-competitions-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .mobile-home-competition-media-link {
   display: block;
   width: 100%;
@@ -1701,7 +2043,7 @@ button {
 .mobile-home-competition-media {
   width: 100%;
   max-width: 100%;
-  height: auto;
+  aspect-ratio: 8 / 10;
   overflow: hidden;
 }
 
@@ -1709,8 +2051,9 @@ button {
   display: block;
   width: 100%;
   max-width: 100%;
-  height: auto;
-  object-fit: contain;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 .mobile-home-competition-media--fallback {
@@ -1732,7 +2075,7 @@ button {
 .mobile-home-competition-title {
   margin: 0;
   font-size: clamp(1.35rem, 6vw, 1.8rem);
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1.1;
   text-transform: uppercase;
@@ -1742,73 +2085,132 @@ button {
 .mobile-home-competition-subtitle {
   margin: 0;
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+.mobile-home-competition-title + .mobile-home-competition-subtitle {
+  margin-top: -0.35rem;
+  margin-bottom: 0.90rem;
 }
 
 .mobile-home-competition-timer {
   display: grid;
   justify-items: center;
-  gap: 0.2rem;
+  gap: 0.35rem;
   color: #e5e7eb;
   text-align: center;
 }
 
-.mobile-home-competition-timer strong {
-  color: #ffffff;
-  font-size: 0.88rem;
-  letter-spacing: 0.1em;
+.mobile-home-competition-countdown {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 18rem;
+  align-items: start;
 }
 
-.mobile-home-competition-timer span {
+.mobile-home-competition-countdown > div {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.12rem;
+}
+
+.mobile-home-competition-countdown > div:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  left: -0.34rem;
+  top: 0.25rem;
+  width: 1px;
+  height: 1.45rem;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.mobile-home-competition-countdown strong {
+  color: #ffffff;
+  font-size: 1.55rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.mobile-home-competition-countdown span {
+  color: #ffffff;
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.mobile-home-competition-timer > span {
   font-size: 0.68rem;
   line-height: 1.35;
+  font-style: italic;
+  margin-bottom: 0.90rem;
 }
 
 .mobile-home-competition-stats {
   margin: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
 }
 
 .mobile-home-competition-stats div {
-  border-left: 1px solid rgba(255, 255, 255, 0.25);
-  padding: 0.2rem 0.5rem 0.1rem;
+  border-left: 1px solid rgba(16, 185, 129, 0.58);
+  padding: 0.15rem 0.65rem 0.1rem;
   min-width: 0;
+  text-align: left;
 }
 
 .mobile-home-competition-stats div:first-child {
-  border-left: 2px solid #00dd77;
+  border-left: 1px solid rgba(16, 185, 129, 0.58);
+  padding-left: 0.65rem;
 }
 
 .mobile-home-competition-stats dt {
   margin: 0;
-  color: #00dd77;
-  font-size: clamp(1.2rem, 5vw, 1.6rem);
-  font-weight: 900;
+  color: #10b981;
+  font-size: clamp(1.35rem, 5vw, 1.7rem);
+  font-weight: 700;
+  line-height: 1;
   overflow-wrap: anywhere;
 }
 
 .mobile-home-competition-stats dd {
-  margin: 0.1rem 0 0;
+  margin: 0.2rem 0 0;
   color: #ffffff;
-  font-size: 0.74rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 500;
 }
 
 .mobile-home-competition-cta {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
   width: 100%;
   min-height: 2.9rem;
-  border-radius: 999px;
-  background: #0f7a4d;
+  border-radius: 0.25rem;
+  background: #0f6b42;
   color: #ffffff;
-  font-size: 0.92rem;
-  font-weight: 900;
-  letter-spacing: 0.01em;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  padding: 0 1.1rem 0 1.25rem;
   text-decoration: none;
+}
+
+.mobile-home-competition-cta-label {
+  flex: 1;
+  text-align: center;
+}
+
+.mobile-home-competition-cta span {
+  font-size: 1.35rem;
+  line-height: 1;
 }
 
 .mobile-home-competition-cta--sold-out {
@@ -1891,27 +2293,63 @@ button {
 .footer-contact-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .footer-contact-grid > * {
   display: grid;
-  min-height: 7rem;
+  gap: 0.3rem;
+  min-height: 7.4rem;
   place-items: center;
-  border-radius: 0.35rem;
-  background: #111111;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.6rem;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 44%),
+    linear-gradient(160deg, #0a0b10, #101218 58%, #0c0f16 100%);
   color: #ffffff;
-  padding: 0.9rem;
+  box-shadow:
+    0 0.35rem 1rem rgba(2, 6, 23, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  padding: 1rem 0.9rem;
   text-align: center;
   text-decoration: none;
+  transition:
+    transform 150ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.footer-contact-grid a:hover,
+.footer-contact-grid a:focus-visible {
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow:
+    0 0.55rem 1.3rem rgba(2, 6, 23, 0.38),
+    0 0 0 2px rgba(16, 185, 129, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.footer-contact-grid > *::before {
+  content: "";
+  width: 2.1rem;
+  height: 0.2rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  opacity: 0.95;
 }
 
 .footer-contact-grid strong {
-  font-size: 0.8rem;
+  color: #f8fafc;
+  font-size: 1.04rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
 }
 
 .footer-contact-grid span {
-  font-size: 0.72rem;
+  color: #9ca3af;
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 .footer-email {
@@ -1922,21 +2360,38 @@ button {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.75rem 1rem;
+  gap: 0.6rem 0.7rem;
 }
 
 .footer-legal-nav a,
 .footer-company {
-  color: #666666;
-  font-size: 0.75rem;
+  color: #6b7280;
+  font-size: 0.78rem;
   font-weight: 800;
   text-align: center;
   text-decoration: none;
 }
 
+.footer-legal-nav a {
+  border-radius: 999px;
+  padding: 0.38rem 0.7rem;
+  background: rgba(15, 23, 42, 0.05);
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.footer-legal-nav a:hover,
+.footer-legal-nav a:focus-visible {
+  background: rgba(15, 23, 42, 0.1);
+  color: #374151;
+}
+
 .footer-company {
-  margin-bottom: 1rem;
-  line-height: 1.5;
+  max-width: 34ch;
+  margin-bottom: 1.1rem;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
 }
 
 @media (max-width: 640px) {

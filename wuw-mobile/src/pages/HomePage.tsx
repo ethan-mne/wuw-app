@@ -38,7 +38,10 @@ export function HomePage() {
       </p>
 
       {loading ? (
-        <p>Loading competitions...</p>
+        <div className="home-competitions-loading" role="status" aria-live="polite">
+          <span className="home-competitions-loading-spinner" aria-hidden />
+          <span className="sr-only">Loading competitions...</span>
+        </div>
       ) : (
         <MobileCompetitionList competitions={homeCompetitions} />
       )}
