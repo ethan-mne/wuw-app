@@ -153,8 +153,8 @@ export function CompetitionDetailPage() {
         answer: null,
         discountPercent,
         timedOut: false,
-      },
-    } satisfies CheckoutFlowState);
+      } satisfies CheckoutFlowState,
+    });
   };
 
   return (
