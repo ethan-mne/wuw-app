@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { MainNav } from './main-nav';
 import { Bag, Lightbag, Profile } from './icons';
 import { MobileNav } from './mobile-nav';
@@ -17,11 +18,16 @@ export function Header() {
   return (
     <header className='sticky top-0 z-50 w-full bg-white/95'>
       <div className='w-full bg-black flex items-center justify-center h-10 pb-1'>
-        <span className='mr-2 rounded-full border border-white/45 bg-black px-2 py-[2px] text-[11px] font-black tracking-[0.08em] text-white'>
-          APPLE PAY
-        </span>
-        <span className='text-white text-sm font-semibold tracking-[0.03em]'>
-          IS AVAILABLE ON WINUWATCH!
+        <Image
+          src='/apple-pay-logo.svg'
+          alt='Apple Pay'
+          width={40}
+          height={20}
+          priority
+          className='mr-2'
+        />
+        <span className='text-white text-sm'>
+          Apple Pay is available on winuwatch!
         </span>
       </div>
       <div className='container flex h-14 max-w-screen-2xl items-center justify-between '>

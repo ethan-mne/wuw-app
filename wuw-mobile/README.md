@@ -12,33 +12,16 @@ Ce projet reprend la structure fonctionnelle consumer du projet web Next.js, san
 
 ## Environnement
 
-Copier `.env.example` vers `.env` puis pointer vers le backend local/remote.
+Copier `.env.example` vers `.env` puis adapter l'URL quand le backend mobile sera pret.
 
 ```bash
-VITE_API_BASE_URL=http://localhost:3000
+VITE_API_BASE_URL=https://api.example.com
 ```
 
 ## Developpement web
 
 ```bash
 npm run dev
-## Backend mobile dedie (in-repo)
-
-Le backend mobile est expose par le projet `wuw-app` via des routes versionnees:
-
-- `GET /api/mobile/v1/competitions`
-- `GET /api/mobile/v1/competitions/:id`
-- `POST /api/mobile/v1/auth/send-otp`
-- `POST /api/mobile/v1/auth/check-otp`
-- `GET /api/mobile/v1/me`
-- `PUT /api/mobile/v1/me`
-- `GET /api/mobile/v1/me/summary`
-- `GET /api/mobile/v1/orders/history`
-- `GET /api/mobile/v1/winners?skip=0&take=20`
-
-La route `GET /api/mobile/v1/winners` est la route de reference pour le mobile.
-Configurer `VITE_API_BASE_URL` vers un backend qui expose bien ces routes `v1`.
-
 ```
 
 ## Build web mobile

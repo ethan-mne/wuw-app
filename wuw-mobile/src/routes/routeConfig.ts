@@ -1,7 +1,7 @@
 export const coreRoutes = [
   { label: 'Home', path: '' },
-  { label: 'Profile', path: 'account/profile' },
-  { label: 'Contact us', path: 'contact-us' },
+  { label: 'Competitions', path: 'competitions' },
+  { label: 'Account', path: 'account/dashboard' },
 ] as const;
 
 export const sourceRouteMap = [
@@ -10,7 +10,6 @@ export const sourceRouteMap = [
   ['/{locale}/verification', 'VerificationPage'],
   ['/{locale}/competitions', 'CompetitionsPage'],
   ['/{locale}/competitions/:id', 'CompetitionDetailPage'],
-  ['/{locale}/competitions/:id/question', 'QuestionPage'],
   ['/{locale}/competitions/:id/:orderId', 'CheckoutPage'],
   ['/{locale}/competitions/:id/:orderId/confirmation', 'ConfirmationPage'],
   ['/{locale}/competitions/:id/:orderId/error', 'PaymentErrorPage'],
