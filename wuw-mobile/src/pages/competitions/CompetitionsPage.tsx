@@ -23,9 +23,13 @@ export function CompetitionsPage() {
         title="Current competitions"
         description="Mobile version of the web competitions listing."
       />
-      {competitions.length === 0 ? (
-        <p>{loading ? 'Loading competitions...' : 'No competitions found.'}</p>
+      {competitions.length === 0 && loading ? (
+        <div className="home-competitions-loading" role="status" aria-live="polite">
+          <span className="home-competitions-loading-spinner" aria-hidden />
+          <span className="sr-only">Loading competitions...</span>
+        </div>
       ) : null}
+      {competitions.length === 0 && !loading ? <p>No competitions found.</p> : null}
       {competitions.map((competition) => (
         <CompetitionCard key={competition.id} competition={competition} />
       ))}

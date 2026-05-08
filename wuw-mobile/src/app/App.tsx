@@ -13,6 +13,7 @@ import { CompetitionDetailPage } from '../pages/competitions/CompetitionDetailPa
 import { CompetitionsPage } from '../pages/competitions/CompetitionsPage';
 import { ConfirmationPage } from '../pages/competitions/ConfirmationPage';
 import { PaymentErrorPage } from '../pages/competitions/PaymentErrorPage';
+import { QuestionPage } from '../pages/competitions/QuestionPage';
 import { HomePage } from '../pages/HomePage';
 import { LegalPage } from '../pages/legal/LegalPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="verification" element={<VerificationPage />} />
         <Route path="competitions" element={<CompetitionsPage />} />
         <Route path="competitions/:id" element={<CompetitionDetailPage />} />
+        <Route path="competitions/:id/question" element={<QuestionPage />} />
         <Route path="competitions/:id/:orderId" element={<CheckoutPage />} />
         <Route
           path="competitions/:id/:orderId/confirmation"
