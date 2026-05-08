@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { Card } from '../../components/ui';
+import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { Competition } from '../../types';
+import { type CheckoutFlowState } from './checkoutFlow';
 
 type CountdownParts = {
   day: string;
@@ -53,12 +55,18 @@ function formatCurrencyCompact(value: number) {
   }).format(value);
 }
 
-function formatDrawDate(value: string) {
-  return new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(value));
+function getVipPackDiscount(size: number) {
+  if (size >= 50) return 25;
+  if (size >= 25) return 20;
+  if (size >= 20) return 15;
+  return 10;
+}
+
+function getDiscountPercent(quantity: number) {
+  if (quantity === 15 || quantity === 20 || quantity === 25 || quantity === 50) {
+    return getVipPackDiscount(quantity);
+  }
+  return 0;
 }
 
 export function CompetitionDetailPage() {
@@ -71,7 +79,15 @@ export function CompetitionDetailPage() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const ticketPrice = competition?.ticketPrice ?? 0;
-  const totalPrice = useMemo(() => (ticketPrice * quantity).toFixed(2), [ticketPrice, quantity]);
+  const discountPercent = useMemo(() => getDiscountPercent(quantity), [quantity]);
+  const discountedTicketPrice = useMemo(
+    () => ticketPrice * (1 - discountPercent / 100),
+    [ticketPrice, discountPercent],
+  );
+  const totalPrice = useMemo(
+    () => (discountedTicketPrice * quantity).toFixed(2),
+    [discountedTicketPrice, quantity],
+  );
 
   useEffect(() => {
     void mobileDataService
@@ -129,20 +145,16 @@ export function CompetitionDetailPage() {
   const countdown = getCountdownParts(competition.endDate, nowMs);
   const ticketOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   const vipPackSizes = [15, 20, 25, 50];
-  const getDiscount = (size: number) => {
-    if (size >= 50) return 25;
-    if (size >= 25) return 20;
-    if (size >= 20) return 15;
-    return 10;
-  };
   const chanceDenominator = (size: number) => Math.max(1, Math.ceil(competition.totalTickets / size));
   const onContinue = () => {
     navigate(withLocale(locale, `competitions/${competition.id}/question`), {
       state: {
         quantity,
         answer: null,
+        discountPercent,
+        timedOut: false,
       },
-    });
+    } satisfies CheckoutFlowState);
   };
 
   return (
@@ -222,7 +234,7 @@ export function CompetitionDetailPage() {
           </div>
         </div>
         <div className="competition-detail-draw">
-          <strong>{formatDrawDate(competition.endDate)}</strong>
+          <strong>{formatDrawDateDdMmYyyy(competition.endDate)}</strong>
           <span>Draw Date</span>
           <p>or until all tickets are sold out. But never after the draw date</p>
         </div>
@@ -254,7 +266,7 @@ export function CompetitionDetailPage() {
                 className={quantity === size ? 'active' : ''}
               >
                 <strong>{size}</strong>
-                <span>{getDiscount(size)} % off</span>
+                <span>{getVipPackDiscount(size)} % off</span>
                 <small>1/{chanceDenominator(size)} chance to win</small>
               </button>
             ))}

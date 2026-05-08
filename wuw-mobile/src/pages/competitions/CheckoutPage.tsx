@@ -47,6 +47,7 @@ export function CheckoutPage() {
   const locale = isLocale(params.locale) ? params.locale : defaultLocale;
   const flowState = (location.state as CheckoutFlowState | undefined) ?? CHECKOUT_FLOW_DEFAULTS;
   const quantity = Math.max(1, flowState.quantity ?? 1);
+  const discountPercent = Math.max(0, flowState.discountPercent ?? 0);
 
   useEffect(() => {
     void mobileDataService
@@ -61,10 +62,11 @@ export function CheckoutPage() {
       });
   }, [params.id]);
 
-  const total = useMemo(() => (competition?.ticketPrice ?? 0) * quantity, [
-    competition?.ticketPrice,
-    quantity,
-  ]);
+  const discountedTicketPrice = useMemo(
+    () => (competition?.ticketPrice ?? 0) * (1 - discountPercent / 100),
+    [competition?.ticketPrice, discountPercent],
+  );
+  const total = useMemo(() => discountedTicketPrice * quantity, [discountedTicketPrice, quantity]);
 
   const onFieldChange = (key: keyof CheckoutFormState, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -102,6 +104,7 @@ export function CheckoutPage() {
       state: {
         quantity,
         answer: flowState.answer,
+        discountPercent,
         timedOut: flowState.timedOut,
       } satisfies CheckoutFlowState,
     });
@@ -210,7 +213,15 @@ export function CheckoutPage() {
               </div>
               <div>
                 <dt>Ticket price</dt>
-                <dd>GBP {competition.ticketPrice.toFixed(2)}</dd>
+                <dd>
+                  {discountPercent > 0 ? (
+                    <>
+                      GBP {discountedTicketPrice.toFixed(2)} ({discountPercent}% off)
+                    </>
+                  ) : (
+                    <>GBP {competition.ticketPrice.toFixed(2)}</>
+                  )}
+                </dd>
               </div>
               <div>
                 <dt>Total</dt>

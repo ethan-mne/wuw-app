@@ -46,6 +46,7 @@ export function QuestionPage() {
       state: {
         quantity: Math.max(1, flowState.quantity ?? 1),
         answer: selectedAnswer,
+        discountPercent: flowState.discountPercent ?? 0,
         timedOut,
       } satisfies CheckoutFlowState,
     });
