@@ -1,4 +1,4 @@
-package com.wuw.app;
+package com.winuwatch.wuwapp;
 
 import com.getcapacitor.BridgeActivity;
 
