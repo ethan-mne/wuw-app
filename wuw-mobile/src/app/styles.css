@@ -528,6 +528,16 @@ button {
   filter: blur(2px);
 }
 
+.checkout-flow-question-image--placeholder {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #1f2937, #111827);
+  color: #9ca3af;
+  font-size: 0.85rem;
+  font-weight: 800;
+  filter: none;
+}
+
 .checkout-flow-question-watermark {
   position: absolute;
   right: 0.75rem;
@@ -699,7 +709,6 @@ button {
 .competition-detail-page {
   display: grid;
   gap: 0;
-  margin: 0 -0.75rem;
 }
 
 .competition-detail-countdown-banner {
@@ -899,9 +908,9 @@ button {
 
 .competition-detail-content {
   display: grid;
-  gap: 0.9rem;
+  gap: 1.05rem;
   background: #f3f4f6;
-  padding: 0.9rem 0.85rem 1.35rem;
+  padding: 1.2rem 1.25rem 0;
 }
 
 .competition-detail-eyebrow {
@@ -992,12 +1001,13 @@ button {
 }
 
 .competition-detail-vip {
-  margin-top: 1.1rem;
-  padding: 0.15rem 0 0.35rem;
+  margin-top: 0.25rem;
+  padding: 1.15rem 0 0.5rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 .competition-detail-vip h3 {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.85rem;
   color: #6b7280;
   font-size: 0.84rem;
   font-weight: 900;
@@ -1006,19 +1016,19 @@ button {
 .competition-detail-vip-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.7rem;
+  gap: 0.85rem;
 }
 
 .competition-detail-vip-grid button {
   display: grid;
   justify-items: center;
-  gap: 0.28rem;
+  gap: 0.35rem;
   border: 1px solid #d1d5db;
-  border-radius: 0.22rem;
-  background: #f8fafc;
+  border-radius: 0.35rem;
+  background: #ffffff;
   color: #111827;
-  min-height: 4.65rem;
-  padding: 0.8rem 0.55rem;
+  min-height: 5rem;
+  padding: 1.05rem 0.75rem;
 }
 
 .competition-detail-vip-grid button.active {
@@ -1047,7 +1057,125 @@ button {
 }
 
 .competition-detail-content > .checkout-flow-button {
-  margin-top: 1rem;
+  margin-top: 1.15rem;
+  padding: 0.95rem 1.25rem;
+}
+
+.competition-detail-good-to-know {
+  margin-top: 0.5rem;
+  padding: 0;
+}
+
+.competition-detail-good-to-know-heading {
+  margin: 0 -1.25rem 0;
+  padding: 1.35rem 1.25rem 1.2rem;
+  background: #ffffff;
+  text-align: center;
+  font-size: clamp(1.1rem, 4.5vw, 1.5rem);
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  line-height: 1.12;
+  text-transform: uppercase;
+}
+
+.competition-detail-good-to-know-heading-accent {
+  color: #00d166;
+}
+
+.competition-detail-good-to-know-heading-rest {
+  color: #000000;
+}
+
+.competition-detail-info-card {
+  margin: 0 -1.25rem;
+  border-radius: 0;
+  background: #161616;
+  color: #ffffff;
+  padding: 1.55rem 1.25rem 1.65rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+}
+
+.competition-detail-info-card > h3 {
+  margin: 0 0 1.35rem;
+  padding-bottom: 0.05rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  line-height: 1.45;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.competition-detail-info-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
+.competition-detail-info-label {
+  margin: 0 0 0.18rem;
+  color: #a3a3a3;
+  font-size: 0.54rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.competition-detail-info-label--colon::after {
+  content: " :";
+}
+
+.competition-detail-info-value {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.055em;
+  line-height: 1.28;
+  text-transform: uppercase;
+}
+
+.competition-detail-info-value--natural {
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-weight: 800;
+}
+
+.competition-detail-info-value--multiline {
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.5;
+  letter-spacing: 0.07em;
+  text-wrap: balance;
+}
+
+.competition-detail-info-block--split {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.65rem 1rem;
+  align-items: stretch;
+}
+
+.competition-detail-info-split-cell {
+  min-width: 0;
+  padding-right: 0.15rem;
+}
+
+.competition-detail-info-split-cell:last-child {
+  padding-right: 0;
+  padding-left: 0.15rem;
+}
+
+.competition-detail-info-split-rule {
+  width: 1px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.competition-detail-page > .mobile-footer {
+  margin-top: 0;
 }
 
 .site-header {
@@ -2324,8 +2452,10 @@ button {
 
 .footer-logo {
   display: block;
-  font-size: clamp(3rem, 18vw, 4.6875rem);
-  line-height: 0.9;
+  font-size: clamp(2.85rem, 14vw, 4rem);
+  line-height: 0.95;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .footer-tagline {

@@ -1,6 +1,14 @@
 import { Link, useParams } from 'react-router-dom';
 
 import { defaultLocale, isLocale, withLocale } from '../routes/locales';
+import type { Locale } from '../types';
+
+/** Policy pages on the public site (e.g. https://winuwatch.com/en/terms-and-conditions). */
+const LEGAL_SITE_ORIGIN = 'https://winuwatch.com';
+
+function legalPolicyUrl(locale: Locale, slug: string): string {
+  return `${LEGAL_SITE_ORIGIN}/${locale}/${slug}`;
+}
 
 const footerNav = [
   ['How to play', 'howtoplay'],
@@ -14,7 +22,7 @@ const legalNav = [
   ['Terms and conditions', 'terms-and-conditions'],
   ['Return policy', 'return-policy'],
   ['Privacy policy', 'privacy-policy'],
-  ['Refund policy', 'refund-and-cancellation'],
+  ['Refund & cancellation', 'refund-and-cancellation'],
 ] as const;
 
 export function MobileFooter() {
@@ -69,10 +77,15 @@ export function MobileFooter() {
       </section>
 
       <nav className="footer-legal-nav" aria-label="Legal navigation">
-        {legalNav.map(([label, path]) => (
-          <Link key={path} to={withLocale(locale, path)}>
+        {legalNav.map(([label, slug]) => (
+          <a
+            key={slug}
+            href={legalPolicyUrl(locale, slug)}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
             {label}
-          </Link>
+          </a>
         ))}
       </nav>
 

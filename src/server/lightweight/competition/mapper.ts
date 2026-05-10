@@ -12,6 +12,7 @@ type CompetitionWithWatch = {
   max_winners?: number;
   end_date: Date;
   status: CompetitionStatusType;
+  comp_image_url: string | null;
   Watches: {
     id: string;
     brand: string;
@@ -19,6 +20,8 @@ type CompetitionWithWatch = {
     reference_number: string;
     movement: string;
     Bracelet_material: string;
+    glass: string;
+    bezel_material: string;
     year_of_manifacture: number;
     condition: string;
     has_box: boolean;
@@ -42,6 +45,7 @@ export type MobileCompetitionDto = {
   maxWinners: number;
   endDate: string;
   status: 'ACTIVE' | 'OPEN' | 'CLOSED';
+  competitionImageUrl: string | null;
   watch: {
     id: string;
     brand: string;
@@ -49,6 +53,8 @@ export type MobileCompetitionDto = {
     referenceNumber: string;
     movement: string;
     braceletMaterial: string;
+    glass: string;
+    bezelMaterial: string;
     yearOfManufacture: number;
     condition: string;
     hasBox: boolean;
@@ -90,6 +96,7 @@ export function mapCompetitionToMobileDto(
     maxWinners: competition.max_winners ?? 1,
     endDate: competition.end_date.toISOString(),
     status: mapStatus(competition.status, remainingTickets),
+    competitionImageUrl: competition.comp_image_url,
     watch: {
       id: competition.Watches?.id ?? '',
       brand: competition.Watches?.brand ?? 'Unknown',
@@ -97,6 +104,8 @@ export function mapCompetitionToMobileDto(
       referenceNumber: competition.Watches?.reference_number ?? '',
       movement: competition.Watches?.movement ?? '',
       braceletMaterial: competition.Watches?.Bracelet_material ?? '',
+      glass: competition.Watches?.glass ?? '',
+      bezelMaterial: competition.Watches?.bezel_material ?? '',
       yearOfManufacture: competition.Watches?.year_of_manifacture ?? 0,
       condition: competition.Watches?.condition ?? '',
       hasBox: competition.Watches?.has_box ?? false,

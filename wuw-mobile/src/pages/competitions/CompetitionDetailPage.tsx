@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { Card } from '../../components/ui';
+import { MobileFooter } from '../../components/MobileFooter';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
@@ -68,6 +69,35 @@ function getDiscountPercent(quantity: number) {
     return getVipPackDiscount(quantity);
   }
   return 0;
+}
+
+function formatUpperOrDash(value: string): string {
+  const t = value.trim();
+  if (t === '') return '—';
+  return t.toUpperCase();
+}
+
+function formatYearDisplay(year: number): string {
+  if (year === 0) return '—';
+  return String(year);
+}
+
+function formatNaturalOrDash(value: string): string {
+  const t = value.trim();
+  return t === '' ? '—' : t;
+}
+
+function getPapersCopy(hasBox: boolean, hasCertificate: boolean): string {
+  if (hasBox && hasCertificate) {
+    return 'THIS PRODUCT COMES WITH FULL PAPERWORK, A NEW DIGITAL WARRANTY CARD AND IS FULLY BOXED';
+  }
+  if (hasCertificate) {
+    return 'THIS PRODUCT COMES WITH FULL PAPERWORK AND A NEW DIGITAL WARRANTY CARD';
+  }
+  if (hasBox) {
+    return 'THIS PRODUCT IS FULLY BOXED';
+  }
+  return 'SEE LISTING FOR BOX, PAPERS AND WARRANTY DETAILS';
 }
 
 export function CompetitionDetailPage() {
@@ -283,7 +313,77 @@ export function CompetitionDetailPage() {
         <button type="button" className="checkout-flow-button" onClick={onContinue}>
           Continue · GBP {totalPrice}
         </button>
+
+        <div className="competition-detail-good-to-know" aria-labelledby="competition-good-to-know-title">
+          <h2 id="competition-good-to-know-title" className="competition-detail-good-to-know-heading">
+            <span className="competition-detail-good-to-know-heading-accent">Good</span>
+            <span className="competition-detail-good-to-know-heading-rest"> to know</span>
+          </h2>
+          <div className="competition-detail-info-card">
+            <h3>Watch &amp; competition informations</h3>
+            <div className="competition-detail-info-stack">
+              <section className="competition-detail-info-block">
+                <p className="competition-detail-info-label">Maximum entries</p>
+                <p className="competition-detail-info-value">{competition.totalTickets}</p>
+              </section>
+              <section className="competition-detail-info-block">
+                <p className="competition-detail-info-label competition-detail-info-label--colon">
+                  Maximum watch winners
+                </p>
+                <p className="competition-detail-info-value">{competition.maxWinners}</p>
+              </section>
+              <section className="competition-detail-info-block">
+                <p className="competition-detail-info-label">Brand</p>
+                <p className="competition-detail-info-value competition-detail-info-value--natural">
+                  {formatNaturalOrDash(competition.watch.brand)}
+                </p>
+              </section>
+              <section className="competition-detail-info-block">
+                <p className="competition-detail-info-label">Model</p>
+                <p className="competition-detail-info-value competition-detail-info-value--natural">
+                  {formatNaturalOrDash(competition.watch.model)}
+                </p>
+              </section>
+              <section className="competition-detail-info-block competition-detail-info-block--split">
+                <div className="competition-detail-info-split-cell">
+                  <p className="competition-detail-info-label">Reference number</p>
+                  <p className="competition-detail-info-value">
+                    {formatUpperOrDash(competition.watch.referenceNumber)}
+                  </p>
+                </div>
+                <div className="competition-detail-info-split-rule" aria-hidden />
+                <div className="competition-detail-info-split-cell">
+                  <p className="competition-detail-info-label">Year</p>
+                  <p className="competition-detail-info-value">{formatYearDisplay(competition.watch.yearOfManufacture)}</p>
+                </div>
+              </section>
+              <section className="competition-detail-info-block">
+                <p className="competition-detail-info-label">Movement</p>
+                <p className="competition-detail-info-value">{formatUpperOrDash(competition.watch.movement)}</p>
+              </section>
+              <section className="competition-detail-info-block competition-detail-info-block--split">
+                <div className="competition-detail-info-split-cell">
+                  <p className="competition-detail-info-label">Glass</p>
+                  <p className="competition-detail-info-value">{formatUpperOrDash(competition.watch.glass)}</p>
+                </div>
+                <div className="competition-detail-info-split-rule" aria-hidden />
+                <div className="competition-detail-info-split-cell">
+                  <p className="competition-detail-info-label">Bezel material</p>
+                  <p className="competition-detail-info-value">{formatUpperOrDash(competition.watch.bezelMaterial)}</p>
+                </div>
+              </section>
+              <section className="competition-detail-info-block">
+                <p className="competition-detail-info-label">Papers</p>
+                <p className="competition-detail-info-value competition-detail-info-value--multiline">
+                  {getPapersCopy(competition.watch.hasBox, competition.watch.hasCertificate)}
+                </p>
+              </section>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <MobileFooter />
     </section>
   );
 }

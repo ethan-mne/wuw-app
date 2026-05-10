@@ -15,6 +15,7 @@ const mobileCompetitionSelect = {
   max_winners: true,
   end_date: true,
   status: true,
+  comp_image_url: true,
   Watches: {
     select: {
       id: true,
@@ -23,6 +24,8 @@ const mobileCompetitionSelect = {
       reference_number: true,
       movement: true,
       Bracelet_material: true,
+      glass: true,
+      bezel_material: true,
       year_of_manifacture: true,
       condition: true,
       has_box: true,

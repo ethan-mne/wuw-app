@@ -14,6 +14,8 @@ export interface Watch {
   referenceNumber: string;
   movement: string;
   braceletMaterial: string;
+  glass: string;
+  bezelMaterial: string;
   yearOfManufacture: number;
   condition: string;
   hasBox: boolean;
@@ -33,6 +35,8 @@ export interface Competition {
   maxWinners: number;
   endDate: string;
   status: CompetitionStatus;
+  /** Competition hero/promo image; excluded from challenge when also in watch gallery. */
+  competitionImageUrl?: string | null;
   watch: Watch;
 }
 

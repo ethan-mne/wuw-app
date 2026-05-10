@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { Card } from '../../components/ui';
-import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
+import { CHALLENGE_QUESTIONS, CHALLENGE_QUESTION_COUNT } from '../../data/challengeQuestions';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { Competition } from '../../types';
@@ -14,6 +14,13 @@ import {
 
 const QUESTION_TIME_LIMIT_SEC = 40;
 
+function rotateOptions<T>(items: readonly T[], offset: number): T[] {
+  const n = items.length;
+  if (n === 0) return [];
+  const k = ((offset % n) + n) % n;
+  return [...items.slice(k), ...items.slice(0, k)];
+}
+
 export function QuestionPage() {
   const params = useParams();
   const navigate = useNavigate();
@@ -24,6 +31,7 @@ export function QuestionPage() {
   const [loading, setLoading] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(flowState.answer);
   const [secondsLeft, setSecondsLeft] = useState(QUESTION_TIME_LIMIT_SEC);
+  const [questionRound, setQuestionRound] = useState(0);
 
   useEffect(() => {
     void mobileDataService
@@ -38,7 +46,7 @@ export function QuestionPage() {
       });
   }, [params.id]);
 
-  const goToCheckout = (timedOut = false) => {
+  const goToCheckout = () => {
     if (!params.id) {
       navigate(withLocale(locale, 'competitions'));
       return;
@@ -48,29 +56,36 @@ export function QuestionPage() {
         quantity: Math.max(1, flowState.quantity ?? 1),
         answer: selectedAnswer,
         discountPercent: flowState.discountPercent ?? 0,
-        timedOut,
+        timedOut: false,
       } satisfies CheckoutFlowState,
     });
   };
 
   useEffect(() => {
     if (secondsLeft <= 0) {
-      goToCheckout(true);
+      setQuestionRound((r) => r + 1);
+      setSecondsLeft(QUESTION_TIME_LIMIT_SEC);
+      setSelectedAnswer(null);
       return;
     }
-    const id = window.setTimeout(() => setSecondsLeft((prev) => prev - 1), 1000);
+    const id = window.setTimeout(() => {
+      setSecondsLeft((s) => s - 1);
+    }, 1000);
     return () => window.clearTimeout(id);
   }, [secondsLeft]);
 
-  const watchName = useMemo(() => {
-    if (!competition) {
-      return 'this watch';
-    }
-    return `${competition.watch.brand} ${competition.watch.model}`.trim();
-  }, [competition]);
+  const activeQuestion = useMemo(
+    () => CHALLENGE_QUESTIONS[questionRound % CHALLENGE_QUESTION_COUNT],
+    [questionRound],
+  );
 
   if (loading) {
-    return <p>Loading challenge...</p>;
+    return (
+      <div className="home-competitions-loading" role="status" aria-live="polite">
+        <span className="home-competitions-loading-spinner" aria-hidden />
+        <span className="sr-only">Loading challenge</span>
+      </div>
+    );
   }
 
   if (!competition) {
@@ -93,22 +108,20 @@ export function QuestionPage() {
       <Card>
         <div className="checkout-flow-eyebrow">Connoisseur challenge</div>
         <h2 className="checkout-flow-title">What watch is this?</h2>
-        <p className="checkout-flow-question-subtitle">
-          Win the {watchName}. Select your answer before the timer ends.
-        </p>
         <p className="checkout-flow-timer">Time remaining: {secondsLeft}s</p>
 
-        <div className="checkout-flow-question-image-wrap">
+        <div className="checkout-flow-question-image-wrap" aria-live="polite">
           <img
-            src={resolveMediaUrl(competition.watch.images[0]?.url)}
-            alt={watchName}
+            key={`${questionRound}-${activeQuestion.id}`}
+            src={activeQuestion.imageSrc}
+            alt={activeQuestion.alt}
             className="checkout-flow-question-image"
           />
           <span className="checkout-flow-question-watermark">Challenge</span>
         </div>
 
-        <div className="checkout-flow-question-options">
-          {CHECKOUT_QUESTION_OPTIONS.map((option) => {
+        <div className="checkout-flow-question-options" key={questionRound}>
+          {rotateOptions(CHECKOUT_QUESTION_OPTIONS, questionRound).map((option) => {
             const checked = option === selectedAnswer;
             return (
               <label
@@ -131,7 +144,7 @@ export function QuestionPage() {
           type="button"
           className="checkout-flow-button"
           disabled={!selectedAnswer}
-          onClick={() => goToCheckout(false)}
+          onClick={() => goToCheckout()}
         >
           Continue to checkout
         </button>
