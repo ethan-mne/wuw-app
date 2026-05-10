@@ -12,5 +12,4 @@ dist
 !.env.example
 !.env.exemple
 .cursor
-terminals
 **/.DS_Store

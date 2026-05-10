@@ -6,4 +6,3 @@ services:
     name: wuw-backend
     runtime: docker
     dockerfilePath: ./Dockerfile
-    dockerContext: .
