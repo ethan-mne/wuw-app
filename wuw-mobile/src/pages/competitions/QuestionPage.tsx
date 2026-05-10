@@ -107,7 +107,7 @@ export function QuestionPage() {
     <section className="checkout-flow-page">
       <Card>
         <div className="checkout-flow-eyebrow">Connoisseur challenge</div>
-        <h2 className="checkout-flow-title">What watch is this?</h2>
+        <h2 className="checkout-flow-title">{activeQuestion.prompt}</h2>
         <p className="checkout-flow-timer">Time remaining: {secondsLeft}s</p>
 
         <div className="checkout-flow-question-image-wrap" aria-live="polite">
