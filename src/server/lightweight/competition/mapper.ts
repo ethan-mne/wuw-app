@@ -1,3 +1,4 @@
+import type { CompetitionStatus as CompetitionStatusType } from '@prisma/client';
 import { CompetitionStatus } from '@/lib/prisma-enums';
 
 type CompetitionWithWatch = {
@@ -10,7 +11,7 @@ type CompetitionWithWatch = {
   cash_alternative?: number | null;
   max_winners?: number;
   end_date: Date;
-  status: CompetitionStatus;
+  status: CompetitionStatusType;
   Watches: {
     id: string;
     brand: string;
@@ -57,7 +58,7 @@ export type MobileCompetitionDto = {
 };
 
 function mapStatus(
-  status: CompetitionStatus,
+  status: CompetitionStatusType,
   remainingTickets: number,
 ): MobileCompetitionDto['status'] {
   if (status === CompetitionStatus.COMPLETED || remainingTickets <= 0) {

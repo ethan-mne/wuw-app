@@ -7,12 +7,6 @@
   "functions": {
     "src/app/api/**": {
       "maxDuration": 60
-    },
-    "src/app/[locale]/**": {
-      "maxDuration": 15
-    },
-    "src/app/sitemap.ts": {
-      "maxDuration": 15
     }
   }
 }

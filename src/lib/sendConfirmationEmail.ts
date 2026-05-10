@@ -1,9 +1,9 @@
-'use server';
 import { resend } from '@/lib/resend';
 import { ConfirmationEmail } from '@/components/emails/confirmation-email';
 import { GiftTicketEmail } from '@/components/emails/gift-ticket-email';
 import type { CompetitionInterface } from './interfaces';
-import { api } from '@/trpc/server';
+import { getReferralCouponCodeByEmail } from '@/server/referral-queries';
+import { getTicketsByOrderId } from '@/server/ticket-queries';
 import type { gift, order_paymentMethod } from '@prisma/client';
 
 export async function sendConfirmationEmail({
@@ -28,8 +28,8 @@ export async function sendConfirmationEmail({
   try {
     // get ticket list based on order id
     const [user_voucher, tickets] = await Promise.all([
-      api.Referal.getCouponByEmail.query(identifier),
-      api.Tickets.getTicketsByOrderId.query(order_id),
+      getReferralCouponCodeByEmail(identifier),
+      getTicketsByOrderId(order_id),
     ]);
     if (tickets.length > 0) {
       console.log('sending confirtmation email');

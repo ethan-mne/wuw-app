@@ -19,7 +19,6 @@ export const order_paymentMethod = {
   AUREAVIA: 'AUREAVIA',
   WORLDCARD: 'WORLDCARD',
   VOUCH_LAB: 'VOUCH_LAB',
-  TWELVE: 'TWELVE',
 } as const satisfies Record<PrismaOrderPaymentMethod, PrismaOrderPaymentMethod>;
 
 export const order_status = {

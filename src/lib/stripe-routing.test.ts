@@ -84,9 +84,9 @@ describe('stripe account payment method mapping', () => {
     );
   });
 
-  it('maps TWELVE to TWELVE', () => {
+  it('maps TWELVE Stripe account to STRIPE payment method', () => {
     expect(getPaymentMethodForStripeAccount('TWELVE')).toBe(
-      order_paymentMethod.TWELVE,
+      order_paymentMethod.STRIPE,
     );
   });
 });

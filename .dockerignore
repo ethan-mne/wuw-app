@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.gitignore
+wuw-mobile
+coverage
+dist
+.turbo
+*.log
+.env
+.env.*
+!.env.example
+!.env.exemple
+.cursor
+terminals
+**/.DS_Store

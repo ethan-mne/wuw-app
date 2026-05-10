@@ -1,14 +1,12 @@
-'use server';
 import { resend } from '@/lib/resend';
 import { WinnersEmail } from '@/components/emails/winners-email';
-import { api } from '@/trpc/server';
+import { getOrderData } from '@/server/order-details';
 import { CompetitionStatus } from '@/lib/prisma-enums';
 import lookup from 'country-code-lookup';
 import { db as prisma } from '@/server/db';
 
 export async function sendWinnerEmail({ order_id }: { order_id: string }) {
-  const { order: orderDetails, comps } =
-    await api.Order.getOrderDetails.query(order_id);
+  const { order: orderDetails, comps } = await getOrderData(order_id);
   if (!orderDetails || !comps) {
     throw new Error('Invalid order details');
   }

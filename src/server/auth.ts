@@ -69,10 +69,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   pages: {
-    signIn: '/login',
-    verifyRequest: '/',
-    signOut: '/login',
-    error: '/login',
+    signIn: '/api/auth/signin',
   },
   callbacks: {
     async signIn({ user, account, profile }) {

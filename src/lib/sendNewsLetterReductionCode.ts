@@ -1,8 +1,6 @@
-'use server';
 import { resend } from '@/lib/resend';
 import { NewsLetterCoupon } from '@/components/emails/newsletter-coupon';
-import { api } from '@/trpc/server';
-import { TRPCError } from '@trpc/server';
+import { db } from '@/server/db';
 
 export async function sendNewsLetterReductionCode({
   identifier,
@@ -10,7 +8,9 @@ export async function sendNewsLetterReductionCode({
   identifier: string;
 }) {
   try {
-    const checkEmail = await api.Users.checkEmailExists.query(identifier);
+    const checkEmail = await db.user.findUnique({
+      where: { email: identifier },
+    });
     if (!checkEmail) {
       return { success: false, checkEmail };
     }
@@ -23,10 +23,6 @@ export async function sendNewsLetterReductionCode({
     return { success: true, data, checkEmail };
   } catch (error) {
     console.log('failed');
-    throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'Internal server error',
-      cause: error,
-    });
+    throw new Error('Internal server error', { cause: error });
   }
 }

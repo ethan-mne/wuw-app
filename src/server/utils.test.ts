@@ -62,7 +62,7 @@ describe('getBaseUrl', () => {
   });
 
   it('returns empty string when window is defined', () => {
-    // jsdom provides window by default
+    vi.stubGlobal('window', {} as Window & typeof globalThis);
     expect(getBaseUrl()).toBe('');
   });
 

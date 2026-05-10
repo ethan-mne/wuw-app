@@ -1,6 +1,8 @@
-import { redirect } from 'next/navigation';
-
-// This page only renders when the app is built statically (output: 'export')
 export default function RootPage() {
-  redirect('/en');
+  return (
+    <main style={{ fontFamily: 'system-ui', padding: '2rem' }}>
+      <h1>WINUWATCH API</h1>
+      <p>This deployment exposes HTTP APIs and webhooks only.</p>
+    </main>
+  );
 }

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { env } from '@/env';
 import { db } from '@/server/db';
-import { getPaypalAccessToken } from '@/app/[locale]/competitions/[id]/actions';
+import { getPaypalAccessToken } from '@/server/payments/paypal';
 import { HandelConfirmedORder } from '../lib';
 import { isPaymentMethodEnabled } from '@/lib/payment-methods';
 

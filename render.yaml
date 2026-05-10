@@ -1,0 +1,9 @@
+# Render Blueprint: connect your repo, then add all variables from src/env.js in the dashboard
+# (or via dashboard Environment → Environment Groups). Set NEXTAUTH_URL and NEXT_PUBLIC_* URLs
+# to your production service URL.
+services:
+  - type: web
+    name: wuw-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .

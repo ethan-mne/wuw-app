@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Winuwatch</string>
-    <string name="title_activity_main">Winuwatch</string>
-    <string name="package_name">com.winuwatch.wuwapp</string>
-    <string name="custom_url_scheme">com.winuwatch.wuwapp</string>
-</resources>

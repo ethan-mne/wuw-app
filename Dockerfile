@@ -1,9 +1,7 @@
 FROM node:18-alpine AS base
 
-# Install pnpm
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+# Pin pnpm 9.x (matches lockfile v9). Avoid Corepack + pnpm 11 on Node 18 (ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING).
+RUN npm install -g pnpm@9.15.9
 
 FROM base AS deps
 WORKDIR /app
@@ -16,6 +14,8 @@ RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
+
+ENV SKIP_ENV_VALIDATION=1
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
@@ -39,7 +39,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-# Fix the ENV format warnings
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
@@ -47,4 +46,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["pnpm", "start"]
+CMD ["npm", "run", "start"]

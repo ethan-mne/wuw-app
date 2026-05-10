@@ -1,13 +1,10 @@
-import createNextIntlPlugin from 'next-intl/plugin';
 import { withSentryConfig } from '@sentry/nextjs';
-import createMDX from '@next/mdx'
 
 /**
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
  * for Docker builds.
  */
 await import('./src/env.js');
-const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const isDev = process.env.NODE_ENV === 'development';
 
 const cspHeader = [
@@ -28,28 +25,8 @@ const cspHeader = [
 const config = {
   experimental: {
     optimizePackageImports: [
-      '@mui/material',
-      '@mui/icons-material',
-      'react-bootstrap',
-      'firebase',
-      'firebase/app',
-      'firebase/auth',
-      'firebase/storage',
       '@aws-sdk/client-s3',
-      'lucide-react',
-      '@radix-ui/react-accordion',
-      '@radix-ui/react-avatar',
-      '@radix-ui/react-checkbox',
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-dropdown-menu',
-      '@radix-ui/react-label',
-      '@radix-ui/react-popover',
-      '@radix-ui/react-radio-group',
-      '@radix-ui/react-select',
-      '@radix-ui/react-separator',
-      '@radix-ui/react-slot',
       'date-fns',
-      'posthog-js',
       '@react-email/components',
     ],
   },
@@ -65,14 +42,13 @@ const config = {
       },
       {
         hostname: 'winuwatch.s3.eu-west-3.amazonaws.com',
-        protocol: 'https'
+        protocol: 'https',
       },
       {
         hostname: 'd9ylgh2z4lcdz.cloudfront.net',
-        protocol: 'https'
-      }
+        protocol: 'https',
+      },
     ],
-    // unoptimized : true
   },
   async headers() {
     const securityHeaders = isDev
@@ -153,7 +129,6 @@ const config = {
       },
     ];
   },
-  pageExtensions: ['js', 'jsx', 'mdx', 'ts', 'tsx'],
 };
 
 const isProd = process.env.VERCEL_ENV === 'production';
@@ -175,16 +150,4 @@ const sentryConfig = {
   disableSourceMapUpload: !isProd,
 };
 
-const withMDX = createMDX({
-  options: {
-    remarkPlugins: [],
-    rehypePlugins: [],
-  },
-})
-
-const nextConfigWithMDX = withMDX(config)
-
-export default withSentryConfig(
-  withNextIntl(nextConfigWithMDX),
-  sentryConfig,
-);
+export default withSentryConfig(config, sentryConfig);

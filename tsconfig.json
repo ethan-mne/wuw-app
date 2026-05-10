@@ -39,5 +39,11 @@
     ".next/types/**/*.ts",
     "next.config.js"
   ],
-  "exclude": ["node_modules", "playwright-report", "coverage", ".next"]
+  "exclude": [
+    "node_modules",
+    "playwright-report",
+    "coverage",
+    ".next",
+    "wuw-mobile"
+  ]
 }

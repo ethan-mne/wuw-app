@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { sendOTPmail } from '@/app/[locale]/(auth)/login/actions';
+import { sendOTPmail } from '@/server/auth/send-otp-mail';
 import { db } from '@/server/db';
 
 export const sendOtpSchema = z.object({

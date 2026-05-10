@@ -111,6 +111,6 @@ export function getPaymentMethodForStripeAccount(
     case 'SECONDARY':
       return order_paymentMethod.VOUCH_LAB;
     case 'TWELVE':
-      return order_paymentMethod.TWELVE;
+      return order_paymentMethod.STRIPE;
   }
 }
