@@ -6,6 +6,8 @@ import {
   updateMobileProfile,
 } from '@/server/mobile/me.service';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const user = await getMobileProfile();

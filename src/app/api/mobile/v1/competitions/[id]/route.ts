@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getMobileCompetitionById } from '@/server/mobile/competitions.service';
 import { MobileHttpError } from '@/server/mobile/http';
 
+export const dynamic = 'force-dynamic';
+
 type RouteContext = {
   params: {
     id: string;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { Card } from '../../components/ui';
+import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { Competition } from '../../types';
@@ -99,7 +100,7 @@ export function QuestionPage() {
 
         <div className="checkout-flow-question-image-wrap">
           <img
-            src={competition.watch.images[0]?.url ?? ''}
+            src={resolveMediaUrl(competition.watch.images[0]?.url)}
             alt={watchName}
             className="checkout-flow-question-image"
           />

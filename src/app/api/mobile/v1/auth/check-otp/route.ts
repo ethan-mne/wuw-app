@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { checkOtpSchema, isMobileOtpValid } from '@/server/mobile/otp.service';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   const json = (await request.json()) as unknown;
   const parsed = checkOtpSchema.safeParse(json);

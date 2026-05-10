@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { Card } from '../../components/ui';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
+import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { Competition } from '../../types';
@@ -142,6 +143,7 @@ export function CompetitionDetailPage() {
       ? competition.watch.images
       : [{ url: '', alt: watchName || 'Competition watch' }];
   const selectedImage = images[selectedImageIndex] ?? images[0];
+  const selectedImageSrc = resolveMediaUrl(selectedImage?.url);
   const countdown = getCountdownParts(competition.endDate, nowMs);
   const ticketOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   const vipPackSizes = [15, 20, 25, 50];
@@ -159,63 +161,68 @@ export function CompetitionDetailPage() {
 
   return (
     <section className="competition-detail-page">
-      <div className="competition-detail-countdown" role="timer" aria-live="off">
-        <div>
-          <strong>{countdown.day}</strong>
-          <span>DAY</span>
+      <div className="competition-detail-countdown-banner">
+        <div className="competition-detail-countdown" role="timer" aria-live="off">
+          <div>
+            <strong>{countdown.day}</strong>
+            <span>DAY</span>
+          </div>
+          <div>
+            <strong>{countdown.hour}</strong>
+            <span>HOUR</span>
+          </div>
+          <div>
+            <strong>{countdown.min}</strong>
+            <span>MIN</span>
+          </div>
+          <div>
+            <strong>{countdown.sec}</strong>
+            <span>SEC</span>
+          </div>
         </div>
-        <div>
-          <strong>{countdown.hour}</strong>
-          <span>HOUR</span>
-        </div>
-        <div>
-          <strong>{countdown.min}</strong>
-          <span>MIN</span>
-        </div>
-        <div>
-          <strong>{countdown.sec}</strong>
-          <span>SEC</span>
-        </div>
+        <p className="competition-detail-countdown-note">
+          or until all tickets are sold out. But never after the draw date
+        </p>
       </div>
-      <p className="competition-detail-countdown-note">
-        or until all tickets are sold out. But never after the draw date
-      </p>
 
       <div className="competition-detail-steps" aria-hidden>
-        <div className="active">
-          1. <span>Select your ticket</span>
-          <i />
+        <div className="competition-detail-steps-labels">
+          <div className="active">
+            1. <span>Select your ticket</span>
+          </div>
+          <div>2.</div>
+          <div>3.</div>
         </div>
-        <div>
-          2.
-          <i />
-        </div>
-        <div>
-          3.
-          <i />
+        <div className="competition-detail-steps-track">
+          <span className="active" />
+          <span />
+          <span />
         </div>
       </div>
 
       <div className="competition-detail-gallery">
-        {selectedImage?.url ? (
-          <img src={selectedImage.url} alt={selectedImage.alt || watchName} className="competition-detail-main-image" />
+        {selectedImageSrc ? (
+          <img src={selectedImageSrc} alt={selectedImage.alt || watchName} className="competition-detail-main-image" />
         ) : (
           <div className="competition-detail-main-image competition-detail-main-image--placeholder">
             {competition.watch.model}
           </div>
         )}
         <div className="competition-detail-thumbs" role="list">
-          {images.slice(0, 4).map((image, index) => (
-            <button
-              key={`${image.url}-${index}`}
-              type="button"
-              className={index === selectedImageIndex ? 'active' : ''}
-              onClick={() => setSelectedImageIndex(index)}
-              aria-label={`View image ${index + 1}`}
-            >
-              {image.url ? <img src={image.url} alt={image.alt || watchName} /> : <span>{index + 1}</span>}
-            </button>
-          ))}
+          {images.slice(0, 4).map((image, index) => {
+            const thumbSrc = resolveMediaUrl(image.url);
+            return (
+              <button
+                key={`${image.url || 'img'}-${index}`}
+                type="button"
+                className={index === selectedImageIndex ? 'active' : ''}
+                onClick={() => setSelectedImageIndex(index)}
+                aria-label={`View image ${index + 1}`}
+              >
+                {thumbSrc ? <img src={thumbSrc} alt={image.alt || watchName} /> : <span>{index + 1}</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
 

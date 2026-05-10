@@ -281,11 +281,11 @@ button {
 
 .bottom-nav-link.active,
 .segment.active {
-  background: #0f6b42;
+  background: #114f33;
   color: #ffffff;
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.2),
-    0 0.25rem 0.85rem rgba(15, 107, 66, 0.35);
+    0 0.25rem 0.85rem rgba(17, 79, 51, 0.35);
 }
 
 .segmented-nav {
@@ -702,102 +702,143 @@ button {
   margin: 0 -0.75rem;
 }
 
-.competition-detail-countdown {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.55rem;
-  align-items: start;
+.competition-detail-countdown-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
   background: #121316;
   color: #ffffff;
-  padding: 0.7rem 1rem 0.4rem;
+  padding: 1.1rem 1.25rem 1.05rem;
+}
+
+.competition-detail-countdown {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  margin: 0;
+  padding: 0;
 }
 
 .competition-detail-countdown > div {
-  position: relative;
   display: grid;
   justify-items: center;
+  gap: 0.2rem;
+  min-width: 3.1rem;
+  padding: 0 0.85rem;
 }
 
-.competition-detail-countdown > div:not(:first-child)::before {
-  content: "";
-  position: absolute;
-  left: -0.28rem;
-  top: 0.18rem;
-  width: 1px;
-  height: 1.4rem;
-  background: rgba(255, 255, 255, 0.45);
+.competition-detail-countdown > div:not(:first-child) {
+  border-left: 1px solid rgba(255, 255, 255, 0.38);
+}
+
+.competition-detail-countdown > div:first-child {
+  padding-left: 0;
+}
+
+.competition-detail-countdown > div:last-child {
+  padding-right: 0;
 }
 
 .competition-detail-countdown strong {
-  font-size: 1.5rem;
-  font-weight: 900;
+  font-size: clamp(1.05rem, 3.4vw, 1.2rem);
+  font-weight: 800;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .competition-detail-countdown span {
-  font-size: 0.58rem;
+  font-size: 0.52rem;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .competition-detail-countdown-note {
   margin: 0;
-  background: #121316;
-  color: #ffffff;
-  font-size: 0.64rem;
+  max-width: 22rem;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.62rem;
   font-style: italic;
-  font-weight: 800;
-  line-height: 1.35;
-  padding: 0 1rem 0.55rem;
+  font-weight: 700;
+  line-height: 1.45;
+  padding: 0 0.5rem;
+  text-align: center;
+  text-wrap: balance;
 }
 
 .competition-detail-steps {
   display: grid;
+  gap: 0.65rem;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  padding: 1rem 1.25rem 1.15rem;
+}
+
+.competition-detail-steps-labels {
+  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: end;
-  border-top: 1px solid #d1d5db;
-  border-bottom: 1px solid #d1d5db;
-  background: #f3f4f6;
-  padding: 0.6rem 0.85rem 0.3rem;
+  align-items: start;
+  justify-items: center;
+  text-align: center;
+  column-gap: 0.35rem;
 }
 
-.competition-detail-steps > div {
-  position: relative;
-  color: #6b7280;
-  font-size: 0.76rem;
-  font-weight: 900;
-  padding-bottom: 0.5rem;
+.competition-detail-steps-labels > div {
+  width: 100%;
+  max-width: 11rem;
+  margin: 0 auto;
+  color: #9ca3af;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
-.competition-detail-steps > div.active {
+.competition-detail-steps-labels > div.active {
   color: #111827;
+  font-weight: 700;
 }
 
-.competition-detail-steps > div span {
-  font-size: 0.92rem;
-  font-weight: 900;
-  letter-spacing: -0.04em;
+.competition-detail-steps-labels > div span {
+  font: inherit;
+  font-weight: inherit;
 }
 
-.competition-detail-steps > div i {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: #bfc4cc;
+.competition-detail-steps-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-height: 7px;
+  align-items: center;
 }
 
-.competition-detail-steps > div i::after {
+.competition-detail-steps-track::before {
   content: "";
   position: absolute;
-  left: 50%;
-  top: -3px;
-  transform: translateX(-50%);
-  width: 6px;
-  height: 6px;
+  left: 6%;
+  right: 6%;
+  top: 50%;
+  height: 1px;
+  margin-top: -0.5px;
+  background: #e5e7eb;
+  pointer-events: none;
+}
+
+.competition-detail-steps-track > span {
+  position: relative;
+  justify-self: center;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
-  background: #6b7280;
+  background: #9ca3af;
+  z-index: 1;
+}
+
+.competition-detail-steps-track > span.active {
+  background: #111827;
 }
 
 .competition-detail-gallery {
@@ -830,18 +871,26 @@ button {
 }
 
 .competition-detail-thumbs button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   padding: 0;
   background: #e5e7eb;
-  min-height: 4.9rem;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
   overflow: hidden;
 }
 
 .competition-detail-thumbs button.active {
-  box-shadow: inset 0 0 0 2px #0f6b42;
+  box-shadow: inset 0 0 0 2px #114f33;
 }
 
 .competition-detail-thumbs img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -852,7 +901,7 @@ button {
   display: grid;
   gap: 0.9rem;
   background: #f3f4f6;
-  padding: 0.9rem 0.85rem 1.1rem;
+  padding: 0.9rem 0.85rem 1.35rem;
 }
 
 .competition-detail-eyebrow {
@@ -942,8 +991,13 @@ button {
   color: #ffffff;
 }
 
+.competition-detail-vip {
+  margin-top: 1.1rem;
+  padding: 0.15rem 0 0.35rem;
+}
+
 .competition-detail-vip h3 {
-  margin: 0.5rem 0 0.55rem;
+  margin: 0 0 0.75rem;
   color: #6b7280;
   font-size: 0.84rem;
   font-weight: 900;
@@ -952,23 +1006,23 @@ button {
 .competition-detail-vip-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
+  gap: 0.7rem;
 }
 
 .competition-detail-vip-grid button {
   display: grid;
   justify-items: center;
-  gap: 0.15rem;
+  gap: 0.28rem;
   border: 1px solid #d1d5db;
   border-radius: 0.22rem;
   background: #f8fafc;
   color: #111827;
-  min-height: 4.25rem;
-  padding: 0.5rem 0.35rem;
+  min-height: 4.65rem;
+  padding: 0.8rem 0.55rem;
 }
 
 .competition-detail-vip-grid button.active {
-  border-color: #0f6b42;
+  border-color: #114f33;
   background: #ecfdf5;
 }
 
@@ -989,7 +1043,11 @@ button {
   color: #64748b;
   font-size: 0.62rem;
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.2;
+}
+
+.competition-detail-content > .checkout-flow-button {
+  margin-top: 1rem;
 }
 
 .site-header {
@@ -2195,7 +2253,7 @@ button {
   width: 100%;
   min-height: 2.9rem;
   border-radius: 0.25rem;
-  background: #0f6b42;
+  background: #114f33;
   color: #ffffff;
   font-size: 1.05rem;
   font-weight: 700;

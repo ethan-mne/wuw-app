@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { MobileHttpError } from '@/server/mobile/http';
 import { listMobileOrderHistory } from '@/server/mobile/orders.service';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const orders = await listMobileOrderHistory();

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import type { Competition } from '../../types';
 
@@ -122,7 +123,7 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
               }
             >
               <ResponsiveCompetitionImage
-                src={competition.watch.images[0]?.url}
+                src={resolveMediaUrl(competition.watch.images[0]?.url)}
                 alt={competition.watch.images[0]?.alt || competition.name}
               />
               {isClosed ? (

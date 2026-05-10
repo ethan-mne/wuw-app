@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
+import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { defaultLocale } from '../../routes/locales';
 import type { Competition, Winner } from '../../types';
 
@@ -46,7 +47,7 @@ export function MobileCommunityWon({
         <div className="mobile-community-won-strip" role="list">
           {past.length > 0
             ? past.map((c) => {
-                const img = c.watch.images[0]?.url ?? '';
+                const img = resolveMediaUrl(c.watch.images[0]?.url);
                 const title = `${c.watch.brand} ${c.watch.model}`.trim();
                 return (
                   <article key={c.id} className="mobile-community-won-card" role="listitem">
