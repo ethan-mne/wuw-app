@@ -43,8 +43,7 @@ button {
 }
 
 .site-header a:visited,
-.mobile-footer a:visited,
-.bottom-nav a:visited {
+.mobile-footer a:visited {
   color: inherit;
 }
 
@@ -282,9 +281,11 @@ button {
 
 .bottom-nav-link.active,
 .segment.active {
-  background: rgba(255, 255, 255, 0.12);
+  background: #0f6b42;
   color: #ffffff;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 0.25rem 0.85rem rgba(15, 107, 66, 0.35);
 }
 
 .segmented-nav {
