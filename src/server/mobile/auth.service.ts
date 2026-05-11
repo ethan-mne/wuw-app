@@ -7,7 +7,7 @@ import { verifyMobileSessionToken } from '@/server/mobile/mobile-session-token';
 type SessionRequirement = 'userId' | 'email';
 
 export async function requireMobileSession(requirement: SessionRequirement) {
-  const headerList = await headers();
+  const headerList = headers();
   const authHeader = headerList.get('authorization');
 
   if (authHeader?.toLowerCase().startsWith('bearer ')) {
