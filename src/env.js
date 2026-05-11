@@ -1,6 +1,7 @@
 import { createEnv } from '@t3-oss/env-nextjs';
 import { z } from 'zod';
 
+/** @param {string | undefined} raw */
 function skipEnvValidationEnabled(raw) {
   if (raw == null || raw === '') return false;
   return ['1', 'true', 'yes'].includes(String(raw).toLowerCase());
