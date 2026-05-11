@@ -1,6 +1,11 @@
 import { createEnv } from '@t3-oss/env-nextjs';
 import { z } from 'zod';
 
+function skipEnvValidationEnabled(raw) {
+  if (raw == null || raw === '') return false;
+  return ['1', 'true', 'yes'].includes(String(raw).toLowerCase());
+}
+
 export const env = createEnv({
   /**
    * Specify your server-side environment variables schema here. This way you can ensure the app
@@ -119,8 +124,10 @@ export const env = createEnv({
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
    * useful for Docker builds.
+   *
+   * Set to `1`, `true`, or `yes` to skip (use `0` / unset for strict validation in full-web deploys).
    */
-  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
+  skipValidation: skipEnvValidationEnabled(process.env.SKIP_ENV_VALIDATION),
   /**
    * Makes it so that empty strings are treated as undefined. `SOME_VAR: z.string()` and
    * `SOME_VAR=''` will throw an error.

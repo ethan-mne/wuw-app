@@ -32,6 +32,9 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+# Matches builder: full schema is web+payments; slim API stacks omit OAuth/PayPal/Posthog.
+# Omit or set SKIP_ENV_VALIDATION=0 plus all secrets when running the complete app in Docker.
+ENV SKIP_ENV_VALIDATION=1
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
