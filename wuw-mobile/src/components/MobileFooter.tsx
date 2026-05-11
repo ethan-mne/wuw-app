@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 
+import { CONTACT_INFO, contactTelHref, contactWhatsAppUrl } from '../data/contactInfo';
 import { defaultLocale, isLocale, withLocale } from '../routes/locales';
 import type { Locale } from '../types';
 
@@ -58,21 +59,21 @@ export function MobileFooter() {
           <strong>Secure payment</strong>
           <span>Visa · Mastercard · Amex · Apple Pay</span>
         </div>
-        <a href="https://wa.me/447488863429" rel="noreferrer" target="_blank">
+        <a href={contactWhatsAppUrl()} rel="noreferrer" target="_blank">
           <strong>Need assistance?</strong>
           <span>WhatsApp support</span>
         </a>
-        <a href="https://www.instagram.com/winuwatch/" rel="noreferrer" target="_blank">
+        <a href={CONTACT_INFO.instagramUrl} rel="noreferrer" target="_blank">
           <strong>Instagram</strong>
-          <span>@winuwatch</span>
+          <span>{CONTACT_INFO.instagramHandle}</span>
         </a>
-        <a href="tel:+447488863429">
+        <a href={contactTelHref()}>
           <strong>Phone</strong>
-          <span>+44 748 886 3429</span>
+          <span>{CONTACT_INFO.phoneDisplay}</span>
         </a>
-        <a className="footer-email" href="mailto:contact@winuwatch.uk">
+        <a className="footer-email" href={`mailto:${CONTACT_INFO.email}`}>
           <strong>Email</strong>
-          <span>contact@winuwatch.uk</span>
+          <span>{CONTACT_INFO.email}</span>
         </a>
       </section>
 

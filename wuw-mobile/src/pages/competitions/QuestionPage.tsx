@@ -6,11 +6,7 @@ import { CHALLENGE_QUESTIONS, CHALLENGE_QUESTION_COUNT } from '../../data/challe
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { Competition } from '../../types';
-import {
-  CHECKOUT_FLOW_DEFAULTS,
-  CHECKOUT_QUESTION_OPTIONS,
-  type CheckoutFlowState,
-} from './checkoutFlow';
+import { CHECKOUT_FLOW_DEFAULTS, type CheckoutFlowState } from './checkoutFlow';
 
 const QUESTION_TIME_LIMIT_SEC = 40;
 
@@ -32,6 +28,7 @@ export function QuestionPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(flowState.answer);
   const [secondsLeft, setSecondsLeft] = useState(QUESTION_TIME_LIMIT_SEC);
   const [questionRound, setQuestionRound] = useState(0);
+  const [challengeImageFailed, setChallengeImageFailed] = useState(false);
 
   useEffect(() => {
     void mobileDataService
@@ -48,7 +45,7 @@ export function QuestionPage() {
 
   const goToCheckout = () => {
     if (!params.id) {
-      navigate(withLocale(locale, 'competitions'));
+      navigate(withLocale(locale, ''));
       return;
     }
     navigate(withLocale(locale, `competitions/${params.id}/draft-order`), {
@@ -79,6 +76,13 @@ export function QuestionPage() {
     [questionRound],
   );
 
+  /** Only one horizontal half of the photo is shown; alternates each round. */
+  const challengeImageHalf = questionRound % 2 === 0 ? 'top' : 'bottom';
+
+  useEffect(() => {
+    setChallengeImageFailed(false);
+  }, [activeQuestion.id, activeQuestion.imageSrc]);
+
   if (loading) {
     return (
       <div className="home-competitions-loading" role="status" aria-live="polite">
@@ -95,9 +99,9 @@ export function QuestionPage() {
         <button
           type="button"
           className="checkout-flow-button"
-          onClick={() => navigate(withLocale(locale, 'competitions'))}
+          onClick={() => navigate(withLocale(locale, ''))}
         >
-          Back to competitions
+          Back to home
         </button>
       </Card>
     );
@@ -110,18 +114,32 @@ export function QuestionPage() {
         <h2 className="checkout-flow-title">{activeQuestion.prompt}</h2>
         <p className="checkout-flow-timer">Time remaining: {secondsLeft}s</p>
 
-        <div className="checkout-flow-question-image-wrap" aria-live="polite">
-          <img
-            key={`${questionRound}-${activeQuestion.id}`}
-            src={activeQuestion.imageSrc}
-            alt={activeQuestion.alt}
-            className="checkout-flow-question-image"
-          />
+        <div
+          className="checkout-flow-question-image-wrap"
+          aria-live="polite"
+          role="img"
+          aria-label={activeQuestion.alt}
+        >
+          <div
+            className="checkout-flow-question-half-view"
+            key={`${questionRound}-${activeQuestion.id}-${challengeImageHalf}`}
+          >
+            {!challengeImageFailed ? (
+              <img
+                src={activeQuestion.imageSrc}
+                alt=""
+                aria-hidden={true}
+                className={`checkout-flow-question-half-img checkout-flow-question-half-img--${challengeImageHalf}`}
+                decoding="async"
+                onError={() => setChallengeImageFailed(true)}
+              />
+            ) : null}
+          </div>
           <span className="checkout-flow-question-watermark">Challenge</span>
         </div>
 
         <div className="checkout-flow-question-options" key={questionRound}>
-          {rotateOptions(CHECKOUT_QUESTION_OPTIONS, questionRound).map((option) => {
+          {rotateOptions(activeQuestion.options, questionRound).map((option) => {
             const checked = option === selectedAnswer;
             return (
               <label

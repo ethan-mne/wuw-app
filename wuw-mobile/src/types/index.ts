@@ -52,9 +52,14 @@ export interface Winner {
 export interface OrderSummary {
   id: string;
   competitionId: string;
+  /** From API when available */
+  competitionName?: string;
+  competitionImageUrl?: string | null;
   ticketQuantity: number;
   ticketPrice: number;
   couponCode?: string;
+  /** ISO 8601 order date from API */
+  orderedAt?: string;
 }
 
 export interface AccountSummary {
@@ -64,3 +69,32 @@ export interface AccountSummary {
   activeTickets: number;
   referralCode: string;
 }
+
+/** `GET /api/mobile/v1/referrals/usage` — coupon uses by others. */
+export interface ReferralUsageItem {
+  customerName: string;
+  usedAt: string;
+  competitionName: string;
+  wincoinsEarned: number;
+}
+
+/** Matches `GET/PUT /api/mobile/v1/me` profile fields. */
+export interface MobileUserProfile {
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  phone: string | null;
+  country: string | null;
+  zipCode: string | null;
+  address: string | null;
+  city: string | null;
+  image: string | null;
+  /** ISO date string when set */
+  emailVerified: string | null;
+}
+
+/** Router state from login after send-otp succeeds. */
+export type VerificationRouteState = {
+  email: string;
+  otpId: string;
+};

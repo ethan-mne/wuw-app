@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
+import { formatGbpCompact } from '../../lib/formatCurrency';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import type { Competition } from '../../types';
 
@@ -15,7 +16,14 @@ interface ResponsiveCompetitionImageProps {
 }
 
 function ResponsiveCompetitionImage({ src, alt }: ResponsiveCompetitionImageProps) {
-  if (!src) {
+  const [failed, setFailed] = useState(false);
+  const trimmed = src?.trim() ?? '';
+
+  useEffect(() => {
+    setFailed(false);
+  }, [trimmed]);
+
+  if (!trimmed || failed) {
     return (
       <div
         className="mobile-home-competition-media mobile-home-competition-media--fallback"
@@ -26,31 +34,15 @@ function ResponsiveCompetitionImage({ src, alt }: ResponsiveCompetitionImageProp
 
   return (
     <div className="mobile-home-competition-media">
-      <img src={src} alt={alt} loading="lazy" decoding="async" />
+      <img
+        src={trimmed}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
     </div>
   );
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-GB', {
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-    style: 'currency',
-  }).format(value);
-}
-
-function formatCurrencyCompact(value: number) {
-  if (Math.abs(value) >= 1000) {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP',
-      notation: 'compact',
-      maximumFractionDigits: 0,
-    })
-      .format(value)
-      .replace('K', 'k');
-  }
-  return formatCurrency(value);
 }
 
 type CountdownParts = {
@@ -118,7 +110,7 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
               className="mobile-home-competition-media-link"
               to={
                 isClosed
-                  ? withLocale(locale, 'competitions')
+                  ? withLocale(locale, '')
                   : withLocale(locale, `competitions/${competition.id}`)
               }
             >
@@ -165,11 +157,11 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
                   <dd>Max tickets</dd>
                 </div>
                 <div>
-                  <dt>{formatCurrencyCompact(competition.price)}</dt>
+                  <dt>{formatGbpCompact(competition.price)}</dt>
                   <dd>Watch Value</dd>
                 </div>
                 <div>
-                  <dt>{formatCurrencyCompact(competition.ticketPrice)}</dt>
+                  <dt>{formatGbpCompact(competition.ticketPrice)}</dt>
                   <dd>Entry Price</dd>
                 </div>
               </dl>
@@ -182,7 +174,7 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
                 }
                 to={
                   isClosed
-                    ? withLocale(locale, 'competitions')
+                    ? withLocale(locale, '')
                     : withLocale(locale, `competitions/${competition.id}`)
                 }
               >

@@ -4,6 +4,32 @@ import { requireMobileSession } from '@/server/mobile/auth.service';
 import { MobileHttpError } from '@/server/mobile/http';
 import type { MobileAccountSummary, MobileProfileUpdateInput } from '@/server/mobile/types';
 
+const mobileProfileSelect = {
+  firstName: true,
+  lastName: true,
+  email: true,
+  phone: true,
+  country: true,
+  zipCode: true,
+  address: true,
+  city: true,
+  image: true,
+  emailVerified: true,
+} as const;
+
+export type MobileProfileDto = {
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  phone: string | null;
+  country: string | null;
+  zipCode: string | null;
+  address: string | null;
+  city: string | null;
+  image: string | null;
+  emailVerified: Date | null;
+};
+
 export const mobileProfileUpdateSchema = z.object({
   firstname: z.string().min(1),
   lastname: z.string().min(1),
@@ -15,14 +41,19 @@ export const mobileProfileUpdateSchema = z.object({
   email: z.string().email(),
 });
 
-export async function getMobileProfile() {
+export async function getMobileProfile(): Promise<MobileProfileDto> {
   const { userId } = await requireMobileSession('userId');
-  return db.user.findUnique({
+  const user = await db.user.findUnique({
     where: { id: userId },
+    select: mobileProfileSelect,
   });
+  if (!user) {
+    throw new MobileHttpError('User not found', 404);
+  }
+  return user;
 }
 
-export async function updateMobileProfile(input: MobileProfileUpdateInput) {
+export async function updateMobileProfile(input: MobileProfileUpdateInput): Promise<MobileProfileDto> {
   const { userId } = await requireMobileSession('userId');
   return db.user.update({
     where: { id: userId },
@@ -36,6 +67,7 @@ export async function updateMobileProfile(input: MobileProfileUpdateInput) {
       city: input.city,
       country: input.country,
     },
+    select: mobileProfileSelect,
   });
 }
 

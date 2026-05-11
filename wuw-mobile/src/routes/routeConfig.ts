@@ -8,7 +8,6 @@ export const sourceRouteMap = [
   ['/{locale}', 'HomePage'],
   ['/{locale}/login', 'LoginPage'],
   ['/{locale}/verification', 'VerificationPage'],
-  ['/{locale}/competitions', 'CompetitionsPage'],
   ['/{locale}/competitions/:id', 'CompetitionDetailPage'],
   ['/{locale}/competitions/:id/question', 'QuestionPage'],
   ['/{locale}/competitions/:id/:orderId', 'CheckoutPage'],

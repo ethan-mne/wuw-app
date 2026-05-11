@@ -10,7 +10,6 @@ import { LoginPage } from '../pages/auth/LoginPage';
 import { VerificationPage } from '../pages/auth/VerificationPage';
 import { CheckoutPage } from '../pages/competitions/CheckoutPage';
 import { CompetitionDetailPage } from '../pages/competitions/CompetitionDetailPage';
-import { CompetitionsPage } from '../pages/competitions/CompetitionsPage';
 import { ConfirmationPage } from '../pages/competitions/ConfirmationPage';
 import { PaymentErrorPage } from '../pages/competitions/PaymentErrorPage';
 import { QuestionPage } from '../pages/competitions/QuestionPage';
@@ -29,7 +28,7 @@ export default function App() {
         <Route index element={<HomePage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="verification" element={<VerificationPage />} />
-        <Route path="competitions" element={<CompetitionsPage />} />
+        <Route path="competitions" element={<Navigate to=".." replace />} />
         <Route path="competitions/:id" element={<CompetitionDetailPage />} />
         <Route path="competitions/:id/question" element={<QuestionPage />} />
         <Route path="competitions/:id/:orderId" element={<CheckoutPage />} />

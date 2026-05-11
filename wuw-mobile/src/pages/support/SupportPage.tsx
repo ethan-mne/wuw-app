@@ -1,5 +1,6 @@
 import { Card, PageHeader } from '../../components/ui';
 import { supportPages } from '../../data/content';
+import { ContactUsBody } from './ContactUsBody';
 
 interface SupportPageProps {
   pageKey: (typeof supportPages)[number]['path'];
@@ -7,6 +8,10 @@ interface SupportPageProps {
 
 export function SupportPage({ pageKey }: SupportPageProps) {
   const page = supportPages.find((item) => item.path === pageKey);
+
+  if (pageKey === 'contact-us') {
+    return <ContactUsBody />;
+  }
 
   return (
     <section className="page-stack">

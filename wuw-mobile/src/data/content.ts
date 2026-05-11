@@ -17,7 +17,7 @@ export const supportPages = [
   {
     path: 'contact-us',
     title: 'Contact us',
-    summary: 'Support entry point for mobile users.',
+    summary: 'Instagram, WhatsApp, phone, email and postal address.',
   },
   {
     path: 'engagement',

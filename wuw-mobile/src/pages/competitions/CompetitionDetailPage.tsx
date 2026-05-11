@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Card } from '../../components/ui';
 import { MobileFooter } from '../../components/MobileFooter';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
+import { formatGbp, formatGbpCompact } from '../../lib/formatCurrency';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
@@ -37,24 +38,6 @@ function getCountdownParts(endDate: string, nowMs: number): CountdownParts {
     min: toTwoDigits(minutes),
     sec: toTwoDigits(seconds),
   };
-}
-
-function formatCurrencyCompact(value: number) {
-  if (Math.abs(value) >= 1000) {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP',
-      notation: 'compact',
-      maximumFractionDigits: 0,
-    })
-      .format(value)
-      .replace('K', 'k');
-  }
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 function getVipPackDiscount(size: number) {
@@ -109,14 +92,16 @@ export function CompetitionDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [mainImageFailed, setMainImageFailed] = useState(false);
+  const [failedThumbs, setFailedThumbs] = useState<Record<number, boolean>>({});
   const ticketPrice = competition?.ticketPrice ?? 0;
   const discountPercent = useMemo(() => getDiscountPercent(quantity), [quantity]);
   const discountedTicketPrice = useMemo(
     () => ticketPrice * (1 - discountPercent / 100),
     [ticketPrice, discountPercent],
   );
-  const totalPrice = useMemo(
-    () => (discountedTicketPrice * quantity).toFixed(2),
+  const totalAmount = useMemo(
+    () => discountedTicketPrice * quantity,
     [discountedTicketPrice, quantity],
   );
 
@@ -140,6 +125,14 @@ export function CompetitionDetailPage() {
     return () => window.clearInterval(intervalId);
   }, []);
 
+  useEffect(() => {
+    setMainImageFailed(false);
+  }, [selectedImageIndex, competition?.id]);
+
+  useEffect(() => {
+    setFailedThumbs({});
+  }, [competition?.id]);
+
   if (!competition && loading) {
     return (
       <div className="home-competitions-loading" role="status" aria-live="polite">
@@ -156,9 +149,9 @@ export function CompetitionDetailPage() {
         <button
           type="button"
           className="checkout-flow-button"
-          onClick={() => navigate(withLocale(locale, 'competitions'))}
+          onClick={() => navigate(withLocale(locale, ''))}
         >
-          Back to competitions
+          Back to home
         </button>
       </Card>
     );
@@ -231,8 +224,13 @@ export function CompetitionDetailPage() {
       </div>
 
       <div className="competition-detail-gallery">
-        {selectedImageSrc ? (
-          <img src={selectedImageSrc} alt={selectedImage.alt || watchName} className="competition-detail-main-image" />
+        {selectedImageSrc && !mainImageFailed ? (
+          <img
+            src={selectedImageSrc}
+            alt={selectedImage.alt || watchName}
+            className="competition-detail-main-image"
+            onError={() => setMainImageFailed(true)}
+          />
         ) : (
           <div className="competition-detail-main-image competition-detail-main-image--placeholder">
             {competition.watch.model}
@@ -241,6 +239,7 @@ export function CompetitionDetailPage() {
         <div className="competition-detail-thumbs" role="list">
           {images.slice(0, 4).map((image, index) => {
             const thumbSrc = resolveMediaUrl(image.url);
+            const thumbFailed = failedThumbs[index] ?? false;
             return (
               <button
                 key={`${image.url || 'img'}-${index}`}
@@ -249,7 +248,15 @@ export function CompetitionDetailPage() {
                 onClick={() => setSelectedImageIndex(index)}
                 aria-label={`View image ${index + 1}`}
               >
-                {thumbSrc ? <img src={thumbSrc} alt={image.alt || watchName} /> : <span>{index + 1}</span>}
+                {thumbSrc && !thumbFailed ? (
+                  <img
+                    src={thumbSrc}
+                    alt={image.alt || watchName}
+                    onError={() => setFailedThumbs((prev) => ({ ...prev, [index]: true }))}
+                  />
+                ) : (
+                  <span>{index + 1}</span>
+                )}
               </button>
             );
           })}
@@ -262,11 +269,11 @@ export function CompetitionDetailPage() {
 
         <div className="competition-detail-meta">
           <div>
-            <strong>{formatCurrencyCompact(competition.price)}</strong>
+            <strong>{formatGbpCompact(competition.price)}</strong>
             <span>Watch Value</span>
           </div>
           <div>
-            <strong>{formatCurrencyCompact(competition.ticketPrice)}</strong>
+            <strong>{formatGbpCompact(competition.ticketPrice)}</strong>
             <span>Entry Price</span>
           </div>
         </div>
@@ -311,7 +318,7 @@ export function CompetitionDetailPage() {
         </div>
 
         <button type="button" className="checkout-flow-button" onClick={onContinue}>
-          Continue · GBP {totalPrice}
+          Continue · {formatGbp(totalAmount)}
         </button>
 
         <div className="competition-detail-good-to-know" aria-labelledby="competition-good-to-know-title">

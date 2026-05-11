@@ -16,12 +16,24 @@ export type MobileWinnersResponse = {
   hasMore: boolean;
 };
 
+export type MobileReferralUsageItem = {
+  customerName: string;
+  usedAt: string;
+  competitionName: string;
+  wincoinsEarned: number;
+};
+
 export type MobileOrderHistoryItem = {
   id: string;
   competitionId: string;
+  /** Denormalized from Competition for mobile list UI */
+  competitionName: string;
+  competitionImageUrl: string | null;
   ticketQuantity: number;
   ticketPrice: number;
   couponCode?: string;
+  /** ISO 8601 — order confirmation / creation time */
+  orderedAt: string;
 };
 
 export type MobileAccountSummary = {

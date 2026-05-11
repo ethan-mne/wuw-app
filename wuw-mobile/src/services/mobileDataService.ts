@@ -1,5 +1,14 @@
 import { apiClient } from './apiClient';
-import type { AccountSummary, Competition, OrderSummary, Winner } from '../types';
+import { API_BASE_URL } from '../lib/config';
+import { mobileAuthHeaders, setMobileSessionToken } from '../lib/mobileSessionToken';
+import type {
+  AccountSummary,
+  Competition,
+  MobileUserProfile,
+  OrderSummary,
+  ReferralUsageItem,
+  Winner,
+} from '../types';
 
 type ApiDataResponse<T> = {
   data: T;
@@ -100,6 +109,228 @@ function normalizeWinnersResponse(payload: unknown): ListWinnersResponse {
   return { data: [], hasMore: false };
 }
 
+export type LoadAccountSummaryResult =
+  | { kind: 'ok'; data: AccountSummary }
+  | { kind: 'sign_in_required' }
+  | { kind: 'error' };
+
+async function loadAccountSummary(): Promise<LoadAccountSummaryResult> {
+  if (!API_BASE_URL) {
+    return { kind: 'error' };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/mobile/v1/me/summary`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...mobileAuthHeaders(),
+      },
+    });
+
+    if (response.status === 401) {
+      setMobileSessionToken(null);
+      return { kind: 'sign_in_required' };
+    }
+
+    if (!response.ok) {
+      return { kind: 'error' };
+    }
+
+    const json = (await response.json()) as ApiDataResponse<AccountSummary>;
+    if (!json?.data || typeof json.data !== 'object') {
+      return { kind: 'error' };
+    }
+
+    return { kind: 'ok', data: json.data };
+  } catch {
+    return { kind: 'error' };
+  }
+}
+
+export type LoadMobileProfileResult =
+  | { kind: 'ok'; data: MobileUserProfile }
+  | { kind: 'sign_in_required' }
+  | { kind: 'error' };
+
+export type UpdateMobileProfilePayload = {
+  firstname: string;
+  lastname: string;
+  country: string;
+  zip: string;
+  address: string;
+  city: string;
+  phone: string;
+  email: string;
+};
+
+export type UpdateMobileProfileResult =
+  | { kind: 'ok'; data: MobileUserProfile }
+  | { kind: 'sign_in_required' }
+  | { kind: 'invalid'; message: string }
+  | { kind: 'error' };
+
+function optStr(v: unknown): string | null {
+  if (v == null) {
+    return null;
+  }
+  return typeof v === 'string' ? v : String(v);
+}
+
+function normalizeEmailVerified(v: unknown): string | null {
+  if (v == null) {
+    return null;
+  }
+  if (typeof v === 'string') {
+    return v;
+  }
+  return String(v);
+}
+
+function normalizeMobileProfile(raw: unknown): MobileUserProfile | null {
+  if (typeof raw !== 'object' || raw === null) {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  if (typeof o.email !== 'string') {
+    return null;
+  }
+  return {
+    firstName: optStr(o.firstName),
+    lastName: optStr(o.lastName),
+    email: o.email,
+    phone: optStr(o.phone),
+    country: optStr(o.country),
+    zipCode: optStr(o.zipCode),
+    address: optStr(o.address),
+    city: optStr(o.city),
+    image: optStr(o.image),
+    emailVerified: normalizeEmailVerified(o.emailVerified),
+  };
+}
+
+async function loadMobileProfile(): Promise<LoadMobileProfileResult> {
+  if (!API_BASE_URL) {
+    return { kind: 'error' };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/mobile/v1/me`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...mobileAuthHeaders(),
+      },
+    });
+
+    if (response.status === 401) {
+      setMobileSessionToken(null);
+      return { kind: 'sign_in_required' };
+    }
+
+    if (!response.ok) {
+      return { kind: 'error' };
+    }
+
+    const json = (await response.json()) as ApiDataResponse<unknown>;
+    const parsed = normalizeMobileProfile(json.data);
+    if (!parsed) {
+      return { kind: 'error' };
+    }
+
+    return { kind: 'ok', data: parsed };
+  } catch {
+    return { kind: 'error' };
+  }
+}
+
+async function updateMobileProfile(
+  payload: UpdateMobileProfilePayload,
+): Promise<UpdateMobileProfileResult> {
+  if (!API_BASE_URL) {
+    return { kind: 'error' };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/mobile/v1/me`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...mobileAuthHeaders(),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.status === 401) {
+      setMobileSessionToken(null);
+      return { kind: 'sign_in_required' };
+    }
+
+    if (response.status === 400) {
+      let message = 'Could not save. Check your details.';
+      try {
+        const j = (await response.json()) as { error?: unknown };
+        if (typeof j.error === 'string' && j.error.trim()) {
+          message = j.error;
+        }
+      } catch {
+        /* use default */
+      }
+      return { kind: 'invalid', message };
+    }
+
+    if (!response.ok) {
+      return { kind: 'error' };
+    }
+
+    const json = (await response.json()) as ApiDataResponse<unknown>;
+    const parsed = normalizeMobileProfile(json.data);
+    if (!parsed) {
+      return { kind: 'error' };
+    }
+
+    return { kind: 'ok', data: parsed };
+  } catch {
+    return { kind: 'error' };
+  }
+}
+
+export type ListReferralUsagesResult =
+  | { kind: 'ok'; data: ReferralUsageItem[] }
+  | { kind: 'sign_in_required' }
+  | { kind: 'error' };
+
+async function listReferralUsages(): Promise<ListReferralUsagesResult> {
+  if (!API_BASE_URL) {
+    return { kind: 'error' };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/mobile/v1/referrals/usage`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...mobileAuthHeaders(),
+      },
+    });
+
+    if (response.status === 401) {
+      setMobileSessionToken(null);
+      return { kind: 'sign_in_required' };
+    }
+
+    if (!response.ok) {
+      return { kind: 'error' };
+    }
+
+    const json = (await response.json()) as ApiDataResponse<ReferralUsageItem[]>;
+    if (!Array.isArray(json.data)) {
+      return { kind: 'error' };
+    }
+
+    return { kind: 'ok', data: json.data };
+  } catch {
+    return { kind: 'error' };
+  }
+}
+
 function toCompetitionArray(payload: unknown): Competition[] | null {
   if (Array.isArray(payload)) {
     return payload as Competition[];
@@ -151,12 +382,10 @@ export const mobileDataService = {
     );
     return response.data;
   },
-  getAccountSummary: async (): Promise<AccountSummary> => {
-    const response = await apiClient<ApiDataResponse<AccountSummary>>(
-      '/api/mobile/v1/me/summary',
-    );
-    return response.data;
-  },
+  loadAccountSummary,
+  loadMobileProfile,
+  updateMobileProfile,
+  listReferralUsages,
   listOrderHistory: async (): Promise<OrderSummary[]> => {
     const response = await apiClient<ApiDataResponse<OrderSummary[]>>(
       '/api/mobile/v1/orders/history',

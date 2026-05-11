@@ -1,7 +1,10 @@
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { SafeImage } from '../../components/SafeImage';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
+import { formatGbp } from '../../lib/formatCurrency';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
-import { defaultLocale } from '../../routes/locales';
+import { defaultLocale, isLocale } from '../../routes/locales';
 import type { Competition, Winner } from '../../types';
 
 /** Matches `PastCompetitions` / `messages/en.json` (`competition.our_community`, `has_won`, `home.subtitle`). */
@@ -19,12 +22,24 @@ const COPY = {
   join: 'Join the next competition',
 };
 
-function formatGbp(value: number) {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-  }).format(value);
+function CommunityWonCardImage({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+  const trimmed = src.trim();
+  if (!trimmed || failed) {
+    return <div className="mobile-community-won-card-placeholder" aria-hidden />;
+  }
+  return (
+    <img
+      src={trimmed}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 export function MobileCommunityWon({
@@ -34,6 +49,9 @@ export function MobileCommunityWon({
   competitions: Competition[];
   winners?: Winner[];
 }) {
+  const params = useParams();
+  const locale = isLocale(params.locale) ? params.locale : defaultLocale;
+
   const now = new Date();
   const past = [...competitions]
     .filter((c) => new Date(c.endDate) < now)
@@ -53,7 +71,7 @@ export function MobileCommunityWon({
                   <article key={c.id} className="mobile-community-won-card" role="listitem">
                     <div className="mobile-community-won-card-media">
                       {img ? (
-                        <img src={img} alt={title || 'Competition watch'} />
+                        <CommunityWonCardImage src={img} alt={title || 'Competition watch'} />
                       ) : (
                         <div className="mobile-community-won-card-placeholder" aria-hidden />
                       )}
@@ -64,7 +82,7 @@ export function MobileCommunityWon({
                         {COPY.won} {formatDrawDateDdMmYyyy(c.endDate)}
                       </p>
                       <p className="mobile-community-won-card-value">
-                        {COPY.value} {formatGbp(c.price)}
+                        {COPY.value} {formatGbp(c.price, 0)}
                       </p>
                     </div>
                   </article>
@@ -74,7 +92,10 @@ export function MobileCommunityWon({
                 <article key={winner.id} className="mobile-community-won-card" role="listitem">
                   <div className="mobile-community-won-card-media">
                     {winner.imageUrl ? (
-                      <img src={winner.imageUrl} alt={winner.prize || 'Winner prize'} />
+                      <CommunityWonCardImage
+                        src={winner.imageUrl}
+                        alt={winner.prize || 'Winner prize'}
+                      />
                     ) : (
                       <div className="mobile-community-won-card-placeholder" aria-hidden />
                     )}
@@ -108,14 +129,14 @@ export function MobileCommunityWon({
             <p className="mobile-community-won-certificate-copy">{COPY.usesLatestTechnology}</p>
             <div className="mobile-community-won-certificate-card">
               <p>{COPY.drawCertificateExample}</p>
-              <img
+              <SafeImage
                 src="https://d9ylgh2z4lcdz.cloudfront.net/randomdraws-certificate.png"
                 alt="Randomdraws draw certificate"
               />
             </div>
           </div>
 
-          <Link className="mobile-community-won-cta" to={`/${defaultLocale}/competitions`}>
+          <Link className="mobile-community-won-cta" to={`/${locale}`}>
             {COPY.join}
           </Link>
         </div>

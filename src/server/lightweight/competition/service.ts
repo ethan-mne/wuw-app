@@ -4,7 +4,8 @@ import {
   type MobileCompetitionDto,
 } from './mapper';
 
-const mobileCompetitionSelect = {
+/** Loaded rows for list + detail; remaining tickets use confirmed ticket count. */
+const mobileCompetitionCoreSelect = {
   id: true,
   name: true,
   start_date: true,
@@ -37,6 +38,10 @@ const mobileCompetitionSelect = {
       },
     },
   },
+} as const;
+
+const mobileCompetitionSelect = {
+  ...mobileCompetitionCoreSelect,
   _count: {
     select: {
       Ticket: {
@@ -49,6 +54,17 @@ const mobileCompetitionSelect = {
     },
   },
 } as const;
+
+async function countConfirmedTicketsForCompetition(competitionId: string): Promise<number> {
+  return db.ticket.count({
+    where: {
+      competitionId,
+      Order: {
+        status: 'CONFIRMED',
+      },
+    },
+  });
+}
 
 let supportsIsGoldFilter: boolean | null = null;
 
@@ -97,10 +113,25 @@ export async function listCompetitionsForMobile(): Promise<MobileCompetitionDto[
 }
 
 export async function getCompetitionForMobileById(id: string) {
+  const trimmedId = id.trim();
+  if (!trimmedId) {
+    return null;
+  }
+
+  /** Separate count avoids Prisma findUnique + filtered relation _count issues on PlanetScale (relationMode prisma). */
   const competition = await db.competition.findUnique({
-    where: { id },
-    select: mobileCompetitionSelect,
+    where: { id: trimmedId },
+    select: mobileCompetitionCoreSelect,
   });
 
-  return competition ? mapCompetitionToMobileDto(competition) : null;
+  if (!competition) {
+    return null;
+  }
+
+  const confirmedTickets = await countConfirmedTicketsForCompetition(trimmedId);
+
+  return mapCompetitionToMobileDto({
+    ...competition,
+    _count: { Ticket: confirmedTickets },
+  });
 }

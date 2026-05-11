@@ -11,10 +11,3 @@ export const CHECKOUT_FLOW_DEFAULTS: CheckoutFlowState = {
   discountPercent: 0,
   timedOut: false,
 };
-
-export const CHECKOUT_QUESTION_OPTIONS = [
-  'Rolex Submariner',
-  'Omega Speedmaster',
-  'Patek Philippe Nautilus',
-  'Audemars Piguet Royal Oak',
-] as const;

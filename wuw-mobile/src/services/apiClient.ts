@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../lib/config';
+import { mobileAuthHeaders } from '../lib/mobileSessionToken';
 
 type RequestOptions = Omit<RequestInit, 'headers'> & {
   headers?: Record<string, string>;
@@ -16,6 +17,7 @@ export async function apiClient<TResponse>(
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...mobileAuthHeaders(),
       ...options.headers,
     },
   });
