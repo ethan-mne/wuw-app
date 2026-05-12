@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { Card } from '../../components/ui';
+import { INFORMATIVE_ONLY_MODE } from '../../config/informativeOnlyMode';
 import { CHALLENGE_QUESTIONS, CHALLENGE_QUESTION_COUNT } from '../../data/challengeQuestions';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
@@ -31,6 +32,17 @@ export function QuestionPage() {
   const [challengeImageFailed, setChallengeImageFailed] = useState(false);
 
   useEffect(() => {
+    if (!INFORMATIVE_ONLY_MODE) return;
+    const id = params.id;
+    const target =
+      id !== undefined && id !== ''
+        ? withLocale(locale, `competitions/${id}`)
+        : withLocale(locale, '');
+    navigate(target, { replace: true });
+  }, [locale, navigate, params.id]);
+
+  useEffect(() => {
+    if (INFORMATIVE_ONLY_MODE) return;
     void mobileDataService
       .getCompetition(params.id)
       .then((data) => {

@@ -34,6 +34,8 @@ export interface Competition {
   cashAlternative: number | null;
   maxWinners: number;
   endDate: string;
+  /** Canonical live draw instant (ISO); from `drawing_date` on the API. */
+  drawingDate: string;
   status: CompetitionStatus;
   /** Competition hero/promo image; excluded from challenge when also in watch gallery. */
   competitionImageUrl?: string | null;

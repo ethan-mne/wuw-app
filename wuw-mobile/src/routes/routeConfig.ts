@@ -1,11 +1,13 @@
 export const coreRoutes = [
   { label: 'Home', path: '' },
+  { label: 'Draws', path: 'draws' },
   { label: 'Profile', path: 'account/profile' },
-  { label: 'Contact us', path: 'contact-us' },
+  { label: 'Contact', path: 'contact-us' },
 ] as const;
 
 export const sourceRouteMap = [
   ['/{locale}', 'HomePage'],
+  ['/{locale}/draws', 'DrawsPage'],
   ['/{locale}/login', 'LoginPage'],
   ['/{locale}/verification', 'VerificationPage'],
   ['/{locale}/competitions/:id', 'CompetitionDetailPage'],

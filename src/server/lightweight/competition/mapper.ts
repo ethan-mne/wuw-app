@@ -11,6 +11,7 @@ type CompetitionWithWatch = {
   cash_alternative?: number | null;
   max_winners?: number;
   end_date: Date;
+  drawing_date: Date;
   status: CompetitionStatusType;
   comp_image_url: string | null;
   Watches: {
@@ -44,6 +45,8 @@ export type MobileCompetitionDto = {
   cashAlternative: number | null;
   maxWinners: number;
   endDate: string;
+  /** Canonical live draw instant (ISO 8601). */
+  drawingDate: string;
   status: 'ACTIVE' | 'OPEN' | 'CLOSED';
   competitionImageUrl: string | null;
   watch: {
@@ -95,6 +98,7 @@ export function mapCompetitionToMobileDto(
     cashAlternative: competition.cash_alternative ?? null,
     maxWinners: competition.max_winners ?? 1,
     endDate: competition.end_date.toISOString(),
+    drawingDate: competition.drawing_date.toISOString(),
     status: mapStatus(competition.status, remainingTickets),
     competitionImageUrl: competition.comp_image_url,
     watch: {

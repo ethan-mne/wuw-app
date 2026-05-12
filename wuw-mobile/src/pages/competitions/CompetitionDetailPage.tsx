@@ -6,6 +6,7 @@ import { MobileFooter } from '../../components/MobileFooter';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
 import { formatGbp, formatGbpCompact } from '../../lib/formatCurrency';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
+import { INFORMATIVE_ONLY_MODE } from '../../config/informativeOnlyMode';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { Competition } from '../../types';
@@ -94,15 +95,19 @@ export function CompetitionDetailPage() {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [mainImageFailed, setMainImageFailed] = useState(false);
   const [failedThumbs, setFailedThumbs] = useState<Record<number, boolean>>({});
+  const purchasesEnabled = !INFORMATIVE_ONLY_MODE;
   const ticketPrice = competition?.ticketPrice ?? 0;
-  const discountPercent = useMemo(() => getDiscountPercent(quantity), [quantity]);
+  const discountPercent = useMemo(
+    () => (purchasesEnabled ? getDiscountPercent(quantity) : 0),
+    [quantity, purchasesEnabled],
+  );
   const discountedTicketPrice = useMemo(
-    () => ticketPrice * (1 - discountPercent / 100),
-    [ticketPrice, discountPercent],
+    () => (purchasesEnabled ? ticketPrice * (1 - discountPercent / 100) : 0),
+    [ticketPrice, discountPercent, purchasesEnabled],
   );
   const totalAmount = useMemo(
-    () => discountedTicketPrice * quantity,
-    [discountedTicketPrice, quantity],
+    () => (purchasesEnabled ? discountedTicketPrice * quantity : 0),
+    [discountedTicketPrice, quantity, purchasesEnabled],
   );
 
   useEffect(() => {
@@ -170,17 +175,6 @@ export function CompetitionDetailPage() {
   const countdown = getCountdownParts(competition.endDate, nowMs);
   const ticketOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   const vipPackSizes = [15, 20, 25, 50];
-  const chanceDenominator = (size: number) => Math.max(1, Math.ceil(competition.totalTickets / size));
-  const onContinue = () => {
-    navigate(withLocale(locale, `competitions/${competition.id}/question`), {
-      state: {
-        quantity,
-        answer: null,
-        discountPercent,
-        timedOut: false,
-      } satisfies CheckoutFlowState,
-    });
-  };
 
   return (
     <section className="competition-detail-page">
@@ -208,20 +202,22 @@ export function CompetitionDetailPage() {
         </p>
       </div>
 
-      <div className="competition-detail-steps" aria-hidden>
-        <div className="competition-detail-steps-labels">
-          <div className="active">
-            1. <span>Select your ticket</span>
+      {!INFORMATIVE_ONLY_MODE ? (
+        <div className="competition-detail-steps" aria-hidden>
+          <div className="competition-detail-steps-labels">
+            <div className="active">
+              1. <span>Select your ticket</span>
+            </div>
+            <div>2.</div>
+            <div>3.</div>
           </div>
-          <div>2.</div>
-          <div>3.</div>
+          <div className="competition-detail-steps-track">
+            <span className="active" />
+            <span />
+            <span />
+          </div>
         </div>
-        <div className="competition-detail-steps-track">
-          <span className="active" />
-          <span />
-          <span />
-        </div>
-      </div>
+      ) : null}
 
       <div className="competition-detail-gallery">
         {selectedImageSrc && !mainImageFailed ? (
@@ -283,43 +279,67 @@ export function CompetitionDetailPage() {
           <p>or until all tickets are sold out. But never after the draw date</p>
         </div>
 
-        <div className="competition-detail-select">
-          <h2>How many Tickets would you like ?</h2>
-          <div className="competition-detail-ticket-grid" role="group" aria-label="Ticket quantity">
-            {ticketOptions.map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={quantity === option ? 'active' : ''}
-                onClick={() => setQuantity(option)}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
+        {purchasesEnabled ? (
+          <>
+            <div className="competition-detail-select">
+              <h2>How many Tickets would you like ?</h2>
+              <div className="competition-detail-ticket-grid" role="group" aria-label="Ticket quantity">
+                {ticketOptions.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={quantity === option ? 'active' : ''}
+                    onClick={() => setQuantity(option)}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        <div className="competition-detail-vip">
-          <h3>VIP Pack</h3>
-          <div className="competition-detail-vip-grid">
-            {vipPackSizes.map((size) => (
-              <button
-                key={size}
-                type="button"
-                onClick={() => setQuantity(size)}
-                className={quantity === size ? 'active' : ''}
-              >
-                <strong>{size}</strong>
-                <span>{getVipPackDiscount(size)} % off</span>
-                <small>1/{chanceDenominator(size)} chance to win</small>
-              </button>
-            ))}
-          </div>
-        </div>
+            <div className="competition-detail-vip">
+              <h3>VIP Pack</h3>
+              <div className="competition-detail-vip-grid">
+                {vipPackSizes.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => setQuantity(size)}
+                    className={quantity === size ? 'active' : ''}
+                  >
+                    <strong>{size}</strong>
+                    <span>{getVipPackDiscount(size)} % off</span>
+                    <small>
+                      1/{Math.max(1, Math.ceil(competition.totalTickets / size))} chance to win
+                    </small>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        <button type="button" className="checkout-flow-button" onClick={onContinue}>
-          Continue · {formatGbp(totalAmount)}
-        </button>
+            <button
+              type="button"
+              className="checkout-flow-button"
+              onClick={() =>
+                navigate(withLocale(locale, `competitions/${competition.id}/question`), {
+                  state: {
+                    quantity,
+                    answer: null,
+                    discountPercent,
+                    timedOut: false,
+                  } satisfies CheckoutFlowState,
+                })
+              }
+            >
+              Continue · {formatGbp(totalAmount)}
+            </button>
+          </>
+        ) : (
+          <p className="competition-detail-informative-notice" role="status">
+            Prize draws shown here are for information only — ticket purchases and checkout are not
+            available.
+          </p>
+        )}
 
         <div className="competition-detail-good-to-know" aria-labelledby="competition-good-to-know-title">
           <h2 id="competition-good-to-know-title" className="competition-detail-good-to-know-heading">

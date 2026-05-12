@@ -13,6 +13,7 @@ import { CompetitionDetailPage } from '../pages/competitions/CompetitionDetailPa
 import { ConfirmationPage } from '../pages/competitions/ConfirmationPage';
 import { PaymentErrorPage } from '../pages/competitions/PaymentErrorPage';
 import { QuestionPage } from '../pages/competitions/QuestionPage';
+import { DrawsPage } from '../pages/DrawsPage';
 import { HomePage } from '../pages/HomePage';
 import { LegalPage } from '../pages/legal/LegalPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -26,6 +27,7 @@ export default function App() {
       <Route path="/" element={<Navigate to={`/${defaultLocale}`} replace />} />
       <Route path="/:locale" element={<MobileShell />}>
         <Route index element={<HomePage />} />
+        <Route path="draws" element={<DrawsPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="verification" element={<VerificationPage />} />
         <Route path="competitions" element={<Navigate to=".." replace />} />

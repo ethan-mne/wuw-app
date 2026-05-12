@@ -331,6 +331,18 @@ async function listReferralUsages(): Promise<ListReferralUsagesResult> {
   }
 }
 
+export type DrawsTimelineSeed = {
+  past: Competition[];
+  upcoming: Competition[];
+  hasMorePast: boolean;
+  hasMoreFuture: boolean;
+};
+
+export type DrawsTimelinePage = {
+  items: Competition[];
+  hasMore: boolean;
+};
+
 function toCompetitionArray(payload: unknown): Competition[] | null {
   if (Array.isArray(payload)) {
     return payload as Competition[];
@@ -342,6 +354,51 @@ function toCompetitionArray(payload: unknown): Competition[] | null {
     }
   }
   return null;
+}
+
+function normalizeDrawsTimelineSeed(raw: unknown): DrawsTimelineSeed | null {
+  if (typeof raw !== 'object' || raw === null) {
+    return null;
+  }
+  const root = raw as { data?: unknown };
+  const d = root.data;
+  if (typeof d !== 'object' || d === null) {
+    return null;
+  }
+  const o = d as Record<string, unknown>;
+  const past = o.past;
+  const upcoming = o.upcoming;
+  if (
+    !Array.isArray(past)
+    || !Array.isArray(upcoming)
+    || typeof o.hasMorePast !== 'boolean'
+    || typeof o.hasMoreFuture !== 'boolean'
+  ) {
+    return null;
+  }
+  return {
+    past: past as Competition[],
+    upcoming: upcoming as Competition[],
+    hasMorePast: o.hasMorePast,
+    hasMoreFuture: o.hasMoreFuture,
+  };
+}
+
+function normalizeDrawsTimelinePage(raw: unknown): DrawsTimelinePage | null {
+  if (typeof raw !== 'object' || raw === null) {
+    return null;
+  }
+  const root = raw as { data?: unknown };
+  const d = root.data;
+  if (typeof d !== 'object' || d === null) {
+    return null;
+  }
+  const o = d as Record<string, unknown>;
+  const items = o.items;
+  if (!Array.isArray(items) || typeof o.hasMore !== 'boolean') {
+    return null;
+  }
+  return { items: items as Competition[], hasMore: o.hasMore };
 }
 
 export const mobileDataService = {
@@ -372,6 +429,59 @@ export const mobileDataService = {
     }
 
     return firstResult ?? [];
+  },
+  listDrawsTimelineSeed: async (params?: {
+    takePast?: number;
+    takeFuture?: number;
+  }): Promise<DrawsTimelineSeed | null> => {
+    const search = new URLSearchParams();
+    if (params?.takePast != null) {
+      search.set('takePast', String(params.takePast));
+    }
+    if (params?.takeFuture != null) {
+      search.set('takeFuture', String(params.takeFuture));
+    }
+    const q = search.toString();
+    const endpoint = `/api/mobile/v1/draws${q ? `?${q}` : ''}`;
+
+    try {
+      const response = await apiClient<unknown>(endpoint);
+      return normalizeDrawsTimelineSeed(response);
+    } catch {
+      return null;
+    }
+  },
+  listDrawsTimelineBefore: async (
+    beforeIso: string,
+    take = 15,
+  ): Promise<DrawsTimelinePage | null> => {
+    const search = new URLSearchParams();
+    search.set('before', beforeIso);
+    search.set('take', String(take));
+    const endpoint = `/api/mobile/v1/draws?${search.toString()}`;
+
+    try {
+      const response = await apiClient<unknown>(endpoint);
+      return normalizeDrawsTimelinePage(response);
+    } catch {
+      return null;
+    }
+  },
+  listDrawsTimelineAfter: async (
+    afterIso: string,
+    take = 15,
+  ): Promise<DrawsTimelinePage | null> => {
+    const search = new URLSearchParams();
+    search.set('after', afterIso);
+    search.set('take', String(take));
+    const endpoint = `/api/mobile/v1/draws?${search.toString()}`;
+
+    try {
+      const response = await apiClient<unknown>(endpoint);
+      return normalizeDrawsTimelinePage(response);
+    } catch {
+      return null;
+    }
   },
   getCompetition: async (id?: string): Promise<Competition | undefined> => {
     if (!id) {

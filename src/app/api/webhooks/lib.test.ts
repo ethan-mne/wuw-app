@@ -111,6 +111,8 @@ const mockCompetition: Competition = {
   watchesId: 'watches-1',
   showtickets: false,
   comp_image_url: 'https://example.com/image.jpg',
+  is_gold: false,
+  comp_image_provider: null,
 };
 
 const mockUpdatedOrder: Order = {
@@ -135,6 +137,9 @@ function createMockUser(wincoin = 0): User {
     wincoin,
     utm: null,
     is_admin: false,
+    createdAt: mockDate,
+    updatedAt: mockDate,
+    emailVerifiedBool: false,
   };
 }
 

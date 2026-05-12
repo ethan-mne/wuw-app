@@ -15,6 +15,7 @@ const mobileCompetitionCoreSelect = {
   cash_alternative: true,
   max_winners: true,
   end_date: true,
+  drawing_date: true,
   status: true,
   comp_image_url: true,
   Watches: {
@@ -110,6 +111,127 @@ export async function listCompetitionsForMobile(): Promise<MobileCompetitionDto[
   });
 
   return competitions.map(mapCompetitionToMobileDto);
+}
+
+/** Cutoff for paging older draws — same window as timeline seed for consistency. */
+const DRAW_TIMELINE_LOOKBACK_MONTHS = 24;
+
+async function timelineLookbackCutoff(): Promise<Date> {
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - DRAW_TIMELINE_LOOKBACK_MONTHS);
+  return cutoff;
+}
+
+/** Gold filter fragment for mobile draw timeline queries. */
+function drawTimelineGoldWhere(useIsGoldFilter: boolean) {
+  return useIsGoldFilter ? ({ is_gold: false } as const) : ({} as const);
+}
+
+/** Initial snapshot: bounded past + bounded future chunks (each `take + 1` to derive hasMore). */
+export async function getDrawTimelineSeed(
+  takePast: number,
+  takeFuture: number,
+): Promise<{
+  past: MobileCompetitionDto[];
+  upcoming: MobileCompetitionDto[];
+  hasMorePast: boolean;
+  hasMoreFuture: boolean;
+}> {
+  const useIsGoldFilter = await canUseIsGoldFilter();
+  const cutoff = await timelineLookbackCutoff();
+  const gold = drawTimelineGoldWhere(useIsGoldFilter);
+  const now = new Date();
+
+  const pastRaw = await db.competition.findMany({
+    where: {
+      ...gold,
+      drawing_date: {
+        lte: now,
+        gte: cutoff,
+      },
+    },
+    select: mobileCompetitionSelect,
+    orderBy: { drawing_date: 'desc' },
+    take: takePast + 1,
+  });
+
+  const futureRaw = await db.competition.findMany({
+    where: {
+      ...gold,
+      drawing_date: { gt: now },
+    },
+    select: mobileCompetitionSelect,
+    orderBy: { drawing_date: 'asc' },
+    take: takeFuture + 1,
+  });
+
+  const hasMorePast = pastRaw.length > takePast;
+  const hasMoreFuture = futureRaw.length > takeFuture;
+  const pastSlice = pastRaw.slice(0, takePast);
+  const futureSlice = futureRaw.slice(0, takeFuture);
+
+  return {
+    past: [...pastSlice].reverse().map(mapCompetitionToMobileDto),
+    upcoming: futureSlice.map(mapCompetitionToMobileDto),
+    hasMorePast,
+    hasMoreFuture,
+  };
+}
+
+/** Older draws strictly before cursor (exclusive), ascending chronological order for prepending order. */
+export async function getDrawTimelinePageBefore(
+  cursorExclusive: Date,
+  take: number,
+): Promise<{ items: MobileCompetitionDto[]; hasMore: boolean }> {
+  const useIsGoldFilter = await canUseIsGoldFilter();
+  const cutoff = await timelineLookbackCutoff();
+  const gold = drawTimelineGoldWhere(useIsGoldFilter);
+
+  const rows = await db.competition.findMany({
+    where: {
+      ...gold,
+      drawing_date: {
+        lt: cursorExclusive,
+        gte: cutoff,
+      },
+    },
+    select: mobileCompetitionSelect,
+    orderBy: { drawing_date: 'desc' },
+    take: take + 1,
+  });
+
+  const hasMore = rows.length > take;
+  const slice = rows.slice(0, take);
+  return {
+    items: [...slice].reverse().map(mapCompetitionToMobileDto),
+    hasMore,
+  };
+}
+
+/** Later draws strictly after cursor (exclusive), ascending order. */
+export async function getDrawTimelinePageAfter(
+  cursorExclusive: Date,
+  take: number,
+): Promise<{ items: MobileCompetitionDto[]; hasMore: boolean }> {
+  const useIsGoldFilter = await canUseIsGoldFilter();
+  const gold = drawTimelineGoldWhere(useIsGoldFilter);
+
+  const rows = await db.competition.findMany({
+    where: {
+      ...gold,
+      drawing_date: { gt: cursorExclusive },
+    },
+    select: mobileCompetitionSelect,
+    orderBy: { drawing_date: 'asc' },
+    take: take + 1,
+  });
+
+  const hasMore = rows.length > take;
+  const slice = rows.slice(0, take);
+  return {
+    items: slice.map(mapCompetitionToMobileDto),
+    hasMore,
+  };
 }
 
 export async function getCompetitionForMobileById(id: string) {

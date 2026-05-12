@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { SafeImage } from '../../components/SafeImage';
 import { Card } from '../../components/ui';
+import { INFORMATIVE_ONLY_MODE } from '../../config/informativeOnlyMode';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
 import { formatGbp } from '../../lib/formatCurrency';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
@@ -99,6 +100,17 @@ export function CheckoutPage() {
   const discountPercent = Math.max(0, flowState.discountPercent ?? 0);
 
   useEffect(() => {
+    if (!INFORMATIVE_ONLY_MODE) return;
+    const id = params.id;
+    const target =
+      id !== undefined && id !== ''
+        ? withLocale(locale, `competitions/${id}`)
+        : withLocale(locale, '');
+    navigate(target, { replace: true });
+  }, [locale, navigate, params.id]);
+
+  useEffect(() => {
+    if (INFORMATIVE_ONLY_MODE) return;
     void mobileDataService
       .getCompetition(params.id)
       .then((data) => {
@@ -112,6 +124,7 @@ export function CheckoutPage() {
   }, [params.id]);
 
   useEffect(() => {
+    if (INFORMATIVE_ONLY_MODE) return;
     if (!getMobileSessionToken()) {
       return;
     }
