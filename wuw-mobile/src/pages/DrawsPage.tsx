@@ -8,7 +8,9 @@ import { defaultLocale, isLocale, withLocale } from '../routes/locales';
 import { mobileDataService } from '../services/mobileDataService';
 import type { Competition, Locale } from '../types';
 
-const DRAW_PAGE_SIZE = 15;
+const DRAW_FUTURE_PAGE_SIZE = 15;
+/** Matches server `MOBILE_DRAWS_MAX_PAST` — only recent past draws load. */
+const DRAW_PAST_LIMIT = 3;
 
 function drawInstantMs(competition: Competition): number {
   const raw = competition.drawingDate ?? competition.endDate;
@@ -193,8 +195,8 @@ export function DrawsPage() {
     async function load() {
       try {
         const seed = await mobileDataService.listDrawsTimelineSeed({
-          takePast: DRAW_PAGE_SIZE,
-          takeFuture: DRAW_PAGE_SIZE,
+          takePast: DRAW_PAST_LIMIT,
+          takeFuture: DRAW_FUTURE_PAGE_SIZE,
         });
 
         if (cancelled) {
@@ -258,7 +260,7 @@ export function DrawsPage() {
     try {
       const page = await mobileDataService.listDrawsTimelineBefore(
         beforeIso,
-        DRAW_PAGE_SIZE,
+        DRAW_FUTURE_PAGE_SIZE,
       );
       if (!page?.items?.length) {
         setHasMorePast(page?.hasMore ?? false);
@@ -294,7 +296,7 @@ export function DrawsPage() {
     try {
       const page = await mobileDataService.listDrawsTimelineAfter(
         afterIso,
-        DRAW_PAGE_SIZE,
+        DRAW_FUTURE_PAGE_SIZE,
       );
       if (!page?.items?.length) {
         setHasMoreFuture(page?.hasMore ?? false);
@@ -411,7 +413,7 @@ export function DrawsPage() {
         </p>
         <h2 className="draws-intro-headline">Upcoming live draws</h2>
         <p className="draws-intro-sub">
-          Scroll up for past results — more load as you scroll. Scroll down for later draws.
+          Recent past results above. Scroll down for later draws — more load as you scroll.
         </p>
       </header>
 

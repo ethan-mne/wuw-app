@@ -127,16 +127,26 @@ function drawTimelineGoldWhere(useIsGoldFilter: boolean) {
   return useIsGoldFilter ? ({ is_gold: false } as const) : ({} as const);
 }
 
-/** Initial snapshot: bounded past + bounded future chunks (each `take + 1` to derive hasMore). */
+export type DrawTimelineSeedOpts = {
+  /** When false, fetches exactly `takePast` rows and sets `hasMorePast` to false. */
+  probePastHasMore?: boolean;
+  /** When false, fetches exactly `takeFuture` rows and sets `hasMoreFuture` to false. */
+  probeFutureHasMore?: boolean;
+};
+
+/** Initial snapshot: bounded past + bounded future chunks (`take + 1` per side when probing hasMore). */
 export async function getDrawTimelineSeed(
   takePast: number,
   takeFuture: number,
+  opts?: DrawTimelineSeedOpts,
 ): Promise<{
   past: MobileCompetitionDto[];
   upcoming: MobileCompetitionDto[];
   hasMorePast: boolean;
   hasMoreFuture: boolean;
 }> {
+  const probePast = opts?.probePastHasMore ?? true;
+  const probeFuture = opts?.probeFutureHasMore ?? true;
   const useIsGoldFilter = await canUseIsGoldFilter();
   const cutoff = await timelineLookbackCutoff();
   const gold = drawTimelineGoldWhere(useIsGoldFilter);
@@ -152,7 +162,7 @@ export async function getDrawTimelineSeed(
     },
     select: mobileCompetitionSelect,
     orderBy: { drawing_date: 'desc' },
-    take: takePast + 1,
+    take: probePast ? takePast + 1 : takePast,
   });
 
   const futureRaw = await db.competition.findMany({
@@ -162,11 +172,11 @@ export async function getDrawTimelineSeed(
     },
     select: mobileCompetitionSelect,
     orderBy: { drawing_date: 'asc' },
-    take: takeFuture + 1,
+    take: probeFuture ? takeFuture + 1 : takeFuture,
   });
 
-  const hasMorePast = pastRaw.length > takePast;
-  const hasMoreFuture = futureRaw.length > takeFuture;
+  const hasMorePast = probePast && pastRaw.length > takePast;
+  const hasMoreFuture = probeFuture && futureRaw.length > takeFuture;
   const pastSlice = pastRaw.slice(0, takePast);
   const futureSlice = futureRaw.slice(0, takeFuture);
 
