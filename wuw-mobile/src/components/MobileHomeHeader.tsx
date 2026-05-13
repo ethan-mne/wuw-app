@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 
+import { INFORMATIVE_ONLY_MODE } from '../config/informativeOnlyMode';
 import { defaultLocale, isLocale, withLocale } from '../routes/locales';
 
 export function MobileHomeHeader() {
@@ -8,10 +9,12 @@ export function MobileHomeHeader() {
 
   return (
     <header className="site-header">
-      <div className="apple-pay-banner">
-        <span className="apple-pay-badge">APPLE PAY</span>
-        <span>IS AVAILABLE ON WINUWATCH!</span>
-      </div>
+      {!INFORMATIVE_ONLY_MODE ? (
+        <div className="apple-pay-banner">
+          <span className="apple-pay-badge">APPLE PAY</span>
+          <span>IS AVAILABLE ON WINUWATCH!</span>
+        </div>
+      ) : null}
 
       <div className="site-header-bar">
         <div className="header-actions" aria-hidden="true" />
