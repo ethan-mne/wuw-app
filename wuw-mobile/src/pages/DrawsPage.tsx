@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import { DrawAlertHeroStrip, DrawThinRowAlertButton } from '../features/draws/DrawAlertViews';
+import { isDrawAlertEligible } from '../lib/drawAlertEligibility';
+
 import { formatPastDrawLabel, formatUpcomingDrawLabel } from '../lib/formatDrawScheduleLabel';
 import { formatGbpCompact } from '../lib/formatCurrency';
 import { resolveMediaUrl } from '../lib/resolveMediaUrl';
@@ -9,8 +12,15 @@ import { mobileDataService } from '../services/mobileDataService';
 import type { Competition, Locale } from '../types';
 
 const DRAW_FUTURE_PAGE_SIZE = 15;
-/** Matches server `MOBILE_DRAWS_MAX_PAST` — only recent past draws load. */
+/** Matches server `MOBILE_DRAWS_MAX_PAST` — only recent past draws in the seed. */
 const DRAW_PAST_LIMIT = 3;
+/**
+ * Max past rows rendered (newest-first among past). Competitions promoted from upcoming to
+ * past as clocks tick otherwise flood this list despite a small seed.
+ */
+const DRAW_PAST_DISPLAY_LIMIT = 5;
+/** If older draws are ever fetched, keep batches small — do not reuse future page size (15). */
+const DRAW_PAST_PAGE_SIZE = 6;
 
 function drawInstantMs(competition: Competition): number {
   const raw = competition.drawingDate ?? competition.endDate;
@@ -116,12 +126,10 @@ function DrawThinRow({ competition, locale, nowMs, variant }: DrawThinRowProps) 
       ? formatPastDrawLabel(drawIso, locale, new Date(nowMs))
       : formatUpcomingDrawLabel(drawIso, locale, new Date(nowMs));
   const to = withLocale(locale, `competitions/${competition.id}`);
+  const showAlert = variant === 'future' && isDrawAlertEligible(competition, nowMs);
 
-  return (
-    <Link
-      className={`draws-thin-row draws-thin-row--${variant}${isClosed ? ' draws-thin-row--closed' : ''}`}
-      to={to}
-    >
+  const rowLeading = (
+    <>
       <ThinThumb src={thumbUrl(competition)} alt={competition.name} />
       <div className="draws-thin-row-body">
         <span className="draws-thin-row-eyebrow">
@@ -135,10 +143,37 @@ function DrawThinRow({ competition, locale, nowMs, variant }: DrawThinRowProps) 
         <h3 className="draws-thin-row-title">{competition.name}</h3>
         <p className="draws-thin-row-time">{label}</p>
       </div>
-      <span className="draws-thin-row-chevron" aria-hidden>
-        →
-      </span>
-    </Link>
+    </>
+  );
+
+  if (!showAlert) {
+    return (
+      <Link
+        className={`draws-thin-row draws-thin-row--${variant}${isClosed ? ' draws-thin-row--closed' : ''}`}
+        to={to}
+      >
+        {rowLeading}
+        <span className="draws-thin-row-chevron" aria-hidden>
+          →
+        </span>
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      className={`draws-thin-row-card draws-thin-row-card--${variant}${isClosed ? ' draws-thin-row-card--closed' : ''}`}
+    >
+      <div className="draws-thin-row-card-main">
+        <Link className="draws-thin-row-card-leading" to={to}>
+          {rowLeading}
+        </Link>
+        <DrawThinRowAlertButton competition={competition} locale={locale} nowMs={nowMs} />
+        <Link className="draws-thin-row-card-chevron" to={to} aria-label={`${competition.name} — open details`}>
+          <span aria-hidden>→</span>
+        </Link>
+      </div>
+    </div>
   );
 }
 
@@ -212,7 +247,8 @@ export function DrawsPage() {
 
         const merged = mergeTimelineAscending([], seed.past, seed.upcoming);
         setTimeline(merged);
-        setHasMorePast(seed.hasMorePast);
+        // Server keeps a fixed past window (no paging); guard so we never load long history tails.
+        setHasMorePast(false);
         setHasMoreFuture(seed.hasMoreFuture);
       } catch {
         if (!cancelled) {
@@ -260,7 +296,7 @@ export function DrawsPage() {
     try {
       const page = await mobileDataService.listDrawsTimelineBefore(
         beforeIso,
-        DRAW_FUTURE_PAGE_SIZE,
+        DRAW_PAST_PAGE_SIZE,
       );
       if (!page?.items?.length) {
         setHasMorePast(page?.hasMore ?? false);
@@ -375,6 +411,9 @@ export function DrawsPage() {
   }, [prependLayoutVersion]);
 
   const { past, upcoming } = splitTimeline(timeline, nowMs);
+  /** Newest draws sit at the end of `past` — keep UI to a short “recent results” strip. */
+  const pastDisplayed =
+    past.length <= DRAW_PAST_DISPLAY_LIMIT ? past : past.slice(-DRAW_PAST_DISPLAY_LIMIT);
   const hero = upcoming[0];
   const restUpcoming = upcoming.slice(1);
   const drawIsoHero = hero ? hero.drawingDate ?? hero.endDate : '';
@@ -413,7 +452,7 @@ export function DrawsPage() {
         </p>
         <h2 className="draws-intro-headline">Upcoming live draws</h2>
         <p className="draws-intro-sub">
-          Recent past results above. Scroll down for later draws — more load as you scroll.
+          When shown, finished draws appear first, followed by upcoming ones below.
         </p>
       </header>
 
@@ -430,9 +469,9 @@ export function DrawsPage() {
         </p>
       ) : null}
 
-      {past.length > 0 ? (
+      {pastDisplayed.length > 0 ? (
         <div className="draws-past-group">
-          {past.map((c) => (
+          {pastDisplayed.map((c) => (
             <DrawThinRow
               key={c.id}
               competition={c}
@@ -444,7 +483,7 @@ export function DrawsPage() {
         </div>
       ) : null}
 
-      {past.length > 0 && hero ? (
+      {pastDisplayed.length > 0 && hero ? (
         <p className="draws-divider" role="separator">
           Up next
         </p>
@@ -457,7 +496,12 @@ export function DrawsPage() {
               <div className="draws-hero-top">
                 <ThinThumb src={thumbUrl(hero)} alt={hero.name} />
                 <div className="draws-hero-copy">
-                  <span className="draws-hero-label">Next draw</span>
+                  <div className="draws-hero-label-row">
+                    <span className="draws-hero-label">Next draw</span>
+                    {heroSoldOut ? (
+                      <span className="draws-hero-sold-out">Sold out</span>
+                    ) : null}
+                  </div>
                   <h3 className="draws-hero-title">{hero.name}</h3>
                   <p className="draws-hero-datetime">
                     {formatUpcomingDrawLabel(
@@ -467,6 +511,13 @@ export function DrawsPage() {
                     )}
                   </p>
                 </div>
+                <Link
+                  className="draws-hero-chevron"
+                  to={withLocale(locale, `competitions/${hero.id}`)}
+                  aria-label={`${hero.name} — open details`}
+                >
+                  <span aria-hidden>→</span>
+                </Link>
               </div>
 
               {countdownHero ? (
@@ -490,20 +541,7 @@ export function DrawsPage() {
                 </div>
               ) : null}
 
-              <Link
-                className={
-                  heroSoldOut
-                    ? 'draws-hero-cta draws-hero-cta--sold-out'
-                    : 'draws-hero-cta'
-                }
-                to={
-                  heroSoldOut
-                    ? withLocale(locale, '')
-                    : withLocale(locale, `competitions/${hero.id}`)
-                }
-              >
-                {heroSoldOut ? 'Tickets sold out' : 'Competition details →'}
-              </Link>
+              <DrawAlertHeroStrip competition={hero} locale={locale} nowMs={nowMs} />
             </div>
           </article>
 

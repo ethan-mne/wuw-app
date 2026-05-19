@@ -20,6 +20,17 @@ export function setMobileSessionToken(token: string | null): void {
   }
 }
 
+/** Clears the mobile JWT and best-effort unregisters push with the backend (native only). */
+export async function clearMobileSession(): Promise<void> {
+  try {
+    const { unregisterPushDeviceIfAny } = await import('./pushNotifications');
+    await unregisterPushDeviceIfAny();
+  } catch {
+    /* ignore */
+  }
+  setMobileSessionToken(null);
+}
+
 export function mobileAuthHeaders(): Record<string, string> {
   const token = getMobileSessionToken();
   return token ? { Authorization: `Bearer ${token}` } : {};

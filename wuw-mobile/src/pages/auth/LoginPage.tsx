@@ -1,10 +1,11 @@
 import { type FormEvent, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { ActionLink, Card, PageHeader } from '../../components/ui';
+import { clearMobileSession } from '../../lib/mobileSessionToken';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { sendLoginOtp, type SendLoginOtpOutcome } from '../../services/authApi';
-import { setMobileSessionToken } from '../../lib/mobileSessionToken';
+import type { LoginRouteState } from '../../types';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -44,6 +45,8 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const params = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const loginExtras = location.state as LoginRouteState | undefined;
   const locale = isLocale(params.locale) ? params.locale : defaultLocale;
 
   const onSubmit = async (event: FormEvent) => {
@@ -61,9 +64,15 @@ export function LoginPage() {
     setSubmitting(false);
 
     if (outcome.status === 'sent') {
-      setMobileSessionToken(null);
+      await clearMobileSession();
       void navigate(withLocale(locale, 'verification'), {
-        state: { email: normalized, otpId: outcome.otpID },
+        state: {
+          email: normalized,
+          otpId: outcome.otpID,
+          ...(loginExtras?.pendingDrawAlertCompetitionId
+            ? { pendingDrawAlertCompetitionId: loginExtras.pendingDrawAlertCompetitionId }
+            : {}),
+        },
       });
       return;
     }

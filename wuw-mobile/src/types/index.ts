@@ -99,4 +99,11 @@ export interface MobileUserProfile {
 export type VerificationRouteState = {
   email: string;
   otpId: string;
+  /** After login, subscribe to draw reminder for this competition (optional). */
+  pendingDrawAlertCompetitionId?: string;
+};
+
+/** Optional state when opening the login page (e.g. from competition draw alert). */
+export type LoginRouteState = {
+  pendingDrawAlertCompetitionId?: string;
 };

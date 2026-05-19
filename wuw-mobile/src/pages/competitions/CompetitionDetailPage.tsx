@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { Card } from '../../components/ui';
 import { MobileFooter } from '../../components/MobileFooter';
+import { DrawAlertPanel } from '../../features/draws/DrawAlertViews';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
 import { formatGbp, formatGbpCompact } from '../../lib/formatCurrency';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
@@ -278,6 +279,8 @@ export function CompetitionDetailPage() {
           <span>Draw Date</span>
           <p>or until all tickets are sold out. But never after the draw date</p>
         </div>
+
+        <DrawAlertPanel competition={competition} locale={locale} />
 
         {purchasesEnabled ? (
           <>

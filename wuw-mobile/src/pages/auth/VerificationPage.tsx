@@ -9,6 +9,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { ActionLink, Card, PageHeader } from '../../components/ui';
 import { setMobileSessionToken } from '../../lib/mobileSessionToken';
+import { mobileDataService } from '../../services/mobileDataService';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { verifyMobileOtp } from '../../services/authApi';
 import type { VerificationRouteState } from '../../types';
@@ -83,7 +84,14 @@ export function VerificationPage() {
 
     if (result.status === 'ok') {
       setMobileSessionToken(result.token);
-      void navigate(withLocale(locale, 'account/dashboard'));
+      void mobileDataService.registerPushAfterLogin();
+      const pending = state.pendingDrawAlertCompetitionId;
+      if (pending) {
+        void mobileDataService.subscribeDrawAlert(pending).catch(() => {});
+        void navigate(withLocale(locale, `competitions/${pending}`));
+      } else {
+        void navigate(withLocale(locale, 'account/dashboard'));
+      }
       return;
     }
 

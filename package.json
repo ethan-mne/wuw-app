@@ -32,6 +32,7 @@
     "@types/uuid": "^9.0.8",
     "country-code-lookup": "^0.1.2",
     "date-fns": "^3.6.0",
+    "firebase-admin": "^13.0.2",
     "libphonenumber-js": "^1.11.17",
     "next": "14.2.34",
     "next-auth": "^4.24.7",

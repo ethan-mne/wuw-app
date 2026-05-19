@@ -1,6 +1,6 @@
 import { apiClient } from './apiClient';
 import { API_BASE_URL } from '../lib/config';
-import { mobileAuthHeaders, setMobileSessionToken } from '../lib/mobileSessionToken';
+import { clearMobileSession, getMobileSessionToken, mobileAuthHeaders } from '../lib/mobileSessionToken';
 import type {
   AccountSummary,
   Competition,
@@ -128,7 +128,7 @@ async function loadAccountSummary(): Promise<LoadAccountSummaryResult> {
     });
 
     if (response.status === 401) {
-      setMobileSessionToken(null);
+      await clearMobileSession();
       return { kind: 'sign_in_required' };
     }
 
@@ -222,7 +222,7 @@ async function loadMobileProfile(): Promise<LoadMobileProfileResult> {
     });
 
     if (response.status === 401) {
-      setMobileSessionToken(null);
+      await clearMobileSession();
       return { kind: 'sign_in_required' };
     }
 
@@ -260,7 +260,7 @@ async function updateMobileProfile(
     });
 
     if (response.status === 401) {
-      setMobileSessionToken(null);
+      await clearMobileSession();
       return { kind: 'sign_in_required' };
     }
 
@@ -312,7 +312,7 @@ async function listReferralUsages(): Promise<ListReferralUsagesResult> {
     });
 
     if (response.status === 401) {
-      setMobileSessionToken(null);
+      await clearMobileSession();
       return { kind: 'sign_in_required' };
     }
 
@@ -527,5 +527,47 @@ export const mobileDataService = {
         [message],
       );
     }
+  },
+  registerPushAfterLogin: async (): Promise<void> => {
+    const { registerPushAfterLogin } = await import('../lib/pushNotifications');
+    await registerPushAfterLogin();
+  },
+  getDrawAlertSubscribed: async (competitionId: string): Promise<boolean> => {
+    if (!API_BASE_URL || !getMobileSessionToken()) {
+      return false;
+    }
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/mobile/v1/competitions/${encodeURIComponent(competitionId)}/draw-alert`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...mobileAuthHeaders(),
+          },
+        },
+      );
+      if (response.status === 401) {
+        return false;
+      }
+      if (!response.ok) {
+        return false;
+      }
+      const json = (await response.json()) as ApiDataResponse<{ subscribed: boolean }>;
+      return Boolean(json?.data?.subscribed);
+    } catch {
+      return false;
+    }
+  },
+  subscribeDrawAlert: async (competitionId: string): Promise<void> => {
+    await apiClient<{ ok: boolean }>(
+      `/api/mobile/v1/competitions/${encodeURIComponent(competitionId)}/draw-alert`,
+      { method: 'POST' },
+    );
+  },
+  unsubscribeDrawAlert: async (competitionId: string): Promise<void> => {
+    await apiClient<{ ok: boolean }>(
+      `/api/mobile/v1/competitions/${encodeURIComponent(competitionId)}/draw-alert`,
+      { method: 'DELETE' },
+    );
   },
 };

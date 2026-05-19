@@ -56,6 +56,12 @@ export const env = createEnv({
     PAYMENT_GATEWAY_URL_TWELVE: z.string().min(1),
     STRIPE_ACCOUNT_PERCENTAGES: z.string().default('30,65,5'),
     DASHBOARD_DEV_BYPASS: z.enum(['true', 'false']).default('false'),
+    /** Vercel Cron: set in project env; sent as `Authorization: Bearer …` when CRON_SECRET is set in Vercel. */
+    CRON_SECRET: z.string().min(1).optional(),
+    /** Alternative to CRON_SECRET for draw-reminder route only. */
+    DRAW_REMINDER_CRON_SECRET: z.string().min(1).optional(),
+    /** Firebase service account JSON string for FCM (server-side). */
+    FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   },
   /**
    * Specify your client-side environment variables schema here. This way you can ensure the app
@@ -121,6 +127,9 @@ export const env = createEnv({
     AUREAVIA_ENDPOINT: process.env.AUREAVIA_ENDPOINT,
     AUREAVIA_MERCHANT_ID: process.env.AUREAVIA_MERCHANT_ID,
     AUREAVIA_HASH_KEY: process.env.AUREAVIA_HASH_KEY,
+    CRON_SECRET: process.env.CRON_SECRET,
+    DRAW_REMINDER_CRON_SECRET: process.env.DRAW_REMINDER_CRON_SECRET,
+    FIREBASE_SERVICE_ACCOUNT_JSON: process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

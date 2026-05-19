@@ -127,6 +127,34 @@ function drawTimelineGoldWhere(useIsGoldFilter: boolean) {
   return useIsGoldFilter ? ({ is_gold: false } as const) : ({} as const);
 }
 
+const DRAW_REMINDER_LEAD_MS = 10 * 60_000;
+const DRAW_REMINDER_SLACK_MS = 5 * 60_000;
+
+/** Competitions whose draw is in ~10 minutes (with slack for cron interval), ACTIVE, same gold filter as mobile timeline. */
+export async function listCompetitionsForDrawReminders(now: Date) {
+  const useIsGoldFilter = await canUseIsGoldFilter();
+  const gold = drawTimelineGoldWhere(useIsGoldFilter);
+  const minDrawing = new Date(now.getTime() + DRAW_REMINDER_LEAD_MS - DRAW_REMINDER_SLACK_MS);
+  const maxDrawing = new Date(now.getTime() + DRAW_REMINDER_LEAD_MS);
+
+  return db.competition.findMany({
+    where: {
+      ...gold,
+      status: 'ACTIVE',
+      drawing_date: {
+        gt: now,
+        gte: minDrawing,
+        lte: maxDrawing,
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      drawing_date: true,
+    },
+  });
+}
+
 export type DrawTimelineSeedOpts = {
   /** When false, fetches exactly `takePast` rows and sets `hasMorePast` to false. */
   probePastHasMore?: boolean;

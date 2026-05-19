@@ -51,6 +51,11 @@ model Watches {
   @@map("watches")
 }
 
+enum PushDevicePlatform {
+  android
+  ios
+}
+
 model Competition {
   id                       String                           @id @default(cuid())
   name                     String
@@ -81,6 +86,8 @@ model Competition {
   Watches                  Watches?                         @relation(fields: [watchesId], references: [id])
   Ticket                   Ticket[]
   Affiliation              Affiliation[]
+  DrawReminderSent         DrawReminderSent[]
+  DrawAlertSubscription    DrawAlertSubscription[]
 
   @@index([id])
   @@map("competition")
@@ -296,6 +303,48 @@ model User {
   accounts          Account[]
   sessions          Session[]
   OTP               OTP[]
+  pushDevices            UserPushDevice[]
+  drawRemindersSent      DrawReminderSent[]
+  drawAlertSubscriptions DrawAlertSubscription[]
+}
+
+model UserPushDevice {
+  id        String             @id @default(cuid())
+  userId    String
+  token     String             @unique @db.VarChar(512)
+  platform  PushDevicePlatform
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_push_device")
+}
+
+model DrawReminderSent {
+  id            String      @id @default(cuid())
+  userId        String
+  competitionId String
+  sentAt        DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, competitionId])
+  @@index([competitionId])
+  @@map("draw_reminder_sent")
+}
+
+model DrawAlertSubscription {
+  id            String      @id @default(cuid())
+  userId        String
+  competitionId String
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, competitionId])
+  @@index([competitionId])
+  @@map("draw_alert_subscription")
 }
 
 model gift {
