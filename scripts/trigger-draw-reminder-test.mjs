@@ -55,7 +55,8 @@ function readArg(name) {
 
 loadEnvFile();
 
-const secret = process.env.CRON_SECRET ?? process.env.DRAW_REMINDER_CRON_SECRET;
+const secret =
+  process.env.DRAW_REMINDER_CRON_SECRET ?? process.env.CRON_SECRET;
 if (!secret) {
   console.error('Missing CRON_SECRET or DRAW_REMINDER_CRON_SECRET in .env');
   process.exit(1);

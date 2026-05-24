@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 
-import { env } from '@/env';
+import {
+  getDrawReminderCronSecret,
+  isDrawReminderCronSecretConfigured,
+} from '@/server/draw-reminders/cron-secrets';
 import {
   runDrawReminderJob,
   runDrawReminderTest,
@@ -8,10 +11,16 @@ import {
 } from '@/server/draw-reminders/send-draw-reminders';
 
 export function authorizeDrawReminderCron(request: Request): NextResponse | null {
-  if (!env.CRON_SECRET && !env.DRAW_REMINDER_CRON_SECRET) {
-    return NextResponse.json({ error: 'Cron secret not configured' }, { status: 503 });
+  if (!isDrawReminderCronSecretConfigured()) {
+    return NextResponse.json(
+      {
+        error: 'Cron secret not configured',
+        hint: 'Set CRON_SECRET or DRAW_REMINDER_CRON_SECRET on the server (Render → wuw-backend → Environment), then redeploy.',
+      },
+      { status: 503 },
+    );
   }
-  const secret = env.CRON_SECRET ?? env.DRAW_REMINDER_CRON_SECRET;
+  const secret = getDrawReminderCronSecret();
   const auth = request.headers.get('authorization');
   if (auth !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

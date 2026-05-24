@@ -1,3 +1,7 @@
+import {
+  isDrawReminderCronSecretConfigured,
+  isFirebaseConfiguredForPush,
+} from '@/server/draw-reminders/cron-secrets';
 import { db } from '@/server/db';
 import { NextResponse } from 'next/server';
 
@@ -23,6 +27,10 @@ export async function GET() {
     db: {
       status: dbStatus,
       latencyMs: dbLatencyMs,
+    },
+    push: {
+      cronSecretConfigured: isDrawReminderCronSecretConfigured(),
+      firebaseConfigured: isFirebaseConfiguredForPush(),
     },
   };
 

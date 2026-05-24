@@ -1,6 +1,9 @@
 # Render Blueprint: connect your repo, then add all variables from src/env.js in the dashboard
 # (or via dashboard Environment → Environment Groups). Set NEXTAUTH_URL and NEXT_PUBLIC_* URLs
 # to your production service URL.
+# Required for draw-reminder cron + npm run draw-reminder:test:prod:
+#   CRON_SECRET (or DRAW_REMINDER_CRON_SECRET) — same value as in your local .env
+#   FIREBASE_SERVICE_ACCOUNT_JSON — Firebase service account JSON (single line)
 services:
   - type: web
     name: wuw-backend

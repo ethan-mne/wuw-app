@@ -1,5 +1,5 @@
-import { env } from '@/env';
 import { db } from '@/server/db';
+import { isFirebaseConfiguredForPush } from '@/server/draw-reminders/cron-secrets';
 import { sendDrawReminderFcmMulticast } from '@/server/draw-reminders/fcm';
 import { isDrawingDateInReminderCronWindow } from '@/server/draw-reminders/window';
 import { listCompetitionsForDrawReminders } from '@/server/lightweight/competition/service';
@@ -201,7 +201,7 @@ async function notifyCompetitionDrawReminder(params: {
 
 /** Production cron: competitions in the ~10-minute-before-draw window. */
 export async function runDrawReminderJob(now: Date): Promise<SendDrawRemindersResult> {
-  if (!env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim()) {
+  if (!isFirebaseConfiguredForPush()) {
     return {
       competitions: 0,
       notificationsAttempted: 0,
@@ -261,7 +261,7 @@ export type DrawReminderTestOptions = {
 export async function runDrawReminderTest(
   options: DrawReminderTestOptions = {},
 ): Promise<SendDrawRemindersResult> {
-  if (!env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim()) {
+  if (!isFirebaseConfiguredForPush()) {
     return {
       competitions: 0,
       notificationsAttempted: 0,
