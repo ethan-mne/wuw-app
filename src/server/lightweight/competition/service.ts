@@ -1,3 +1,4 @@
+import { CompetitionStatus } from '@/lib/prisma-enums';
 import { db } from '@/server/db';
 import {
   mapCompetitionToMobileDto,
@@ -143,7 +144,9 @@ function mobileCompetitionActiveWhere() {
 
 /** Past draws may include completed competitions; still hide NOT_ACTIVE. */
 function mobileCompetitionPastDrawStatusWhere() {
-  return { status: { in: ['ACTIVE', 'COMPLETED'] as const } };
+  return {
+    status: { in: [CompetitionStatus.ACTIVE, CompetitionStatus.COMPLETED] },
+  };
 }
 
 const DRAW_REMINDER_LEAD_MS = 10 * 60_000;
