@@ -1,6 +1,10 @@
 import { db } from '@/server/db';
 import { isFirebaseConfiguredForPush } from '@/server/draw-reminders/cron-secrets';
-import { sendDrawReminderFcmMulticast } from '@/server/draw-reminders/fcm';
+import {
+  deleteInvalidFcmTokens,
+  sendDrawReminderFcmMulticast,
+  type FcmMulticastResult,
+} from '@/server/draw-reminders/fcm';
 import { isDrawingDateInReminderCronWindow } from '@/server/draw-reminders/window';
 import { listCompetitionsForDrawReminders } from '@/server/lightweight/competition/service';
 
@@ -34,6 +38,8 @@ export type SendDrawRemindersResult = {
   competitionIds?: string[];
   debug?: DrawReminderEligibilityDebug[];
   userTarget?: DrawReminderUserTargetDebug;
+  /** Present in test mode when FCM was called (includes per-token error codes). */
+  fcmDelivery?: FcmMulticastResult & { invalidTokensRemoved?: number };
 };
 
 type CompetitionReminderRow = {
@@ -201,7 +207,13 @@ async function notifyCompetitionDrawReminder(params: {
   recordSent?: boolean;
   /** Test only: notify user by id if they have a push token (skip ticket / draw-alert check). */
   bypassEligibility?: boolean;
-}): Promise<{ notificationsAttempted: number; usersNotified: number }> {
+  includeFcmDetails?: boolean;
+  pruneInvalidTokens?: boolean;
+}): Promise<{
+  notificationsAttempted: number;
+  usersNotified: number;
+  fcmDelivery?: FcmMulticastResult & { invalidTokensRemoved?: number };
+}> {
   const ticketEmails = await getTicketEmailsForCompetition(params.comp.id);
 
   const users = await db.user.findMany({
@@ -235,6 +247,7 @@ async function notifyCompetitionDrawReminder(params: {
 
   let notificationsAttempted = 0;
   let usersNotified = 0;
+  let mergedFcm: (FcmMulticastResult & { invalidTokensRemoved?: number }) | undefined;
 
   for (const user of users) {
     const tokens = user.pushDevices.map((d) => d.token);
@@ -242,7 +255,7 @@ async function notifyCompetitionDrawReminder(params: {
       continue;
     }
 
-    const ok = await sendDrawReminderFcmMulticast({
+    const fcm = await sendDrawReminderFcmMulticast({
       tokens,
       title,
       body,
@@ -252,7 +265,26 @@ async function notifyCompetitionDrawReminder(params: {
       },
     });
     notificationsAttempted += tokens.length;
-    if (ok) {
+
+    let invalidTokensRemoved = 0;
+    if (params.pruneInvalidTokens && fcm.failureCount > 0) {
+      invalidTokensRemoved = await deleteInvalidFcmTokens(tokens, fcm.results);
+    }
+
+    if (params.includeFcmDetails) {
+      mergedFcm = mergedFcm
+        ? {
+            successCount: mergedFcm.successCount + fcm.successCount,
+            failureCount: mergedFcm.failureCount + fcm.failureCount,
+            firebaseProjectId: fcm.firebaseProjectId ?? mergedFcm.firebaseProjectId,
+            results: [...mergedFcm.results, ...fcm.results],
+            invalidTokensRemoved:
+              (mergedFcm.invalidTokensRemoved ?? 0) + invalidTokensRemoved,
+          }
+        : { ...fcm, invalidTokensRemoved };
+    }
+
+    if (fcm.successCount > 0) {
       if (params.recordSent !== false) {
         await db.drawReminderSent.upsert({
           where: {
@@ -269,7 +301,7 @@ async function notifyCompetitionDrawReminder(params: {
     }
   }
 
-  return { notificationsAttempted, usersNotified };
+  return { notificationsAttempted, usersNotified, fcmDelivery: mergedFcm };
 }
 
 /** Production cron: competitions in the ~10-minute-before-draw window. */
@@ -369,10 +401,12 @@ export async function runDrawReminderTest(
 
   let notificationsAttempted = 0;
   let usersNotified = 0;
+  let fcmDelivery: SendDrawRemindersResult['fcmDelivery'];
 
   const skipAlreadySent = options.skipAlreadySent ?? true;
   const recordSent = options.recordSent ?? false;
   const bypassEligibility = Boolean(options.userId?.trim());
+  const includeFcmDetails = true;
 
   const debugRows: DrawReminderEligibilityDebug[] = [];
   if (options.debug) {
@@ -394,9 +428,14 @@ export async function runDrawReminderTest(
       skipAlreadySent,
       recordSent,
       bypassEligibility,
+      includeFcmDetails,
+      pruneInvalidTokens: true,
     });
     notificationsAttempted += result.notificationsAttempted;
     usersNotified += result.usersNotified;
+    if (result.fcmDelivery) {
+      fcmDelivery = result.fcmDelivery;
+    }
   }
 
   return {
@@ -406,5 +445,6 @@ export async function runDrawReminderTest(
     competitionIds: competitions.map((c) => c.id),
     ...(debugRows.length > 0 ? { debug: debugRows } : {}),
     ...(userTarget ? { userTarget } : {}),
+    ...(fcmDelivery ? { fcmDelivery } : {}),
   };
 }
