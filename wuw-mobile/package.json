@@ -13,7 +13,9 @@
     "android:sync": "npm run build:prod && npx cap sync android",
     "android:open": "npx cap open android",
     "android:bundle": "node scripts/android-bundle.mjs",
-    "android:release": "npm run android:sync && npm run android:bundle"
+    "android:release": "npm run android:sync && npm run android:bundle",
+    "ios:sync": "npm run build:prod && npx cap sync ios && node scripts/link-ios-google-service.mjs",
+    "postinstall": "node scripts/patch-fcm-ios-plugin.mjs"
   },
   "dependencies": {
     "@capacitor-community/fcm": "^8.1.0",

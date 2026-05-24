@@ -1,4 +1,3 @@
-import { FCM } from '@capacitor-community/fcm';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 
@@ -78,12 +77,18 @@ export async function getPushReceivePermission(): Promise<PushReceivePermission 
   }
 }
 
+async function getFcmPlugin() {
+  const { FCM } = await import('@capacitor-community/fcm');
+  return FCM;
+}
+
 /**
  * Register with the OS, then read the FCM token (not the APNs token from `registration` on iOS).
  */
 async function registerForFcmToken(): Promise<string | null> {
   try {
     await PushNotifications.register();
+    const FCM = await getFcmPlugin();
     const { token } = await FCM.getToken();
     if (!token?.trim() || !isLikelyFcmRegistrationToken(token)) {
       return null;

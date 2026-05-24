@@ -76,8 +76,11 @@ npx cap open android
 ## Ouvrir iOS
 
 ```bash
+npm run ios:sync
 npx cap open ios
 ```
+
+**Crash au premier lancement sur iOS** : l’app inclut Firebase/FCM pour les push. Sans `GoogleService-Info.plist` dans le bundle, l’ancienne version plantait au démarrage. Placez le fichier téléchargé depuis Firebase dans `ios/App/App/GoogleService-Info.plist`, puis `npm run ios:sync` (lie le plist au projet Xcode). Voir `GoogleService-Info.plist.example`.
 
 ## Publication sur le Google Play Store
 
