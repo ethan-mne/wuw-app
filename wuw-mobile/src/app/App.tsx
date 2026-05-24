@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { MobileShell } from '../components/MobileShell';
+import { RequireAuth } from '../components/RequireAuth';
 import { legalPages, supportPages } from '../data/content';
 import { getMobileSessionToken } from '../lib/mobileSessionToken';
 import { mobileDataService } from '../services/mobileDataService';
@@ -37,40 +38,42 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Navigate to={`/${defaultLocale}`} replace />} />
       <Route path="/:locale" element={<MobileShell />}>
-        <Route index element={<HomePage />} />
-        <Route path="draws" element={<DrawsPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="verification" element={<VerificationPage />} />
-        <Route path="competitions" element={<Navigate to=".." replace />} />
-        <Route path="competitions/:id" element={<CompetitionDetailPage />} />
-        <Route path="competitions/:id/question" element={<QuestionPage />} />
-        <Route path="competitions/:id/:orderId" element={<CheckoutPage />} />
-        <Route
-          path="competitions/:id/:orderId/confirmation"
-          element={<ConfirmationPage />}
-        />
-        <Route path="competitions/:id/:orderId/error" element={<PaymentErrorPage />} />
-        <Route path="account/dashboard" element={<AccountDashboardPage />} />
-        <Route path="account/redeem-free-ticket" element={<AccountRedeemFreeTicketPage />} />
-        <Route path="account/profile" element={<AccountProfilePage />} />
-        <Route path="account/history" element={<AccountHistoryPage />} />
-        <Route path="account/referrals" element={<AccountReferralsPage />} />
-        <Route path="winners" element={<WinnersPage />} />
-        {supportPages.map((page) => (
+        <Route element={<RequireAuth />}>
+          <Route index element={<HomePage />} />
+          <Route path="draws" element={<DrawsPage />} />
+          <Route path="competitions" element={<Navigate to=".." replace />} />
+          <Route path="competitions/:id" element={<CompetitionDetailPage />} />
+          <Route path="competitions/:id/question" element={<QuestionPage />} />
+          <Route path="competitions/:id/:orderId" element={<CheckoutPage />} />
           <Route
-            key={page.path}
-            path={page.path}
-            element={<SupportPage pageKey={page.path} />}
+            path="competitions/:id/:orderId/confirmation"
+            element={<ConfirmationPage />}
           />
-        ))}
-        {legalPages.map((page) => (
-          <Route
-            key={page.path}
-            path={page.path}
-            element={<LegalPage pageKey={page.path} />}
-          />
-        ))}
-        <Route path="*" element={<NotFoundPage />} />
+          <Route path="competitions/:id/:orderId/error" element={<PaymentErrorPage />} />
+          <Route path="account/dashboard" element={<AccountDashboardPage />} />
+          <Route path="account/redeem-free-ticket" element={<AccountRedeemFreeTicketPage />} />
+          <Route path="account/profile" element={<AccountProfilePage />} />
+          <Route path="account/history" element={<AccountHistoryPage />} />
+          <Route path="account/referrals" element={<AccountReferralsPage />} />
+          <Route path="winners" element={<WinnersPage />} />
+          {supportPages.map((page) => (
+            <Route
+              key={page.path}
+              path={page.path}
+              element={<SupportPage pageKey={page.path} />}
+            />
+          ))}
+          {legalPages.map((page) => (
+            <Route
+              key={page.path}
+              path={page.path}
+              element={<LegalPage pageKey={page.path} />}
+            />
+          ))}
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to={`/${defaultLocale}`} replace />} />
     </Routes>

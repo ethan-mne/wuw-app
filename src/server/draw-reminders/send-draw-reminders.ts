@@ -4,12 +4,23 @@ import { sendDrawReminderFcmMulticast } from '@/server/draw-reminders/fcm';
 import { isDrawingDateInReminderCronWindow } from '@/server/draw-reminders/window';
 import { listCompetitionsForDrawReminders } from '@/server/lightweight/competition/service';
 
+export type DrawReminderEligibilityDebug = {
+  competitionId: string;
+  ticketHolderEmails: number;
+  usersWithPushDevice: number;
+  usersWithDrawAlert: number;
+  eligibleUsers: number;
+  /** Logged-in users with a push token but no ticket email match and no draw alert for this comp. */
+  pushOnlyNoEligibility: number;
+};
+
 export type SendDrawRemindersResult = {
   competitions: number;
   notificationsAttempted: number;
   usersNotified: number;
   skippedReason?: 'firebase_not_configured' | 'no_competitions' | 'competition_not_found';
   competitionIds?: string[];
+  debug?: DrawReminderEligibilityDebug[];
 };
 
 type CompetitionReminderRow = {
@@ -57,21 +68,68 @@ async function loadCompetitionsForReminderRun(
   return listCompetitionsForDrawReminders(now);
 }
 
+async function getTicketEmailsForCompetition(competitionId: string): Promise<string[]> {
+  const orders = await db.order.findMany({
+    where: {
+      status: 'CONFIRMED',
+      Ticket: { some: { competitionId } },
+    },
+    select: { email: true },
+    distinct: ['email'],
+  });
+  return [...new Set(orders.map((o) => o.email).filter((e) => Boolean(e)))];
+}
+
+export async function getDrawReminderEligibilityDebug(
+  competitionId: string,
+): Promise<DrawReminderEligibilityDebug> {
+  const ticketEmails = await getTicketEmailsForCompetition(competitionId);
+
+  const [usersWithPushDevice, usersWithDrawAlert, eligibleUsers, pushOnlyNoEligibility] =
+    await Promise.all([
+      db.user.count({ where: { pushDevices: { some: {} } } }),
+      db.user.count({
+        where: {
+          drawAlertSubscriptions: { some: { competitionId } },
+        },
+      }),
+      db.user.count({
+        where: {
+          pushDevices: { some: {} },
+          OR: [
+            ...(ticketEmails.length > 0 ? [{ email: { in: ticketEmails } }] : []),
+            { drawAlertSubscriptions: { some: { competitionId } } },
+          ],
+        },
+      }),
+      db.user.count({
+        where: {
+          pushDevices: { some: {} },
+          drawAlertSubscriptions: { none: { competitionId } },
+          ...(ticketEmails.length > 0 ? { email: { notIn: ticketEmails } } : {}),
+        },
+      }),
+    ]);
+
+  return {
+    competitionId,
+    ticketHolderEmails: ticketEmails.length,
+    usersWithPushDevice,
+    usersWithDrawAlert,
+    eligibleUsers,
+    pushOnlyNoEligibility,
+  };
+}
+
 async function notifyCompetitionDrawReminder(params: {
   comp: CompetitionReminderRow;
   userId?: string;
   skipAlreadySent?: boolean;
   recordSent?: boolean;
+  /** Test only: notify user by id if they have a push token (skip ticket / draw-alert check). */
+  bypassEligibility?: boolean;
 }): Promise<{ notificationsAttempted: number; usersNotified: number }> {
-  const orders = await db.order.findMany({
-    where: {
-      status: 'CONFIRMED',
-      Ticket: { some: { competitionId: params.comp.id } },
-    },
-    select: { email: true },
-    distinct: ['email'],
-  });
-  const ticketEmails = [...new Set(orders.map((o) => o.email).filter((e) => Boolean(e)))];
+  const ticketEmails = await getTicketEmailsForCompetition(params.comp.id);
 
   const users = await db.user.findMany({
     where: {
@@ -80,10 +138,14 @@ async function notifyCompetitionDrawReminder(params: {
       ...(params.skipAlreadySent
         ? {}
         : { drawRemindersSent: { none: { competitionId: params.comp.id } } }),
-      OR: [
-        ...(ticketEmails.length > 0 ? [{ email: { in: ticketEmails } }] : []),
-        { drawAlertSubscriptions: { some: { competitionId: params.comp.id } } },
-      ],
+      ...(params.bypassEligibility
+        ? {}
+        : {
+            OR: [
+              ...(ticketEmails.length > 0 ? [{ email: { in: ticketEmails } }] : []),
+              { drawAlertSubscriptions: { some: { competitionId: params.comp.id } } },
+            ],
+          }),
     },
     select: {
       id: true,
@@ -181,7 +243,7 @@ export async function runDrawReminderJob(now: Date): Promise<SendDrawRemindersRe
 export type DrawReminderTestOptions = {
   /** Target one competition; omit to use cron window (or all upcoming if `force`). */
   competitionId?: string;
-  /** Only notify this user (must have a push token and qualify for the draw). */
+  /** Only notify this user; with `userId`, skips ticket/draw-alert requirement (push token only). */
   userId?: string;
   /** Skip cron time window; with no `competitionId`, all ACTIVE upcoming draws. */
   force?: boolean;
@@ -189,6 +251,8 @@ export type DrawReminderTestOptions = {
   skipAlreadySent?: boolean;
   /** Write `draw_reminder_sent` after success (default false for test). */
   recordSent?: boolean;
+  /** Include per-competition eligibility counts in the response. */
+  debug?: boolean;
 };
 
 /**
@@ -235,6 +299,14 @@ export async function runDrawReminderTest(
 
   const skipAlreadySent = options.skipAlreadySent ?? true;
   const recordSent = options.recordSent ?? false;
+  const bypassEligibility = Boolean(options.userId?.trim());
+
+  const debugRows: DrawReminderEligibilityDebug[] = [];
+  if (options.debug) {
+    for (const comp of competitions) {
+      debugRows.push(await getDrawReminderEligibilityDebug(comp.id));
+    }
+  }
 
   for (const comp of competitions) {
     const result = await notifyCompetitionDrawReminder({
@@ -242,6 +314,7 @@ export async function runDrawReminderTest(
       userId: options.userId,
       skipAlreadySent,
       recordSent,
+      bypassEligibility,
     });
     notificationsAttempted += result.notificationsAttempted;
     usersNotified += result.usersNotified;
@@ -252,5 +325,6 @@ export async function runDrawReminderTest(
     notificationsAttempted,
     usersNotified,
     competitionIds: competitions.map((c) => c.id),
+    ...(debugRows.length > 0 ? { debug: debugRows } : {}),
   };
 }

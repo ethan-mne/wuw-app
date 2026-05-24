@@ -14,6 +14,7 @@
     "start": "next start",
     "test": "vitest run",
     "draw-reminder:test": "node scripts/trigger-draw-reminder-test.mjs",
+    "draw-reminder:test:prod": "node scripts/trigger-draw-reminder-test.mjs --prod",
     "test:ui": "SKIP_ENV_VALIDATION=true vitest --ui",
     "format": "prettier --write \"src/**/*.+(js|jsx|ts|tsx)\""
   },

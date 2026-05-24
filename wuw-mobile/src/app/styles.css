@@ -1881,7 +1881,8 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
 }
 
 .brand-mark {
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   background: #114f33;
   color: #ffffff;
   padding: 0.2rem 0.55rem;
