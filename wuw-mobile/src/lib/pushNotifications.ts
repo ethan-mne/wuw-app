@@ -1,6 +1,8 @@
+import { FCM } from '@capacitor-community/fcm';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 
+import { isLikelyFcmRegistrationToken } from './fcmToken';
 import { getStoredPushDeviceToken, setStoredPushDeviceToken } from './pushStorage';
 import { registerPushTokenWithServer, unregisterPushTokenWithServer } from '../services/pushDeviceApi';
 
@@ -76,37 +78,26 @@ export async function getPushReceivePermission(): Promise<PushReceivePermission 
   }
 }
 
+/**
+ * Register with the OS, then read the FCM token (not the APNs token from `registration` on iOS).
+ */
 async function registerForFcmToken(): Promise<string | null> {
-  return new Promise<string | null>((resolve) => {
-    let settled = false;
-    const finish = (value: string | null) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      window.clearTimeout(timer);
-      resolve(value);
-    };
-
-    const timer = window.setTimeout(() => finish(null), 15_000);
-
-    void (async () => {
-      try {
-        await PushNotifications.addListener('registration', (event) => {
-          finish(event.value);
-        });
-        await PushNotifications.addListener('registrationError', () => {
-          finish(null);
-        });
-        await PushNotifications.register().catch(() => finish(null));
-      } catch {
-        finish(null);
-      }
-    })();
-  });
+  try {
+    await PushNotifications.register();
+    const { token } = await FCM.getToken();
+    if (!token?.trim() || !isLikelyFcmRegistrationToken(token)) {
+      return null;
+    }
+    return token.trim();
+  } catch {
+    return null;
+  }
 }
 
 async function persistTokenOnServer(token: string): Promise<void> {
+  if (!isLikelyFcmRegistrationToken(token)) {
+    return;
+  }
   const platform: 'android' | 'ios' = Capacitor.getPlatform() === 'ios' ? 'ios' : 'android';
   setStoredPushDeviceToken(token);
   try {

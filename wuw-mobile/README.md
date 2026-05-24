@@ -86,7 +86,7 @@ npx cap open ios
 1. **Compte Google Play Developer** — [play.google.com/console](https://play.google.com/console) (frais unique ~25 USD).
 2. **Android Studio** — installe le JDK et le SDK Android. Sur Windows, le SDK est généralement dans `%LOCALAPPDATA%\Android\Sdk`.
 3. **Backend production** — `.env.production` pointe déjà vers `VITE_API_BASE_URL=https://wuw-backend.onrender.com`.
-4. **Firebase** (notifications push) — créez un projet Firebase, ajoutez une app Android avec le package `com.winuwatch.wuwapp`, téléchargez `google-services.json` dans `android/app/`.
+4. **Firebase** (notifications push) — projet `winuwatch-bd56d` : `google-services.json` dans `android/app/`, et pour iOS ajoutez `GoogleService-Info.plist` dans `ios/App/App` (Xcode). L’app utilise `@capacitor-community/fcm` pour enregistrer un **token FCM** (pas le token APNs Capacitor seul).
 
 ### 1. Clé de signature (upload keystore)
 
