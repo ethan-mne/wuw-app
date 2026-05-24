@@ -195,7 +195,7 @@ export function DrawThinRowAlertButton({
   }
 
   return (
-    <div className="draws-thin-row-remind-inline">
+    <div className="draws-thin-row-remind-inline draws-thin-row-remind-inline--stacked">
       {loadingGate ? (
         <button
           type="button"
@@ -243,9 +243,9 @@ export function DrawThinRowAlertButton({
         </button>
       )}
       {p.error ? (
-        <span className="sr-only" role="alert">
+        <p className="draws-thin-row-remind-error" role="alert">
           {p.error}
-        </span>
+        </p>
       ) : null}
     </div>
   );

@@ -3813,6 +3813,11 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
   justify-content: center;
 }
 
+.draws-thin-row-remind-inline--stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .draws-thin-row-remind-inline--tick {
   min-width: 1.5rem;
   text-align: center;
@@ -3864,6 +3869,15 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
 .draws-thin-row-remind-btn--secondary {
   background: #e2e8f0;
   color: #0f172a;
+}
+
+.draws-thin-row-remind-error {
+  margin: 0.25rem 0 0;
+  max-width: 6.5rem;
+  font-size: 0.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #b45309;
 }
 
 .draws-thin-row {

@@ -6,11 +6,11 @@ export async function registerPushTokenWithServer(
   platform: 'android' | 'ios',
 ): Promise<void> {
   if (!API_BASE_URL) {
-    return;
+    throw new Error('VITE_API_BASE_URL is not configured.');
   }
   const session = getMobileSessionToken();
   if (!session) {
-    return;
+    throw new Error('Not logged in');
   }
 
   const response = await fetch(`${API_BASE_URL}/api/mobile/v1/me/push-token`, {

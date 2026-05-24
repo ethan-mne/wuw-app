@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 
+import { pushRegisterFailureMessage } from '../lib/pushNotifications';
 import { getMobileSessionToken } from '../lib/mobileSessionToken';
 import { withLocale } from '../routes/locales';
 import { mobileDataService } from '../services/mobileDataService';
@@ -28,22 +29,20 @@ export function useDrawAlertPrefs(competitionId: string | undefined, enabled: bo
     }
 
     let cancelled = false;
+
     void (async () => {
-      try {
-        const [orders, sub] = await Promise.all([
-          mobileDataService.listOrderHistory().catch(() => [] as OrderSummary[]),
-          mobileDataService.getDrawAlertSubscribed(id),
-        ]);
-        if (cancelled) {
-          return;
-        }
-        setHasTicket(orders.some((o) => o.competitionId === id));
+      const sub = await mobileDataService.getDrawAlertSubscribed(id).catch(() => false);
+      if (!cancelled) {
         setSubscribed(sub);
-      } catch {
-        if (!cancelled) {
-          setHasTicket(false);
-          setSubscribed(false);
-        }
+      }
+    })();
+
+    void (async () => {
+      const orders = await mobileDataService
+        .listOrderHistory()
+        .catch(() => [] as OrderSummary[]);
+      if (!cancelled) {
+        setHasTicket(orders.some((o) => o.competitionId === id));
       }
     })();
 
@@ -53,7 +52,7 @@ export function useDrawAlertPrefs(competitionId: string | undefined, enabled: bo
   }, [id, active]);
 
   const alertPrefsLoading =
-    Boolean(getMobileSessionToken()) && active && (hasTicket === null || subscribed === null);
+    Boolean(getMobileSessionToken()) && active && subscribed === null;
 
   const navigateToLogin = (navigate: NavigateFunction, locale: Locale) => {
     navigate(withLocale(locale, 'login'), { state: { pendingDrawAlertCompetitionId: id } });
@@ -63,26 +62,13 @@ export function useDrawAlertPrefs(competitionId: string | undefined, enabled: bo
     setError('');
     setBusy(true);
     try {
-      const push = await mobileDataService.ensurePushRegisteredForAlerts();
-      if (!push.ok) {
-        if (push.reason === 'permission_denied') {
-          setError(
-            'Allow notifications for Winuwatch in your phone settings, then tap again.',
-          );
-        } else if (push.reason === 'no_fcm_token' || push.reason === 'invalid_token_shape') {
-          setError(
-            'Could not register this device for push. Reinstall the app, allow notifications, then try again.',
-          );
-        } else if (push.reason === 'server_rejected') {
-          setError(push.detail ?? 'Server rejected push registration. Try again.');
-        } else {
-          setError('Push notifications require the installed app on a real device.');
-        }
-        return;
-      }
-
       await mobileDataService.subscribeDrawAlert(id);
       setSubscribed(true);
+
+      const push = await mobileDataService.ensurePushRegisteredForAlerts();
+      if (!push.ok) {
+        setError(pushRegisterFailureMessage(push));
+      }
     } catch {
       setError('Could not enable alerts. Try again.');
     } finally {
