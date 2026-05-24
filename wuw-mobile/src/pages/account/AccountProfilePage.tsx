@@ -1,5 +1,4 @@
 import { type FormEvent, useMemo, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
 
 import { Card, PageHeader } from '../../components/ui';
 import {
@@ -10,11 +9,13 @@ import {
   normalizeCountryForSelect,
   parsePhoneForForm,
 } from '../../data/profileCountries';
-import { AccountDataError } from '../../features/account/AccountFetchFallback';
+import {
+  AccountDataError,
+  AccountSignInRequired,
+} from '../../features/account/AccountFetchFallback';
 import { AccountNav } from '../../features/account/AccountNav';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { cacheKeys } from '../../lib/dataCache';
-import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { MobileUserProfile } from '../../types';
 
@@ -80,9 +81,6 @@ function PhoneReadonly({ phone }: { phone: string | null | undefined }) {
 }
 
 export function AccountProfilePage() {
-  const params = useParams();
-  const navigate = useNavigate();
-  const locale = isLocale(params.locale) ? params.locale : defaultLocale;
   const {
     data: result,
     isLoading,
@@ -188,7 +186,7 @@ export function AccountProfilePage() {
           return;
         }
         if (result.kind === 'sign_in_required') {
-          navigate(withLocale(locale, 'login'), { replace: true });
+          setSaveError('Sign in to save your profile.');
           return;
         }
         if (result.kind === 'invalid') {
@@ -213,7 +211,7 @@ export function AccountProfilePage() {
   }
 
   if (phase === 'sign_in_required') {
-    return <Navigate to={withLocale(locale, 'login')} replace />;
+    return <AccountSignInRequired pageTitle="Profile" />;
   }
 
   if (phase === 'error') {

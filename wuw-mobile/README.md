@@ -50,7 +50,7 @@ Configurez `VITE_API_BASE_URL` vers un backend qui expose bien ces routes `v1`.
 
 1. **Firebase** : projet avec Cloud Messaging ; ajoutez `google-services.json` dans `android/app/` (le plugin Gradle est déjà en place si le fichier existe).
 2. **Backend** : définissez `FIREBASE_SERVICE_ACCOUNT_JSON` (JSON compte de service sur une ligne) et `CRON_SECRET` ou `DRAW_REMINDER_CRON_SECRET` (même valeur que le secret Cron Vercel si vous utilisez Vercel Cron). La route planifiée : `GET /api/cron/draw-reminders` (en-tête `Authorization: Bearer …`).
-3. **iOS** : dans Xcode, activez Push Notifications ; dans la console Firebase, associez la clé APNs pour que FCM livre sur iOS.
+3. **iOS** : le projet inclut `App.entitlements` (push) et les hooks `AppDelegate` requis par Capacitor. Ajoutez `GoogleService-Info.plist` (Firebase → app iOS `com.winuwatch.wuwapp`) dans `ios/App/App/`, uploadez la clé APNs dans Firebase, puis `npm run build:prod && npx cap sync ios`. Ouvrez Xcode, vérifiez **Signing & Capabilities → Push Notifications**, et lancez sur un appareil physique (les push ne fonctionnent pas sur le simulateur).
 4. Après connexion OTP, l’app enregistre le token sur `POST /api/mobile/v1/me/push-token` (uniquement sur shell natif Capacitor).
 
 ## Build web mobile

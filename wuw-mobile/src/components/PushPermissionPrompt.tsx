@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getMobileSessionToken } from '../lib/mobileSessionToken';
 import {
+  enablePushNotifications,
   getPushReceivePermission,
   isNativePushPlatform,
-  requestPushPermissionAndRegister,
+  notifyPushPermissionChanged,
+  shouldShowPushPermissionPrompt,
 } from '../lib/pushNotifications';
 import {
   markPushPromptDismissedThisSession,
@@ -32,7 +34,7 @@ export function PushPermissionPrompt({ ready }: PushPermissionPromptProps) {
     }
 
     const receive = await getPushReceivePermission();
-    setOpen(receive === 'prompt');
+    setOpen(shouldShowPushPermissionPrompt(receive));
   }, [ready]);
 
   useEffect(() => {
@@ -59,15 +61,17 @@ export function PushPermissionPrompt({ ready }: PushPermissionPromptProps) {
   const onEnable = async () => {
     setBusy(true);
     try {
-      const ok = await requestPushPermissionAndRegister();
+      const ok = await enablePushNotifications();
       if (ok) {
         setOpen(false);
+        notifyPushPermissionChanged();
         return;
       }
       const receive = await getPushReceivePermission();
       if (receive === 'denied') {
         markPushPromptDismissedThisSession();
         setOpen(false);
+        notifyPushPermissionChanged();
       }
     } finally {
       setBusy(false);

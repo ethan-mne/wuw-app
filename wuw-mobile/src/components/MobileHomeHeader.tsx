@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
+import { PushNotificationBanner } from './PushNotificationBanner';
 import { INFORMATIVE_ONLY_MODE } from '../config/informativeOnlyMode';
 import { defaultLocale, isLocale, withLocale } from '../routes/locales';
 import {
@@ -28,7 +29,9 @@ export function MobileHomeHeader() {
   }
 
   return (
-    <header className="site-header">
+    <div className="site-header-sticky">
+      <PushNotificationBanner />
+      <header className="site-header">
       {!INFORMATIVE_ONLY_MODE ? (
         <div className="apple-pay-banner">
           <span className="apple-pay-badge">APPLE PAY</span>
@@ -59,6 +62,7 @@ export function MobileHomeHeader() {
         <div className="header-actions right" aria-hidden="true" />
       </div>
 
-    </header>
+      </header>
+    </div>
   );
 }

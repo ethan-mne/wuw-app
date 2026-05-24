@@ -1828,12 +1828,58 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
   margin-top: 0;
 }
 
-.site-header {
+.site-header-sticky {
   position: sticky;
   top: 0;
   z-index: 20;
+}
+
+.site-header {
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(18px);
+}
+
+.push-notification-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.55rem 0.85rem;
+  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
+  background: #b91c1c;
+  color: #ffffff;
+  border-bottom: 1px solid #991b1b;
+}
+
+.push-notification-banner-text {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.push-notification-banner-btn {
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #b91c1c;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.push-notification-banner-btn:disabled {
+  opacity: 0.7;
+}
+
+.push-notification-banner-btn:active:not(:disabled) {
+  background: #fef2f2;
 }
 
 .apple-pay-banner {

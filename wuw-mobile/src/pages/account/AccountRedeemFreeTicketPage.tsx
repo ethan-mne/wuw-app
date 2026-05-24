@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 import { SafeImage } from '../../components/SafeImage';
 import { Card, PageHeader } from '../../components/ui';
-import { AccountDataError } from '../../features/account/AccountFetchFallback';
+import {
+  AccountDataError,
+  AccountSignInRequired,
+} from '../../features/account/AccountFetchFallback';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { cacheKeys, invalidateCachedData } from '../../lib/dataCache';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
@@ -17,7 +20,6 @@ const MAX_WINCOINS = 100;
 
 export function AccountRedeemFreeTicketPage() {
   const params = useParams();
-  const navigate = useNavigate();
   const locale = isLocale(params.locale) ? params.locale : defaultLocale;
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export function AccountRedeemFreeTicketPage() {
         return;
       }
       if (result.kind === 'sign_in_required') {
-        navigate(withLocale(locale, 'login'), { replace: true });
+        setError('Sign in to redeem a free ticket.');
         return;
       }
       if (result.kind === 'invalid') {
@@ -89,7 +91,7 @@ export function AccountRedeemFreeTicketPage() {
   }
 
   if (summaryResult?.kind === 'sign_in_required') {
-    return <Navigate to={withLocale(locale, 'login')} replace />;
+    return <AccountSignInRequired pageTitle="Redeem free ticket" />;
   }
 
   if (summaryResult?.kind === 'error' || summaryResult?.kind !== 'ok') {
