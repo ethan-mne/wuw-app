@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom';
 
+import { AppLaunchRedirect } from './AppLaunchRedirect';
 import { MobileHomeHeader } from './MobileHomeHeader';
 import { coreRoutes } from '../routes/routeConfig';
 import { defaultLocale, isLocale, withLocale } from '../routes/locales';
@@ -21,9 +22,9 @@ export function MobileShell() {
   const params = useParams();
   const location = useLocation();
   const locale: Locale = isLocale(params.locale) ? params.locale : defaultLocale;
-
   return (
     <div className="mobile-shell">
+      <AppLaunchRedirect />
       <MobileHomeHeader />
 
       <main className="mobile-content">
