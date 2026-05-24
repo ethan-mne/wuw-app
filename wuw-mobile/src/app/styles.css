@@ -1,3 +1,28 @@
+.app-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: #1d1b1c;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  opacity: 1;
+  transition: opacity 0.32s ease;
+  pointer-events: all;
+}
+
+.app-splash--exiting {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-splash__logo {
+  width: clamp(9rem, 48vw, 14rem);
+  height: auto;
+  object-fit: contain;
+}
+
 :root {
   color: #111111;
   background: #ffffff;
@@ -2835,6 +2860,14 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
   width: 100%;
   position: relative;
   text-decoration: none;
+}
+
+.mobile-home-competition-sold-out-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .mobile-home-competition-sold-out-overlay {

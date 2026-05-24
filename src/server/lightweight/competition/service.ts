@@ -98,11 +98,15 @@ export async function listCompetitionsForMobile(): Promise<MobileCompetitionDto[
           end_date: {
             gte: now,
           },
+          ...mobileCompetitionActiveWhere(),
+          ...mobileCompetitionStartedWhere(now),
         }
       : {
           end_date: {
             gte: now,
           },
+          ...mobileCompetitionActiveWhere(),
+          ...mobileCompetitionStartedWhere(now),
         },
     select: mobileCompetitionSelect,
     orderBy: {
@@ -125,6 +129,21 @@ async function timelineLookbackCutoff(): Promise<Date> {
 /** Gold filter fragment for mobile draw timeline queries. */
 function drawTimelineGoldWhere(useIsGoldFilter: boolean) {
   return useIsGoldFilter ? ({ is_gold: false } as const) : ({} as const);
+}
+
+/** Only competitions that have started (visible on home + draws lists). */
+function mobileCompetitionStartedWhere(now: Date) {
+  return { start_date: { lte: now } } as const;
+}
+
+/** Home + upcoming draws — exclude NOT_ACTIVE (and completed) competitions. */
+function mobileCompetitionActiveWhere() {
+  return { status: 'ACTIVE' as const };
+}
+
+/** Past draws may include completed competitions; still hide NOT_ACTIVE. */
+function mobileCompetitionPastDrawStatusWhere() {
+  return { status: { in: ['ACTIVE', 'COMPLETED'] as const } };
 }
 
 const DRAW_REMINDER_LEAD_MS = 10 * 60_000;
@@ -183,6 +202,8 @@ export async function getDrawTimelineSeed(
   const pastRaw = await db.competition.findMany({
     where: {
       ...gold,
+      ...mobileCompetitionPastDrawStatusWhere(),
+      ...mobileCompetitionStartedWhere(now),
       drawing_date: {
         lte: now,
         gte: cutoff,
@@ -196,6 +217,8 @@ export async function getDrawTimelineSeed(
   const futureRaw = await db.competition.findMany({
     where: {
       ...gold,
+      ...mobileCompetitionActiveWhere(),
+      ...mobileCompetitionStartedWhere(now),
       drawing_date: { gt: now },
     },
     select: mobileCompetitionSelect,
@@ -224,10 +247,13 @@ export async function getDrawTimelinePageBefore(
   const useIsGoldFilter = await canUseIsGoldFilter();
   const cutoff = await timelineLookbackCutoff();
   const gold = drawTimelineGoldWhere(useIsGoldFilter);
+  const now = new Date();
 
   const rows = await db.competition.findMany({
     where: {
       ...gold,
+      ...mobileCompetitionPastDrawStatusWhere(),
+      ...mobileCompetitionStartedWhere(now),
       drawing_date: {
         lt: cursorExclusive,
         gte: cutoff,
@@ -253,10 +279,13 @@ export async function getDrawTimelinePageAfter(
 ): Promise<{ items: MobileCompetitionDto[]; hasMore: boolean }> {
   const useIsGoldFilter = await canUseIsGoldFilter();
   const gold = drawTimelineGoldWhere(useIsGoldFilter);
+  const now = new Date();
 
   const rows = await db.competition.findMany({
     where: {
       ...gold,
+      ...mobileCompetitionActiveWhere(),
+      ...mobileCompetitionStartedWhere(now),
       drawing_date: { gt: cursorExclusive },
     },
     select: mobileCompetitionSelect,

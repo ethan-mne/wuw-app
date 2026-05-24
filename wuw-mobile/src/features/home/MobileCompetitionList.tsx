@@ -119,9 +119,12 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
                 alt={competition.watch.images[0]?.alt || competition.name}
               />
               {isClosed ? (
-                <span className="mobile-home-competition-sold-out-overlay" aria-hidden>
-                  SOLD OUT
-                </span>
+                <>
+                  <span className="mobile-home-competition-sold-out-dim" aria-hidden />
+                  <span className="mobile-home-competition-sold-out-overlay" aria-hidden>
+                    SOLD OUT
+                  </span>
+                </>
               ) : null}
             </Link>
 
