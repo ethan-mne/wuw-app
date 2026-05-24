@@ -1,5 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
-import { defaultLocale, isLocale } from '../../routes/locales';
+import { JoinNextCompetitionLink } from '../../components/JoinNextCompetitionLink';
 import { HowToPlayBagIcon, HowToPlayCupIcon, HowToPlayHandIcon, HowToPlayPlayIcon } from './howToPlayIcons';
 
 const COPY = {
@@ -40,10 +39,12 @@ const COPY = {
   ],
 };
 
-export function MobileHowToPlay() {
-  const params = useParams();
-  const locale = isLocale(params.locale) ? params.locale : defaultLocale;
+type MobileHowToPlayProps = {
+  joinTo: string | null;
+  joinLoading?: boolean;
+};
 
+export function MobileHowToPlay({ joinTo, joinLoading = false }: MobileHowToPlayProps) {
   return (
     <section className="home-how-to-play" aria-labelledby="home-how-to-play-title">
       <div className="home-how-to-play-header">
@@ -71,9 +72,13 @@ export function MobileHowToPlay() {
         ))}
       </ol>
 
-      <Link className="home-how-to-play-cta" to={`/${locale}`}>
+      <JoinNextCompetitionLink
+        className="home-how-to-play-cta"
+        joinTo={joinTo}
+        loading={joinLoading}
+      >
         {COPY.joinCta}
-      </Link>
+      </JoinNextCompetitionLink>
     </section>
   );
 }

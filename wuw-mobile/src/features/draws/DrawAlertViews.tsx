@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 
+import { CONTACT_INFO } from '../../data/contactInfo';
 import { useDrawAlertPrefs } from '../../hooks/useDrawAlertPrefs';
-import { isDrawAlertEligible } from '../../lib/drawAlertEligibility';
+import { isDrawAlertEligible, isInHeroLiveBuffer } from '../../lib/drawAlertEligibility';
 import { getMobileSessionToken } from '../../lib/mobileSessionToken';
 import type { Competition, Locale } from '../../types';
 
@@ -81,8 +82,25 @@ export function DrawAlertHeroStrip({
   nowMs: number;
 }) {
   const navigate = useNavigate();
+  const inLiveBuffer = isInHeroLiveBuffer(competition, nowMs);
   const eligible = isDrawAlertEligible(competition, nowMs);
   const p = useDrawAlertPrefs(competition.id, eligible);
+
+  if (inLiveBuffer) {
+    return (
+      <div className="draws-hero-draw-alert">
+        <a
+          className="draws-hero-live-instagram"
+          href={CONTACT_INFO.instagramUrl}
+          rel="noreferrer"
+          target="_blank"
+        >
+          <span aria-hidden>📷</span>
+          Watch the live draw now on our Instagram
+        </a>
+      </div>
+    );
+  }
 
   if (!eligible) {
     return null;

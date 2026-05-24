@@ -8,6 +8,7 @@ import { mobileDataService } from '../services/mobileDataService';
 import { AccountDashboardPage } from '../pages/account/AccountDashboardPage';
 import { AccountHistoryPage } from '../pages/account/AccountHistoryPage';
 import { AccountProfilePage } from '../pages/account/AccountProfilePage';
+import { AccountRedeemFreeTicketPage } from '../pages/account/AccountRedeemFreeTicketPage';
 import { AccountReferralsPage } from '../pages/account/AccountReferralsPage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { VerificationPage } from '../pages/auth/VerificationPage';
@@ -50,6 +51,7 @@ export default function App() {
         />
         <Route path="competitions/:id/:orderId/error" element={<PaymentErrorPage />} />
         <Route path="account/dashboard" element={<AccountDashboardPage />} />
+        <Route path="account/redeem-free-ticket" element={<AccountRedeemFreeTicketPage />} />
         <Route path="account/profile" element={<AccountProfilePage />} />
         <Route path="account/history" element={<AccountHistoryPage />} />
         <Route path="account/referrals" element={<AccountReferralsPage />} />

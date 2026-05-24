@@ -24,9 +24,8 @@ export async function requireMobileSession(requirement: SessionRequirement) {
     if (requirement === 'email' && !email) {
       throw new MobileHttpError('Unauthorized', 401);
     }
-    const session = await getServerAuthSession();
     return {
-      session,
+      session: null,
       userId,
       email,
     };

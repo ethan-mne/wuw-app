@@ -80,6 +80,14 @@ export interface ReferralUsageItem {
   wincoinsEarned: number;
 }
 
+/** Matches `POST /api/mobile/v1/competitions/:id/redeem-free-ticket`. */
+export interface RedeemFreeTicketResult {
+  orderId: string;
+  competitionId: string;
+  competitionName: string;
+  remainingWincoins: number;
+}
+
 /** Matches `GET/PUT /api/mobile/v1/me` profile fields. */
 export interface MobileUserProfile {
   firstName: string | null;

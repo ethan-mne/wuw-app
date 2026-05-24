@@ -36,6 +36,13 @@ export type MobileOrderHistoryItem = {
   orderedAt: string;
 };
 
+export type MobileRedeemFreeTicketResult = {
+  orderId: string;
+  competitionId: string;
+  competitionName: string;
+  remainingWincoins: number;
+};
+
 export type MobileAccountSummary = {
   userName: string;
   email: string | null;

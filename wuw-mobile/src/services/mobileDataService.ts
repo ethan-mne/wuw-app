@@ -6,6 +6,7 @@ import type {
   Competition,
   MobileUserProfile,
   OrderSummary,
+  RedeemFreeTicketResult,
   ReferralUsageItem,
   Winner,
 } from '../types';
@@ -401,6 +402,62 @@ function normalizeDrawsTimelinePage(raw: unknown): DrawsTimelinePage | null {
   return { items: items as Competition[], hasMore: o.hasMore };
 }
 
+export type RedeemFreeTicketOutcome =
+  | { kind: 'ok'; data: RedeemFreeTicketResult }
+  | { kind: 'sign_in_required' }
+  | { kind: 'invalid'; message: string }
+  | { kind: 'error' };
+
+async function redeemFreeTicket(competitionId: string): Promise<RedeemFreeTicketOutcome> {
+  if (!API_BASE_URL) {
+    return { kind: 'error' };
+  }
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/mobile/v1/competitions/${encodeURIComponent(competitionId)}/redeem-free-ticket`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...mobileAuthHeaders(),
+        },
+      },
+    );
+
+    if (response.status === 401) {
+      await clearMobileSession();
+      return { kind: 'sign_in_required' };
+    }
+
+    if (response.status === 400 || response.status === 404) {
+      let message = 'Could not redeem your free ticket.';
+      try {
+        const j = (await response.json()) as { error?: unknown };
+        if (typeof j.error === 'string' && j.error.trim()) {
+          message = j.error;
+        }
+      } catch {
+        /* use default */
+      }
+      return { kind: 'invalid', message };
+    }
+
+    if (!response.ok) {
+      return { kind: 'error' };
+    }
+
+    const json = (await response.json()) as ApiDataResponse<RedeemFreeTicketResult>;
+    if (!json?.data || typeof json.data.orderId !== 'string') {
+      return { kind: 'error' };
+    }
+
+    return { kind: 'ok', data: json.data };
+  } catch {
+    return { kind: 'error' };
+  }
+}
+
 export const mobileDataService = {
   listCompetitions: async (): Promise<Competition[]> => {
     const endpoints = [
@@ -495,6 +552,7 @@ export const mobileDataService = {
   loadAccountSummary,
   loadMobileProfile,
   updateMobileProfile,
+  redeemFreeTicket,
   listReferralUsages,
   listOrderHistory: async (): Promise<OrderSummary[]> => {
     const response = await apiClient<ApiDataResponse<OrderSummary[]>>(

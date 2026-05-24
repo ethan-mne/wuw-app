@@ -1,9 +1,14 @@
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+
 import { Card, PageHeader, StatPill } from '../../components/ui';
 import { AccountDataError, AccountSignInRequired } from '../../features/account/AccountFetchFallback';
 import { MobileLoyaltyProgram } from '../../features/account/MobileLoyaltyProgram';
 import { AccountNav } from '../../features/account/AccountNav';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { cacheKeys } from '../../lib/dataCache';
+import { clearMobileSession } from '../../lib/mobileSessionToken';
+import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { AccountSummary } from '../../types';
 
@@ -23,6 +28,10 @@ function phaseFromResult(
 }
 
 export function AccountDashboardPage() {
+  const params = useParams();
+  const navigate = useNavigate();
+  const locale = isLocale(params.locale) ? params.locale : defaultLocale;
+  const [signingOut, setSigningOut] = useState(false);
   const {
     data: result,
     isLoading,
@@ -32,6 +41,13 @@ export function AccountDashboardPage() {
   const phase = phaseFromResult(result, isLoading);
   const summary: AccountSummary | undefined =
     result?.kind === 'ok' ? result.data : undefined;
+
+  const onSignOut = () => {
+    setSigningOut(true);
+    void clearMobileSession().then(() => {
+      navigate(withLocale(locale, 'login'), { replace: true });
+    });
+  };
 
   if (phase === 'loading') {
     return (
@@ -75,6 +91,14 @@ export function AccountDashboardPage() {
           <StatPill label="Wincoins" value={summary.points} />
           <StatPill label="Tickets" value={summary.activeTickets} />
         </div>
+        <button
+          type="button"
+          className="checkout-flow-button checkout-flow-button--ghost account-sign-out"
+          disabled={signingOut}
+          onClick={onSignOut}
+        >
+          {signingOut ? 'Signing out…' : 'Sign out'}
+        </button>
       </Card>
       <MobileLoyaltyProgram wincoins={summary.points} />
     </section>

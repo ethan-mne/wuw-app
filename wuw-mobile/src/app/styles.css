@@ -62,6 +62,11 @@ button {
   font: inherit;
 }
 
+h2 {
+  font-weight: 650;
+  letter-spacing: 0.05em;
+}
+
 a,
 button {
   -webkit-tap-highlight-color: transparent;
@@ -153,6 +158,8 @@ button {
   margin: 0;
   color: #0f172a;
   font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
 }
 
 .status-card p,
@@ -223,8 +230,9 @@ button {
   margin: 0;
   color: #0f172a;
   font-size: clamp(2rem, 11vw, 3.5rem);
+  font-weight: 650;
   line-height: 0.95;
-  letter-spacing: -0.07em;
+  letter-spacing: 0.04em;
 }
 
 .card {
@@ -562,9 +570,9 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
 .loyalty-program-title {
   margin: 0;
   font-size: clamp(1.65rem, 6vw, 2rem);
-  font-weight: 800;
+  font-weight: 650;
   line-height: 1.1;
-  letter-spacing: -0.04em;
+  letter-spacing: 0.05em;
 }
 
 .loyalty-program-title-accent {
@@ -764,6 +772,17 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
   margin-top: 1.1rem;
 }
 
+.account-redeem-meta {
+  margin: 0 0 0.85rem;
+  color: #64748b;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.account-sign-out {
+  margin-top: 1.25rem;
+}
+
 .account-profile-phone-readonly {
   display: inline-flex;
   flex-wrap: wrap;
@@ -864,8 +883,8 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
   margin: 0;
   color: #0f172a;
   font-size: clamp(1.85rem, 8.5vw, 2.7rem);
-  font-weight: 900;
-  letter-spacing: -0.05em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   line-height: 1.02;
   text-transform: uppercase;
 }
@@ -1605,8 +1624,8 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
   margin: 0.35rem 0 0.55rem;
   color: #111827;
   font-size: 0.88rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 .competition-detail-ticket-grid {
@@ -1973,6 +1992,14 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
   margin-left: 0.25rem;
 }
 
+.home-community-strip-link {
+  margin-left: 0.25rem;
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -2015,8 +2042,8 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
   gap: 0.2rem;
   margin: 0.25rem 0 0;
   font-size: clamp(1.45rem, 6.6vw, 1.95rem);
-  font-weight: 950;
-  letter-spacing: -0.05em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   line-height: 1.02;
   text-transform: uppercase;
   width: 100%;
@@ -2237,6 +2264,16 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
 
 .home-how-to-play-cta:active {
   transform: translateY(1px);
+}
+
+.join-next-competition-link--disabled {
+  display: flex;
+  min-height: 3.35rem;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .home-competitions {
@@ -2707,8 +2744,9 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
   margin: 0;
   color: #111111;
   font-size: clamp(2.5rem, 14vw, 4rem);
+  font-weight: 650;
   line-height: 0.9;
-  letter-spacing: -0.08em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -3640,6 +3678,26 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
   margin: 0.45rem 0 0;
   font-size: 0.68rem;
   color: #b91c1c;
+}
+
+.draws-hero-live-instagram {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border-radius: 999px;
+  background: #114f33;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.78rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+.draws-hero-live-instagram:active {
+  transform: translateY(1px);
 }
 
 .draws-thin-row-card {

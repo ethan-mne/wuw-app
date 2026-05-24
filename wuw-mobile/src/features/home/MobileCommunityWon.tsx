@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
 import { SafeImage } from '../../components/SafeImage';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
 import { formatGbp } from '../../lib/formatCurrency';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
-import { defaultLocale, isLocale } from '../../routes/locales';
+import { JoinNextCompetitionLink } from '../../components/JoinNextCompetitionLink';
 import type { Competition, Winner } from '../../types';
 
 /** Matches `PastCompetitions` / `messages/en.json` (`competition.our_community`, `has_won`, `home.subtitle`). */
@@ -45,13 +44,14 @@ function CommunityWonCardImage({ src, alt }: { src: string; alt: string }) {
 export function MobileCommunityWon({
   competitions,
   winners = [],
+  joinTo,
+  joinLoading = false,
 }: {
   competitions: Competition[];
   winners?: Winner[];
+  joinTo: string | null;
+  joinLoading?: boolean;
 }) {
-  const params = useParams();
-  const locale = isLocale(params.locale) ? params.locale : defaultLocale;
-
   const now = new Date();
   const past = [...competitions]
     .filter((c) => new Date(c.endDate) < now)
@@ -136,9 +136,13 @@ export function MobileCommunityWon({
             </div>
           </div>
 
-          <Link className="mobile-community-won-cta" to={`/${locale}`}>
+          <JoinNextCompetitionLink
+            className="mobile-community-won-cta"
+            joinTo={joinTo}
+            loading={joinLoading}
+          >
             {COPY.join}
-          </Link>
+          </JoinNextCompetitionLink>
         </div>
       </section>
     </div>

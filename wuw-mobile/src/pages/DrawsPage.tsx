@@ -2,7 +2,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Link, useParams } from 'react-router-dom';
 
 import { DrawAlertHeroStrip, DrawThinRowAlertButton } from '../features/draws/DrawAlertViews';
-import { isDrawAlertEligible } from '../lib/drawAlertEligibility';
+import {
+  findHeroLiveBufferDraw,
+  isDrawAlertEligible,
+} from '../lib/drawAlertEligibility';
 
 import { formatPastDrawLabel, formatUpcomingDrawLabel } from '../lib/formatDrawScheduleLabel';
 import { formatGbpCompact } from '../lib/formatCurrency';
@@ -101,13 +104,14 @@ function ThinThumb({ src, alt }: ThinThumbProps) {
 function splitTimeline(competitions: Competition[], nowMs: number) {
   const past: Competition[] = [];
   const upcoming: Competition[] = [];
+  const liveBufferDraw = findHeroLiveBufferDraw(competitions, nowMs);
   for (const c of competitions) {
     const t = drawInstantMs(c);
     if (!Number.isFinite(t)) continue;
-    if (t <= nowMs) {
-      past.push(c);
-    } else {
+    if (t > nowMs || liveBufferDraw?.id === c.id) {
       upcoming.push(c);
+    } else {
+      past.push(c);
     }
   }
   return { past, upcoming };

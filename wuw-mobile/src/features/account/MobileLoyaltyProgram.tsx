@@ -32,10 +32,10 @@ export function MobileLoyaltyProgram({ wincoins }: MobileLoyaltyProgramProps) {
         disabled={!canUseFreeTicket}
         title={
           canUseFreeTicket
-            ? 'Open competitions to use your free ticket'
+            ? 'Choose a competition to redeem your free ticket'
             : `Earn ${MAX_WINCOINS} Wincoins to unlock (you have ${wincoins})`
         }
-        onClick={() => void navigate(withLocale(locale, ''))}
+        onClick={() => void navigate(withLocale(locale, 'account/redeem-free-ticket'))}
       >
         Use your free ticket
       </button>
@@ -63,6 +63,7 @@ export function MobileLoyaltyProgram({ wincoins }: MobileLoyaltyProgramProps) {
       <div className="loyalty-rules">
         <p>{`1 Ticket purchased = ${COINS_PER_TICKET} Wincoins`}</p>
         <p>100 Wincoins = 1 free ticket</p>
+        <p>Redeem on our lowest entry-price competitions only.</p>
       </div>
 
       <p className="loyalty-disclaimer">

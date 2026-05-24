@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import { isHomeCompetitionSoldOut, orderHomeCompetitions } from '../../lib/homeCompetitions';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { formatGbpCompact } from '../../lib/formatCurrency';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
@@ -86,33 +87,26 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
     return () => window.clearInterval(intervalId);
   }, []);
 
-  const orderedCompetitions = [...competitions].sort((a, b) => {
-    const aSoldOut = a.remainingTickets === 0;
-    const bSoldOut = b.remainingTickets === 0;
-    if (aSoldOut === bSoldOut) {
-      return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
-    }
-    return aSoldOut ? 1 : -1;
-  });
+  const orderedCompetitions = orderHomeCompetitions(competitions);
 
   return (
-    <section className="mobile-home-competitions" aria-labelledby="competitions-title">
+    <section
+      id="competitions"
+      className="mobile-home-competitions"
+      aria-labelledby="competitions-title"
+    >
       <h2 id="competitions-title" className="sr-only">
         Competitions
       </h2>
       {orderedCompetitions.map((competition) => {
-        const isClosed = competition.remainingTickets === 0;
+        const isClosed = isHomeCompetitionSoldOut(competition);
         const countdown = getCountdownParts(competition.endDate, nowMs);
 
         return (
           <article className="mobile-home-competition-card" key={competition.id}>
             <Link
               className="mobile-home-competition-media-link"
-              to={
-                isClosed
-                  ? withLocale(locale, '')
-                  : withLocale(locale, `competitions/${competition.id}`)
-              }
+              to={withLocale(locale, `competitions/${competition.id}`)}
             >
               <ResponsiveCompetitionImage
                 src={resolveMediaUrl(competition.watch.images[0]?.url)}
@@ -175,11 +169,7 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
                     ? 'mobile-home-competition-cta mobile-home-competition-cta--sold-out'
                     : 'mobile-home-competition-cta'
                 }
-                to={
-                  isClosed
-                    ? withLocale(locale, '')
-                    : withLocale(locale, `competitions/${competition.id}`)
-                }
+                to={withLocale(locale, `competitions/${competition.id}`)}
               >
                 {isClosed ? (
                   'Tickets sold out'

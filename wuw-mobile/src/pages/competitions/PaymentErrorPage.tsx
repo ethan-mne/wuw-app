@@ -37,9 +37,14 @@ export function PaymentErrorPage() {
         description="Mobile placeholder for the web checkout error route."
       />
       <Card>
-        <ActionLink to={withLocale(locale, `competitions/${params.id ?? ''}`)}>
-          Return to competition
-        </ActionLink>
+        <div className="checkout-flow-secondary-actions">
+          <ActionLink to={withLocale(locale, `competitions/${params.id ?? ''}`)}>
+            Return to competition
+          </ActionLink>
+          <ActionLink variant="secondary" to={withLocale(locale, '')}>
+            Back to home
+          </ActionLink>
+        </div>
       </Card>
     </section>
   );

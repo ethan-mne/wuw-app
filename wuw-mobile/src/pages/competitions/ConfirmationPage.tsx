@@ -38,7 +38,17 @@ export function ConfirmationPage() {
       />
       <Card>
         <p>Order reference: {params.orderId}</p>
-        <ActionLink to={withLocale(locale, 'account/history')}>View history</ActionLink>
+        <div className="checkout-flow-secondary-actions">
+          <ActionLink to={withLocale(locale, 'account/history')}>View history</ActionLink>
+          {params.id ? (
+            <ActionLink variant="secondary" to={withLocale(locale, `competitions/${params.id}`)}>
+              Back to competition
+            </ActionLink>
+          ) : null}
+          <ActionLink variant="secondary" to={withLocale(locale, '')}>
+            Back to home
+          </ActionLink>
+        </div>
       </Card>
     </section>
   );
