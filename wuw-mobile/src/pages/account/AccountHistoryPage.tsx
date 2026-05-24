@@ -1,29 +1,23 @@
-import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { SafeImage } from '../../components/SafeImage';
 import { Card, PageHeader } from '../../components/ui';
 import { AccountNav } from '../../features/account/AccountNav';
+import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { formatGbp } from '../../lib/formatCurrency';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
+import { cacheKeys } from '../../lib/dataCache';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
-import type { OrderSummary } from '../../types';
 
 export function AccountHistoryPage() {
   const params = useParams();
   const locale = isLocale(params.locale) ? params.locale : defaultLocale;
-  const [orders, setOrders] = useState<OrderSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    void mobileDataService
-      .listOrderHistory()
-      .then(setOrders)
-      .catch(() => setOrders([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: orders = [], isLoading: loading } = useCachedQuery(
+    cacheKeys.orderHistory,
+    () => mobileDataService.listOrderHistory(),
+  );
 
   return (
     <section className="page-stack page-content-pad">

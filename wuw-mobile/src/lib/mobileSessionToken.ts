@@ -29,6 +29,8 @@ export async function clearMobileSession(): Promise<void> {
     /* ignore */
   }
   setMobileSessionToken(null);
+  const { invalidateUserCachedData } = await import('./dataCache');
+  invalidateUserCachedData();
 }
 
 export function mobileAuthHeaders(): Record<string, string> {

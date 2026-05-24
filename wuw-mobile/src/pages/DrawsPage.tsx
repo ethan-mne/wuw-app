@@ -6,9 +6,11 @@ import { isDrawAlertEligible } from '../lib/drawAlertEligibility';
 
 import { formatPastDrawLabel, formatUpcomingDrawLabel } from '../lib/formatDrawScheduleLabel';
 import { formatGbpCompact } from '../lib/formatCurrency';
+import { cacheKeys, getCachedData } from '../lib/dataCache';
 import { resolveMediaUrl } from '../lib/resolveMediaUrl';
+import { useCachedQuery } from '../hooks/useCachedQuery';
 import { defaultLocale, isLocale, withLocale } from '../routes/locales';
-import { mobileDataService } from '../services/mobileDataService';
+import { mobileDataService, type DrawsTimelineSeed } from '../services/mobileDataService';
 import type { Competition, Locale } from '../types';
 
 const DRAW_FUTURE_PAGE_SIZE = 15;
@@ -181,12 +183,28 @@ export function DrawsPage() {
   const params = useParams();
   const locale = isLocale(params.locale) ? params.locale : defaultLocale;
 
-  const [timeline, setTimeline] = useState<Competition[]>([]);
-  const [loadingInitial, setLoadingInitial] = useState(true);
+  const drawsSeedKey = cacheKeys.drawsSeed(DRAW_PAST_LIMIT, DRAW_FUTURE_PAGE_SIZE);
+  const { data: seed, isLoading: loadingInitial } = useCachedQuery(drawsSeedKey, () =>
+    mobileDataService.listDrawsTimelineSeed({
+      takePast: DRAW_PAST_LIMIT,
+      takeFuture: DRAW_FUTURE_PAGE_SIZE,
+    }),
+  );
+
+  const [timeline, setTimeline] = useState<Competition[]>(() => {
+    const cached = getCachedData<DrawsTimelineSeed | null>(drawsSeedKey);
+    if (!cached) {
+      return [];
+    }
+    return mergeTimelineAscending([], cached.past, cached.upcoming);
+  });
   const [loadingPast, setLoadingPast] = useState(false);
   const [loadingFuture, setLoadingFuture] = useState(false);
   const [hasMorePast, setHasMorePast] = useState(false);
-  const [hasMoreFuture, setHasMoreFuture] = useState(false);
+  const [hasMoreFuture, setHasMoreFuture] = useState(() => {
+    const cached = getCachedData<DrawsTimelineSeed | null>(drawsSeedKey);
+    return cached?.hasMoreFuture ?? false;
+  });
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   const heroAnchorRef = useRef<HTMLElement | null>(null);
@@ -225,49 +243,22 @@ export function DrawsPage() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const seed = await mobileDataService.listDrawsTimelineSeed({
-          takePast: DRAW_PAST_LIMIT,
-          takeFuture: DRAW_FUTURE_PAGE_SIZE,
-        });
-
-        if (cancelled) {
-          return;
-        }
-
-        if (!seed) {
-          setTimeline([]);
-          setHasMorePast(false);
-          setHasMoreFuture(false);
-          return;
-        }
-
-        const merged = mergeTimelineAscending([], seed.past, seed.upcoming);
-        setTimeline(merged);
-        // Server keeps a fixed past window (no paging); guard so we never load long history tails.
-        setHasMorePast(false);
-        setHasMoreFuture(seed.hasMoreFuture);
-      } catch {
-        if (!cancelled) {
-          setTimeline([]);
-          setHasMorePast(false);
-          setHasMoreFuture(false);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingInitial(false);
-        }
-      }
+    if (loadingInitial) {
+      return;
     }
 
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (!seed) {
+      setTimeline([]);
+      setHasMorePast(false);
+      setHasMoreFuture(false);
+      return;
+    }
+
+    const merged = mergeTimelineAscending([], seed.past, seed.upcoming);
+    setTimeline(merged);
+    setHasMorePast(false);
+    setHasMoreFuture(seed.hasMoreFuture);
+  }, [seed, loadingInitial]);
 
   const loadMorePast = useCallback(async () => {
     if (loadingInitial || loadingPastRef.current || !hasMorePastRef.current) {

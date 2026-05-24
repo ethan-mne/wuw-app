@@ -4,13 +4,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Card } from '../../components/ui';
 import { MobileFooter } from '../../components/MobileFooter';
 import { DrawAlertPanel } from '../../features/draws/DrawAlertViews';
+import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
 import { formatGbp, formatGbpCompact } from '../../lib/formatCurrency';
+import { cacheKeys } from '../../lib/dataCache';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { INFORMATIVE_ONLY_MODE } from '../../config/informativeOnlyMode';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
-import type { Competition } from '../../types';
 import { type CheckoutFlowState } from './checkoutFlow';
 
 type CountdownParts = {
@@ -89,8 +90,12 @@ export function CompetitionDetailPage() {
   const params = useParams();
   const navigate = useNavigate();
   const locale = isLocale(params.locale) ? params.locale : defaultLocale;
-  const [competition, setCompetition] = useState<Competition | undefined>();
-  const [loading, setLoading] = useState(true);
+  const competitionId = params.id ?? '';
+  const { data: competition, isLoading: loading } = useCachedQuery(
+    cacheKeys.competition(competitionId),
+    () => mobileDataService.getCompetition(competitionId),
+    { enabled: Boolean(competitionId) },
+  );
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -110,19 +115,6 @@ export function CompetitionDetailPage() {
     () => (purchasesEnabled ? discountedTicketPrice * quantity : 0),
     [discountedTicketPrice, quantity, purchasesEnabled],
   );
-
-  useEffect(() => {
-    void mobileDataService
-      .getCompetition(params.id)
-      .then((data) => {
-        setCompetition(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setCompetition(undefined);
-        setLoading(false);
-      });
-  }, [params.id]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {

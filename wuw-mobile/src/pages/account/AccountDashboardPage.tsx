@@ -1,39 +1,37 @@
-import { useEffect, useState } from 'react';
-
 import { Card, PageHeader, StatPill } from '../../components/ui';
 import { AccountDataError, AccountSignInRequired } from '../../features/account/AccountFetchFallback';
 import { MobileLoyaltyProgram } from '../../features/account/MobileLoyaltyProgram';
 import { AccountNav } from '../../features/account/AccountNav';
+import { useCachedQuery } from '../../hooks/useCachedQuery';
+import { cacheKeys } from '../../lib/dataCache';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { AccountSummary } from '../../types';
 
 type LoadPhase = 'loading' | 'ok' | 'sign_in_required' | 'error';
 
-export function AccountDashboardPage() {
-  const [summary, setSummary] = useState<AccountSummary>();
-  const [phase, setPhase] = useState<LoadPhase>('loading');
-  const [retryKey, setRetryKey] = useState(0);
+function phaseFromResult(
+  result: Awaited<ReturnType<typeof mobileDataService.loadAccountSummary>> | undefined,
+  isLoading: boolean,
+): LoadPhase {
+  if (!result) {
+    return isLoading ? 'loading' : 'error';
+  }
+  if (result.kind === 'ok') {
+    return 'ok';
+  }
+  return result.kind;
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    setPhase('loading');
-    void mobileDataService.loadAccountSummary().then((result) => {
-      if (cancelled) return;
-      if (result.kind === 'ok') {
-        setSummary(result.data);
-        setPhase('ok');
-        return;
-      }
-      if (result.kind === 'sign_in_required') {
-        setPhase('sign_in_required');
-        return;
-      }
-      setPhase('error');
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [retryKey]);
+export function AccountDashboardPage() {
+  const {
+    data: result,
+    isLoading,
+    refetch,
+  } = useCachedQuery(cacheKeys.accountSummary, () => mobileDataService.loadAccountSummary());
+
+  const phase = phaseFromResult(result, isLoading);
+  const summary: AccountSummary | undefined =
+    result?.kind === 'ok' ? result.data : undefined;
 
   if (phase === 'loading') {
     return (
@@ -59,7 +57,7 @@ export function AccountDashboardPage() {
 
   if (phase === 'error' || !summary) {
     return (
-      <AccountDataError pageTitle="Dashboard" onRetry={() => setRetryKey((k) => k + 1)} />
+      <AccountDataError pageTitle="Dashboard" onRetry={() => refetch()} />
     );
   }
 

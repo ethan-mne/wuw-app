@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 
 import { Card, PageHeader } from '../../components/ui';
@@ -12,6 +12,8 @@ import {
 } from '../../data/profileCountries';
 import { AccountDataError } from '../../features/account/AccountFetchFallback';
 import { AccountNav } from '../../features/account/AccountNav';
+import { useCachedQuery } from '../../hooks/useCachedQuery';
+import { cacheKeys } from '../../lib/dataCache';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { MobileUserProfile } from '../../types';
@@ -81,9 +83,20 @@ export function AccountProfilePage() {
   const params = useParams();
   const navigate = useNavigate();
   const locale = isLocale(params.locale) ? params.locale : defaultLocale;
-  const [profile, setProfile] = useState<MobileUserProfile>();
-  const [phase, setPhase] = useState<LoadPhase>('loading');
-  const [retryKey, setRetryKey] = useState(0);
+  const {
+    data: result,
+    isLoading,
+    refetch,
+    mutate,
+  } = useCachedQuery(cacheKeys.mobileProfile, () => mobileDataService.loadMobileProfile());
+  const profile = result?.kind === 'ok' ? result.data : undefined;
+  const phase: LoadPhase = !result
+    ? isLoading
+      ? 'loading'
+      : 'error'
+    : result.kind === 'ok'
+      ? 'ok'
+      : result.kind;
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<ProfileFormState | null>(null);
   const [formErrors, setFormErrors] = useState<string[]>([]);
@@ -94,27 +107,6 @@ export function AccountProfilePage() {
     () => [...PROFILE_COUNTRIES].sort((a, b) => a.name.localeCompare(b.name)),
     [],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    setPhase('loading');
-    void mobileDataService.loadMobileProfile().then((result) => {
-      if (cancelled) return;
-      if (result.kind === 'ok') {
-        setProfile(result.data);
-        setPhase('ok');
-        return;
-      }
-      if (result.kind === 'sign_in_required') {
-        setPhase('sign_in_required');
-        return;
-      }
-      setPhase('error');
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [retryKey]);
 
   const startEditing = () => {
     if (!profile) return;
@@ -190,7 +182,7 @@ export function AccountProfilePage() {
       .then((result) => {
         setSaving(false);
         if (result.kind === 'ok') {
-          setProfile(result.data);
+          mutate({ kind: 'ok', data: result.data });
           setEditing(false);
           setForm(null);
           return;
@@ -226,13 +218,13 @@ export function AccountProfilePage() {
 
   if (phase === 'error') {
     return (
-      <AccountDataError pageTitle="Profile" onRetry={() => setRetryKey((k) => k + 1)} />
+      <AccountDataError pageTitle="Profile" onRetry={() => refetch()} />
     );
   }
 
   if (!profile) {
     return (
-      <AccountDataError pageTitle="Profile" onRetry={() => setRetryKey((k) => k + 1)} />
+      <AccountDataError pageTitle="Profile" onRetry={() => refetch()} />
     );
   }
 

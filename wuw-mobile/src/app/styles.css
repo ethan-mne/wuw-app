@@ -1863,6 +1863,14 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
 
 .brand-mark {
   font-weight: 700;
+  background: #114f33;
+  color: #ffffff;
+  padding: 0.2rem 0.55rem;
+  line-height: 1.1;
+}
+
+.site-header .brand-mark:visited {
+  color: #ffffff;
 }
 
 .header-actions {

@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { Card, PageHeader } from '../../components/ui';
 import { AccountDataError, AccountSignInRequired } from '../../features/account/AccountFetchFallback';
 import { AccountNav } from '../../features/account/AccountNav';
+import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
+import { cacheKeys } from '../../lib/dataCache';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { AccountSummary, ReferralUsageItem } from '../../types';
 
@@ -15,47 +17,54 @@ function buildReferralShareMessage(code: string, siteUrl: string) {
   return `Join WINUWATCH with my referral code: ${code}\n${siteUrl}`;
 }
 
+function resolveReferralsPhase(
+  summaryResult: Awaited<ReturnType<typeof mobileDataService.loadAccountSummary>> | undefined,
+  usagesResult: Awaited<ReturnType<typeof mobileDataService.listReferralUsages>> | undefined,
+  isLoading: boolean,
+): LoadPhase {
+  if (!summaryResult || !usagesResult) {
+    return isLoading ? 'loading' : 'error';
+  }
+  if (summaryResult.kind === 'sign_in_required' || usagesResult.kind === 'sign_in_required') {
+    return 'sign_in_required';
+  }
+  if (summaryResult.kind === 'error') {
+    return 'error';
+  }
+  return 'ok';
+}
+
 export function AccountReferralsPage() {
-  const [summary, setSummary] = useState<AccountSummary>();
-  const [usages, setUsages] = useState<ReferralUsageItem[]>([]);
-  const [phase, setPhase] = useState<LoadPhase>('loading');
-  const [retryKey, setRetryKey] = useState(0);
+  const {
+    data: summaryResult,
+    isLoading: loadingSummary,
+    refetch: refetchSummary,
+  } = useCachedQuery(cacheKeys.accountSummary, () => mobileDataService.loadAccountSummary());
+
+  const {
+    data: usagesResult,
+    isLoading: loadingUsages,
+    refetch: refetchUsages,
+  } = useCachedQuery(cacheKeys.referralUsages, () => mobileDataService.listReferralUsages());
+
+  const summary: AccountSummary | undefined =
+    summaryResult?.kind === 'ok' ? summaryResult.data : undefined;
+  const usages: ReferralUsageItem[] =
+    usagesResult?.kind === 'ok' ? usagesResult.data : [];
+  const phase = resolveReferralsPhase(
+    summaryResult,
+    usagesResult,
+    loadingSummary || loadingUsages,
+  );
+
   const [copyLabel, setCopyLabel] = useState<'Copy code' | 'Copied'>('Copy code');
 
   const siteUrl = import.meta.env.VITE_SITE_URL ?? DEFAULT_SITE_URL;
 
-  useEffect(() => {
-    let cancelled = false;
-    setPhase('loading');
-    setUsages([]);
-    void mobileDataService.loadAccountSummary().then(async (result) => {
-      if (cancelled) return;
-      if (result.kind === 'sign_in_required') {
-        setPhase('sign_in_required');
-        return;
-      }
-      if (result.kind === 'error') {
-        setPhase('error');
-        return;
-      }
-      setSummary(result.data);
-      const usagesResult = await mobileDataService.listReferralUsages();
-      if (cancelled) return;
-      if (usagesResult.kind === 'sign_in_required') {
-        setPhase('sign_in_required');
-        return;
-      }
-      if (usagesResult.kind === 'error') {
-        setUsages([]);
-      } else {
-        setUsages(usagesResult.data);
-      }
-      setPhase('ok');
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [retryKey]);
+  const refetch = useCallback(() => {
+    refetchSummary();
+    refetchUsages();
+  }, [refetchSummary, refetchUsages]);
 
   const referralCode = summary?.referralCode?.trim() ?? '';
   const canUseCode = Boolean(referralCode);
@@ -108,7 +117,7 @@ export function AccountReferralsPage() {
 
   if (phase === 'error' || !summary) {
     return (
-      <AccountDataError pageTitle="Referrals" onRetry={() => setRetryKey((k) => k + 1)} />
+      <AccountDataError pageTitle="Referrals" onRetry={refetch} />
     );
   }
 

@@ -1,1 +1,1 @@
-export {};
+export { useCachedQuery } from './useCachedQuery';
