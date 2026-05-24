@@ -8,6 +8,14 @@ export function getMobileSessionToken(): string | null {
   }
 }
 
+function notifySessionChanged(): void {
+  try {
+    window.dispatchEvent(new Event('wuw-mobile-session'));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function setMobileSessionToken(token: string | null): void {
   try {
     if (token) {
@@ -15,6 +23,7 @@ export function setMobileSessionToken(token: string | null): void {
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
+    notifySessionChanged();
   } catch {
     /* ignore quota / private mode */
   }

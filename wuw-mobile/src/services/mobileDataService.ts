@@ -586,9 +586,13 @@ export const mobileDataService = {
       );
     }
   },
-  registerPushAfterLogin: async (): Promise<void> => {
-    const { registerPushAfterLogin } = await import('../lib/pushNotifications');
-    await registerPushAfterLogin();
+  syncPushTokenIfPermitted: async (): Promise<void> => {
+    const { syncPushTokenIfPermitted } = await import('../lib/pushNotifications');
+    await syncPushTokenIfPermitted();
+  },
+  requestPushPermissionAndRegister: async (): Promise<boolean> => {
+    const { requestPushPermissionAndRegister } = await import('../lib/pushNotifications');
+    return requestPushPermissionAndRegister();
   },
   getDrawAlertSubscribed: async (competitionId: string): Promise<boolean> => {
     if (!API_BASE_URL || !getMobileSessionToken()) {

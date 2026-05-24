@@ -31,7 +31,7 @@ export default function App() {
     if (!getMobileSessionToken()) {
       return;
     }
-    void mobileDataService.registerPushAfterLogin();
+    void mobileDataService.syncPushTokenIfPermitted();
   }, []);
 
   return (

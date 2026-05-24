@@ -14,6 +14,18 @@ export type DrawReminderEligibilityDebug = {
   pushOnlyNoEligibility: number;
 };
 
+export type DrawReminderUserTargetDebug = {
+  userId: string;
+  competitionId: string;
+  userExists: boolean;
+  pushDeviceCount: number;
+  hasDrawAlert: boolean;
+  hasConfirmedTicket: boolean;
+  firebaseConfigured: boolean;
+  /** Human-readable reasons no push was sent (empty if ready to send). */
+  blockers: string[];
+};
+
 export type SendDrawRemindersResult = {
   competitions: number;
   notificationsAttempted: number;
@@ -21,6 +33,7 @@ export type SendDrawRemindersResult = {
   skippedReason?: 'firebase_not_configured' | 'no_competitions' | 'competition_not_found';
   competitionIds?: string[];
   debug?: DrawReminderEligibilityDebug[];
+  userTarget?: DrawReminderUserTargetDebug;
 };
 
 type CompetitionReminderRow = {
@@ -78,6 +91,66 @@ async function getTicketEmailsForCompetition(competitionId: string): Promise<str
     distinct: ['email'],
   });
   return [...new Set(orders.map((o) => o.email).filter((e) => Boolean(e)))];
+}
+
+export async function getUserDrawReminderTargetDebug(
+  userId: string,
+  competitionId: string,
+): Promise<DrawReminderUserTargetDebug> {
+  const blockers: string[] = [];
+  const firebaseConfigured = isFirebaseConfiguredForPush();
+  if (!firebaseConfigured) {
+    blockers.push('firebase_not_configured_on_server');
+  }
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      pushDevices: { select: { id: true } },
+      drawAlertSubscriptions: {
+        where: { competitionId },
+        select: { id: true },
+      },
+    },
+  });
+
+  if (!user) {
+    blockers.push('user_not_found');
+    return {
+      userId,
+      competitionId,
+      userExists: false,
+      pushDeviceCount: 0,
+      hasDrawAlert: false,
+      hasConfirmedTicket: false,
+      firebaseConfigured,
+      blockers,
+    };
+  }
+
+  const pushDeviceCount = user.pushDevices.length;
+  const hasDrawAlert = user.drawAlertSubscriptions.length > 0;
+  const ticketEmails = await getTicketEmailsForCompetition(competitionId);
+  const hasConfirmedTicket = ticketEmails.includes(user.email);
+
+  if (pushDeviceCount === 0) {
+    blockers.push(
+      'no_fcm_token_in_database — open the installed Android/iOS app, allow notifications, stay logged in (production API)',
+    );
+  }
+
+  return {
+    userId,
+    competitionId,
+    userExists: true,
+    pushDeviceCount,
+    hasDrawAlert,
+    hasConfirmedTicket,
+    firebaseConfigured,
+    blockers,
+  };
 }
 
 export async function getDrawReminderEligibilityDebug(
@@ -308,6 +381,12 @@ export async function runDrawReminderTest(
     }
   }
 
+  let userTarget: DrawReminderUserTargetDebug | undefined;
+  const trimmedUserId = options.userId?.trim();
+  if (trimmedUserId && competitions[0]) {
+    userTarget = await getUserDrawReminderTargetDebug(trimmedUserId, competitions[0].id);
+  }
+
   for (const comp of competitions) {
     const result = await notifyCompetitionDrawReminder({
       comp,
@@ -326,5 +405,6 @@ export async function runDrawReminderTest(
     usersNotified,
     competitionIds: competitions.map((c) => c.id),
     ...(debugRows.length > 0 ? { debug: debugRows } : {}),
+    ...(userTarget ? { userTarget } : {}),
   };
 }

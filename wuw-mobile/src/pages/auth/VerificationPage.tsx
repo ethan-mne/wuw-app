@@ -84,7 +84,7 @@ export function VerificationPage() {
 
     if (result.status === 'ok') {
       setMobileSessionToken(result.token);
-      void mobileDataService.registerPushAfterLogin();
+      void mobileDataService.syncPushTokenIfPermitted();
       const pending = state.pendingDrawAlertCompetitionId;
       if (pending) {
         void mobileDataService.subscribeDrawAlert(pending).catch(() => {});
