@@ -1,6 +1,12 @@
 import { apiClient } from './apiClient';
 import { API_BASE_URL } from '../lib/config';
 import { clearMobileSession, getMobileSessionToken, mobileAuthHeaders } from '../lib/mobileSessionToken';
+import {
+  ensurePushRegisteredForAlerts,
+  obtainPushToken,
+  requestPushPermissionAndRegister,
+  syncPushTokenIfPermitted,
+} from '../lib/pushNotifications';
 import type {
   AccountSummary,
   Competition,
@@ -586,20 +592,10 @@ export const mobileDataService = {
       );
     }
   },
-  syncPushTokenIfPermitted: async () => {
-    const { syncPushTokenIfPermitted } = await import('../lib/pushNotifications');
-    return syncPushTokenIfPermitted();
-  },
-  ensurePushRegisteredForAlerts: async () => {
-    const { ensurePushRegisteredForAlerts } = await import('../lib/pushNotifications');
-    return ensurePushRegisteredForAlerts();
-  },
-  obtainPushToken: async (options?: { prompt?: boolean }) => {
-    const { obtainPushToken } = await import('../lib/pushNotifications');
-    return obtainPushToken(options);
-  },
+  syncPushTokenIfPermitted: async () => syncPushTokenIfPermitted(),
+  ensurePushRegisteredForAlerts: async () => ensurePushRegisteredForAlerts(),
+  obtainPushToken: async (options?: { prompt?: boolean }) => obtainPushToken(options),
   requestPushPermissionAndRegister: async () => {
-    const { requestPushPermissionAndRegister } = await import('../lib/pushNotifications');
     const result = await requestPushPermissionAndRegister();
     return result.ok;
   },

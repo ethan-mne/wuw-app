@@ -15,8 +15,8 @@
     "android:open": "npx cap open android",
     "android:bundle": "node scripts/android-bundle.mjs",
     "android:release": "npm run android:sync && npm run android:bundle",
-    "ios:sync": "npm run build:prod && npx cap sync ios",
-    "ios:sync:dev": "tsc -b && vite build --mode development && npx cap sync ios",
+    "ios:sync": "npm run build:prod && npx cap sync ios && node scripts/normalize-ios-spm-paths.mjs",
+    "ios:sync:dev": "tsc -b && vite build --mode development && npx cap sync ios && node scripts/normalize-ios-spm-paths.mjs",
     "postinstall": "node scripts/patch-fcm-android.mjs"
   },
   "dependencies": {

@@ -1,5 +1,19 @@
 import { ApnsClient, Host, Notification, Errors, ApnsError } from 'apns2';
 
+import {
+  alternateApnsEnvironment,
+  getDefaultApnsEnvironment,
+  isApnsEnvironmentMismatch,
+  type ApnsEnvironment,
+} from '@/server/draw-reminders/apns-environment';
+
+export type { ApnsEnvironment } from '@/server/draw-reminders/apns-environment';
+export {
+  alternateApnsEnvironment,
+  getDefaultApnsEnvironment,
+  isApnsEnvironmentMismatch,
+} from '@/server/draw-reminders/apns-environment';
+
 export type ApnsTokenSendResult = {
   tokenPrefix: string;
   success: boolean;
@@ -12,8 +26,6 @@ export type ApnsMulticastResult = {
   failureCount: number;
   results: ApnsTokenSendResult[];
 };
-
-export type ApnsEnvironment = 'sandbox' | 'production';
 
 function tokenPrefix(token: string): string {
   if (token.length <= 12) {
@@ -55,12 +67,19 @@ export function isApnsConfiguredForPush(): boolean {
   return getApnsConfig() != null;
 }
 
-export function getDefaultApnsEnvironment(): ApnsEnvironment {
-  const raw = process.env.APNS_PRODUCTION?.trim().toLowerCase();
-  if (raw === 'false' || raw === '0') {
-    return 'sandbox';
+export async function updateApnsEnvironmentForTokens(
+  tokens: string[],
+  environment: ApnsEnvironment,
+): Promise<number> {
+  if (tokens.length === 0) {
+    return 0;
   }
-  return 'production';
+  const { db } = await import('@/server/db');
+  const result = await db.userPushDevice.updateMany({
+    where: { token: { in: tokens } },
+    data: { apnsEnvironment: environment },
+  });
+  return result.count;
 }
 
 const clientCache = new Map<ApnsEnvironment, ApnsClient>();
@@ -98,13 +117,17 @@ function emptyResult(tokens: string[], message: string): ApnsMulticastResult {
   };
 }
 
-export async function sendDrawReminderApnsMulticast(params: {
+type ApnsMulticastParams = {
   tokens: string[];
   title: string;
   body: string;
   data: Record<string, string>;
   environment: ApnsEnvironment;
-}): Promise<ApnsMulticastResult> {
+};
+
+async function sendDrawReminderApnsMulticastOnce(
+  params: ApnsMulticastParams,
+): Promise<ApnsMulticastResult> {
   if (params.tokens.length === 0) {
     return { successCount: 0, failureCount: 0, results: [] };
   }
@@ -156,6 +179,64 @@ export async function sendDrawReminderApnsMulticast(params: {
   }
 
   return { successCount, failureCount, results };
+}
+
+export type ApnsMulticastWithFallbackResult = ApnsMulticastResult & {
+  /** Tokens whose stored apnsEnvironment was corrected after a successful retry. */
+  environmentCorrections: Array<{ token: string; environment: ApnsEnvironment }>;
+};
+
+/** Send on the requested APNs host; retry BadEnvironmentKeyInToken on the alternate host. */
+export async function sendDrawReminderApnsMulticast(
+  params: ApnsMulticastParams,
+): Promise<ApnsMulticastWithFallbackResult> {
+  const first = await sendDrawReminderApnsMulticastOnce(params);
+
+  const retryTokens: string[] = [];
+  const retryIndexes: number[] = [];
+  for (let i = 0; i < first.results.length; i++) {
+    const result = first.results[i];
+    const token = params.tokens[i];
+    if (token && result && !result.success && isApnsEnvironmentMismatch(result.errorCode)) {
+      retryTokens.push(token);
+      retryIndexes.push(i);
+    }
+  }
+
+  if (retryTokens.length === 0) {
+    return { ...first, environmentCorrections: [] };
+  }
+
+  const alternateEnvironment = alternateApnsEnvironment(params.environment);
+  const retry = await sendDrawReminderApnsMulticastOnce({
+    ...params,
+    tokens: retryTokens,
+    environment: alternateEnvironment,
+  });
+
+  const mergedResults = [...first.results];
+  let successCount = first.successCount;
+  let failureCount = first.failureCount;
+  const environmentCorrections: Array<{ token: string; environment: ApnsEnvironment }> = [];
+
+  for (let j = 0; j < retryIndexes.length; j++) {
+    const index = retryIndexes[j] ?? -1;
+    const retryResult = retry.results[j];
+    const token = retryTokens[j];
+    if (index < 0 || !retryResult || !token) {
+      continue;
+    }
+
+    const previous = mergedResults[index];
+    if (previous && !previous.success && retryResult.success) {
+      successCount += 1;
+      failureCount -= 1;
+      environmentCorrections.push({ token, environment: alternateEnvironment });
+    }
+    mergedResults[index] = retryResult;
+  }
+
+  return { successCount, failureCount, results: mergedResults, environmentCorrections };
 }
 
 const INVALID_APNS_REASONS = new Set<string>([

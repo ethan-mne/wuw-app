@@ -1,3 +1,6 @@
+import { invalidateUserCachedData } from './dataCache';
+import { unregisterPushDeviceIfAny } from './pushNotifications';
+
 const STORAGE_KEY = 'wuw_mobile_session_token';
 
 export function getMobileSessionToken(): string | null {
@@ -32,13 +35,11 @@ export function setMobileSessionToken(token: string | null): void {
 /** Clears the mobile JWT and best-effort unregisters push with the backend (native only). */
 export async function clearMobileSession(): Promise<void> {
   try {
-    const { unregisterPushDeviceIfAny } = await import('./pushNotifications');
     await unregisterPushDeviceIfAny();
   } catch {
     /* ignore */
   }
   setMobileSessionToken(null);
-  const { invalidateUserCachedData } = await import('./dataCache');
   invalidateUserCachedData();
 }
 

@@ -4,6 +4,7 @@ import {
   getDefaultApnsEnvironment,
   isApnsConfiguredForPush,
   sendDrawReminderApnsMulticast,
+  updateApnsEnvironmentForTokens,
   type ApnsEnvironment,
   type ApnsMulticastResult,
 } from '@/server/draw-reminders/apns';
@@ -349,6 +350,12 @@ async function notifyCompetitionDrawReminder(params: {
         });
         notificationsAttempted += apnsTokens.length;
         userSuccessCount += apns.successCount;
+
+        if (apns.environmentCorrections.length > 0) {
+          for (const correction of apns.environmentCorrections) {
+            await updateApnsEnvironmentForTokens([correction.token], correction.environment);
+          }
+        }
 
         let invalidTokensRemoved = 0;
         if (params.pruneInvalidTokens && apns.failureCount > 0) {
