@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "651859942451",
+    "project_id": "winuwatch-bd56d",
+    "storage_bucket": "winuwatch-bd56d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:651859942451:android:68fdd245efed018e615746",
+        "android_client_info": {
+          "package_name": "com.winuwatch.wuwapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "651859942451-he82m1ggmj8pim8ctnbivftqorid8d1q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2sjscGrTjR_RDALVOl3XUOzpOIE8o9_8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "651859942451-he82m1ggmj8pim8ctnbivftqorid8d1q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

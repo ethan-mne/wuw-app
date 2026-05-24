@@ -79,6 +79,65 @@ npx cap open android
 npx cap open ios
 ```
 
+## Publication sur le Google Play Store
+
+### Prérequis
+
+1. **Compte Google Play Developer** — [play.google.com/console](https://play.google.com/console) (frais unique ~25 USD).
+2. **Android Studio** — installe le JDK et le SDK Android. Sur Windows, le SDK est généralement dans `%LOCALAPPDATA%\Android\Sdk`.
+3. **Backend production** — `.env.production` pointe déjà vers `VITE_API_BASE_URL=https://wuw-backend.onrender.com`.
+4. **Firebase** (notifications push) — créez un projet Firebase, ajoutez une app Android avec le package `com.winuwatch.wuwapp`, téléchargez `google-services.json` dans `android/app/`.
+
+### 1. Clé de signature (upload keystore)
+
+Une seule fois, générez un keystore (conservez-le en lieu sûr — Google ne peut pas le récupérer) :
+
+```bash
+keytool -genkeypair -v -storetype PKCS12 -keystore wuw-mobile/android/release.keystore -alias upload -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Copiez `android/keystore.properties.example` vers `android/keystore.properties` et renseignez les mots de passe.
+
+### 2. Build de production (AAB)
+
+Le Play Store exige un **Android App Bundle** (`.aab`), pas un APK :
+
+```bash
+cd wuw-mobile
+npm run android:release
+```
+
+Le fichier généré se trouve dans :
+
+`android/app/build/outputs/bundle/release/app-release.aab`
+
+Sans `keystore.properties`, Gradle produit un bundle non signé — utilisez **Build → Generate Signed Bundle** dans Android Studio à la place.
+
+### 3. Google Play Console
+
+1. **Créer l’application** — nom « Winuwatch », langue par défaut, type « Application ».
+2. **Fiche Play Store** — description courte/longue, icône 512×512, captures d’écran téléphone (min. 2), catégorie.
+3. **Politique de confidentialité** — URL publique (ex. `https://winuwatch.uk/en/privacy-policy`).
+4. **Classification du contenu** — questionnaire obligatoire.
+5. **Cible d’audience** — tranche d’âge (applications avec paiements / concours : souvent 18+).
+6. **Sécurité des données** — déclaration des données collectées (email, achats, identifiants push, etc.).
+7. **Signature Play App Signing** — à la première upload, Google propose d’héberger la clé de signature ; acceptez et uploadez votre AAB signé avec la clé *upload*.
+
+Publiez d’abord en **test interne** ou **test fermé** pour valider l’app avant la production.
+
+### 4. Versions suivantes
+
+Avant chaque release, incrémentez dans `android/app/build.gradle` :
+
+- `versionCode` — entier strictement croissant (ex. 2, 3…)
+- `versionName` — version affichée (ex. `"1.0.1"`)
+
+Puis relancez `npm run android:release`.
+
+### Note réglementaire
+
+Winuwatch propose des concours avec paiement. Google applique des règles strictes sur les **jeux d’argent / loteries**. Vérifiez que vous respectez la [politique Real-Money Gambling](https://support.google.com/googleplay/android-developer/answer/9877032) pour votre marché (licences UK, etc.) — un refus est possible sans documentation adaptée.
+
 ## Structure
 
 - `src/app` : racine React et styles globaux mobile

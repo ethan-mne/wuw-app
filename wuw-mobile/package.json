@@ -6,9 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:prod": "tsc -b && vite build --mode production",
     "lint": "eslint .",
     "preview": "vite preview",
-    "capacitor:assets": "npx capacitor-assets generate --ios --android --iconBackgroundColor \"#114f33\" --iconBackgroundColorDark \"#114f33\" --splashBackgroundColor \"#1d1b1c\" --splashBackgroundColorDark \"#1d1b1c\""
+    "capacitor:assets": "npx capacitor-assets generate --ios --android --iconBackgroundColor \"#114f33\" --iconBackgroundColorDark \"#114f33\" --splashBackgroundColor \"#1d1b1c\" --splashBackgroundColorDark \"#1d1b1c\"",
+    "android:sync": "npm run build:prod && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:bundle": "node scripts/android-bundle.mjs",
+    "android:release": "npm run android:sync && npm run android:bundle"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",
