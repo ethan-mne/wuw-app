@@ -5,14 +5,14 @@ import { useAppSplash } from '../hooks/useAppSplash';
 import App from './App';
 
 export function Root() {
-  const { showSplash, exiting } = useAppSplash();
+  const { showSplash, exiting, onVideoEnded } = useAppSplash();
 
   return (
     <>
       <BrowserRouter>
         <App />
       </BrowserRouter>
-      {showSplash ? <AppSplash exiting={exiting} /> : null}
+      {showSplash ? <AppSplash exiting={exiting} onVideoEnded={onVideoEnded} /> : null}
     </>
   );
 }

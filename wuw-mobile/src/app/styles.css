@@ -2,8 +2,7 @@
   position: fixed;
   inset: 0;
   z-index: 9999;
-  display: grid;
-  place-items: center;
+  overflow: hidden;
   background: #1d1b1c;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
@@ -17,10 +16,11 @@
   pointer-events: none;
 }
 
-.app-splash__logo {
-  width: clamp(9rem, 48vw, 14rem);
-  height: auto;
-  object-fit: contain;
+.app-splash__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #1d1b1c;
 }
 
 :root {

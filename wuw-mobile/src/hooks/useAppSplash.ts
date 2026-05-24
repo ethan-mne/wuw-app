@@ -1,51 +1,65 @@
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-const MIN_SPLASH_MS = 3000;
 const EXIT_ANIMATION_MS = 320;
+const MAX_SPLASH_MS = 5000;
 
 export function useAppSplash() {
   const [exiting, setExiting] = useState(false);
   const [done, setDone] = useState(false);
+  const dismissedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function dismissSplash() {
-      await new Promise<void>((resolve) => {
-        window.setTimeout(resolve, MIN_SPLASH_MS);
-      });
-      if (cancelled) {
+    async function hideNativeSplash() {
+      if (!Capacitor.isNativePlatform()) {
         return;
       }
 
-      if (Capacitor.isNativePlatform()) {
-        try {
-          await SplashScreen.hide({ fadeOutDuration: 200 });
-        } catch {
-          // Splash plugin may be unavailable in some dev builds.
-        }
-      }
-
-      setExiting(true);
-      await new Promise<void>((resolve) => {
-        window.setTimeout(resolve, EXIT_ANIMATION_MS);
-      });
-      if (!cancelled) {
-        setDone(true);
+      try {
+        await SplashScreen.hide({ fadeOutDuration: 200 });
+      } catch {
+        // Splash plugin may be unavailable in some dev builds.
       }
     }
 
-    void dismissSplash();
+    void hideNativeSplash();
+
+    const fallbackTimer = window.setTimeout(() => {
+      if (!cancelled && !dismissedRef.current) {
+        dismissedRef.current = true;
+        setExiting(true);
+        window.setTimeout(() => {
+          if (!cancelled) {
+            setDone(true);
+          }
+        }, EXIT_ANIMATION_MS);
+      }
+    }, MAX_SPLASH_MS);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(fallbackTimer);
     };
+  }, []);
+
+  const onVideoEnded = useCallback(() => {
+    if (dismissedRef.current) {
+      return;
+    }
+    dismissedRef.current = true;
+
+    setExiting(true);
+    window.setTimeout(() => {
+      setDone(true);
+    }, EXIT_ANIMATION_MS);
   }, []);
 
   return {
     showSplash: !done,
     exiting,
+    onVideoEnded,
   };
 }

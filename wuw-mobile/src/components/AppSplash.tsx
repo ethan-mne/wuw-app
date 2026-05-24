@@ -1,10 +1,26 @@
-import winuLogo from '../../assets/logo.png';
+import { useEffect, useRef } from 'react';
 
 type AppSplashProps = {
   exiting?: boolean;
+  onVideoEnded: () => void;
 };
 
-export function AppSplash({ exiting = false }: AppSplashProps) {
+const SPLASH_VIDEO_SRC = '/splash.mp4';
+
+export function AppSplash({ exiting = false, onVideoEnded }: AppSplashProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+
+    void video.play().catch(() => {
+      onVideoEnded();
+    });
+  }, [onVideoEnded]);
+
   return (
     <div
       className={`app-splash${exiting ? ' app-splash--exiting' : ''}`}
@@ -12,7 +28,17 @@ export function AppSplash({ exiting = false }: AppSplashProps) {
       aria-live="polite"
       aria-label="Loading Winuwatch"
     >
-      <img className="app-splash__logo" src={winuLogo} alt="" width={224} height={224} />
+      <video
+        ref={videoRef}
+        className="app-splash__video"
+        src={SPLASH_VIDEO_SRC}
+        autoPlay
+        muted
+        playsInline
+        preload="auto"
+        onEnded={onVideoEnded}
+        onError={onVideoEnded}
+      />
     </div>
   );
 }
