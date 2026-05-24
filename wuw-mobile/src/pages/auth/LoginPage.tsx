@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
-import { ActionLink, Card, PageHeader } from '../../components/ui';
+import { Card, PageHeader } from '../../components/ui';
 import { clearMobileSession } from '../../lib/mobileSessionToken';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { sendLoginOtp, type SendLoginOtpOutcome } from '../../services/authApi';
@@ -111,11 +111,6 @@ export function LoginPage() {
             {submitting ? 'Sending…' : 'Send code'}
           </button>
         </form>
-        <p className="login-browse-hint">
-          <ActionLink variant="secondary" to={withLocale(locale, '')}>
-            Browse competitions without signing in
-          </ActionLink>
-        </p>
       </Card>
     </section>
   );

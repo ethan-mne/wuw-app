@@ -23,7 +23,16 @@ export async function registerPushTokenWithServer(
   });
 
   if (!response.ok) {
-    throw new Error(`push-token register failed: ${response.status}`);
+    let detail = `HTTP ${response.status}`;
+    try {
+      const body = (await response.json()) as { error?: string };
+      if (body.error) {
+        detail = body.error;
+      }
+    } catch {
+      /* ignore */
+    }
+    throw new Error(`push-token register failed: ${detail}`);
   }
 }
 

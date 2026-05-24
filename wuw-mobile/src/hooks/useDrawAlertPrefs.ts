@@ -63,6 +63,24 @@ export function useDrawAlertPrefs(competitionId: string | undefined, enabled: bo
     setError('');
     setBusy(true);
     try {
+      const push = await mobileDataService.ensurePushRegisteredForAlerts();
+      if (!push.ok) {
+        if (push.reason === 'permission_denied') {
+          setError(
+            'Allow notifications for Winuwatch in your phone settings, then tap again.',
+          );
+        } else if (push.reason === 'no_fcm_token' || push.reason === 'invalid_token_shape') {
+          setError(
+            'Could not register this device for push. Reinstall the app, allow notifications, then try again.',
+          );
+        } else if (push.reason === 'server_rejected') {
+          setError(push.detail ?? 'Server rejected push registration. Try again.');
+        } else {
+          setError('Push notifications require the installed app on a real device.');
+        }
+        return;
+      }
+
       await mobileDataService.subscribeDrawAlert(id);
       setSubscribed(true);
     } catch {

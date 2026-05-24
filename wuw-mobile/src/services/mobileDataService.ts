@@ -586,13 +586,18 @@ export const mobileDataService = {
       );
     }
   },
-  syncPushTokenIfPermitted: async (): Promise<void> => {
+  syncPushTokenIfPermitted: async () => {
     const { syncPushTokenIfPermitted } = await import('../lib/pushNotifications');
-    await syncPushTokenIfPermitted();
+    return syncPushTokenIfPermitted();
   },
-  requestPushPermissionAndRegister: async (): Promise<boolean> => {
+  ensurePushRegisteredForAlerts: async () => {
+    const { ensurePushRegisteredForAlerts } = await import('../lib/pushNotifications');
+    return ensurePushRegisteredForAlerts();
+  },
+  requestPushPermissionAndRegister: async () => {
     const { requestPushPermissionAndRegister } = await import('../lib/pushNotifications');
-    return requestPushPermissionAndRegister();
+    const result = await requestPushPermissionAndRegister();
+    return result.ok;
   },
   getDrawAlertSubscribed: async (competitionId: string): Promise<boolean> => {
     if (!API_BASE_URL || !getMobileSessionToken()) {

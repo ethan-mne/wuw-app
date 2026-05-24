@@ -10,11 +10,15 @@ export function isApnsDeviceToken(token: string): boolean {
 
 export function isLikelyFcmRegistrationToken(token: string): boolean {
   const trimmed = token.trim();
-  if (trimmed.length < 80) {
+  if (!trimmed || isApnsDeviceToken(trimmed)) {
     return false;
   }
-  if (isApnsDeviceToken(trimmed)) {
-    return false;
+  // Typical FCM v1 token (contains ':' and APA91b segment).
+  if (trimmed.includes(':') && trimmed.length >= 50) {
+    return true;
   }
-  return true;
+  if (trimmed.length >= 80) {
+    return true;
+  }
+  return false;
 }

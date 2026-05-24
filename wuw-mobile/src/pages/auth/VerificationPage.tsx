@@ -84,12 +84,15 @@ export function VerificationPage() {
 
     if (result.status === 'ok') {
       setMobileSessionToken(result.token);
-      void mobileDataService.syncPushTokenIfPermitted();
       const pending = state.pendingDrawAlertCompetitionId;
       if (pending) {
-        void mobileDataService.subscribeDrawAlert(pending).catch(() => {});
+        void (async () => {
+          await mobileDataService.ensurePushRegisteredForAlerts();
+          await mobileDataService.subscribeDrawAlert(pending).catch(() => {});
+        })();
         void navigate(withLocale(locale, `competitions/${pending}`));
       } else {
+        void mobileDataService.syncPushTokenIfPermitted();
         void navigate(withLocale(locale, 'account/dashboard'));
       }
       return;

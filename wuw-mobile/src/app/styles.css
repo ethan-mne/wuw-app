@@ -414,11 +414,6 @@ button {
   gap: 1rem;
 }
 
-.login-browse-hint {
-  margin: 0.25rem 0 0;
-  text-align: center;
-}
-
 button.action-link {
   border: none;
   width: 100%;

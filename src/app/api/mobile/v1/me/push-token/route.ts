@@ -13,7 +13,9 @@ export async function POST(request: Request) {
   const json = (await request.json()) as unknown;
   const parsed = upsertPushDeviceSchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    const message =
+      parsed.error.issues[0]?.message ?? 'Invalid FCM token or payload';
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 
   try {
