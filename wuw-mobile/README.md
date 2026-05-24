@@ -80,7 +80,7 @@ npm run ios:sync
 npx cap open ios
 ```
 
-**Crash au premier lancement sur iOS** : l’app inclut Firebase/FCM pour les push. Sans `GoogleService-Info.plist` dans le bundle, l’ancienne version plantait au démarrage. Placez le fichier téléchargé depuis Firebase dans `ios/App/App/GoogleService-Info.plist`, puis `npm run ios:sync` (lie le plist au projet Xcode). Voir `GoogleService-Info.plist.example`.
+**Crash iOS au lancement** : ne copiez **pas** `GoogleService-Info.plist.example` (valeurs `YOUR_IOS_*` → Firebase plante). Téléchargez le vrai plist depuis Firebase → `ios/App/App/GoogleService-Info.plist`, puis `npm run ios:sync`. Vérifier : `npm run ios:firebase-setup`.
 
 ## Publication sur le Google Play Store
 

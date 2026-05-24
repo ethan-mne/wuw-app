@@ -14,6 +14,7 @@
     "android:open": "npx cap open android",
     "android:bundle": "node scripts/android-bundle.mjs",
     "android:release": "npm run android:sync && npm run android:bundle",
+    "ios:firebase-setup": "node scripts/setup-ios-google-service.mjs",
     "ios:sync": "npm run build:prod && npx cap sync ios && node scripts/link-ios-google-service.mjs",
     "postinstall": "node scripts/patch-fcm-ios-plugin.mjs"
   },

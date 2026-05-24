@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Copy to GoogleService-Info.plist (same folder) after downloading from Firebase Console:
-  Project winuwatch-bd56d → add iOS app com.winuwatch.wuwapp → Download GoogleService-Info.plist
+  DO NOT rename this file to GoogleService-Info.plist — placeholder values crash iOS on launch.
 
-  In Xcode: add the file to the App target (Copy Bundle Resources).
+  Download the real GoogleService-Info.plist from Firebase Console:
+  Project winuwatch-bd56d → iOS app com.winuwatch.wuwapp → Download
+
+  Save as GoogleService-Info.plist in this folder, then: npm run ios:sync
 -->
 <plist version="1.0">
 <dict>
