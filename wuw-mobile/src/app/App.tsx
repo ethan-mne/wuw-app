@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { MobileShell } from '../components/MobileShell';
 import { legalPages, supportPages } from '../data/content';
 import { getMobileSessionToken } from '../lib/mobileSessionToken';
+import { setupPushNotificationHandlers } from '../lib/pushNotificationSetup';
 import { mobileDataService } from '../services/mobileDataService';
 import { AccountDashboardPage } from '../pages/account/AccountDashboardPage';
 import { AccountHistoryPage } from '../pages/account/AccountHistoryPage';
@@ -26,6 +27,10 @@ import { WinnersPage } from '../pages/winners/WinnersPage';
 import { defaultLocale } from '../routes/locales';
 
 export default function App() {
+  useEffect(() => {
+    void setupPushNotificationHandlers();
+  }, []);
+
   useEffect(() => {
     const syncPushWhenLoggedIn = () => {
       if (!getMobileSessionToken()) {

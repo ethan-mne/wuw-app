@@ -78,6 +78,27 @@ export async function sendDrawReminderFcmMulticast(params: {
     tokens: params.tokens,
     notification: { title: params.title, body: params.body },
     data: dataPayload,
+    android: {
+      priority: 'high',
+      notification: {
+        channelId: 'draw_reminders',
+        priority: 'high' as const,
+        defaultSound: true,
+        defaultVibrateTimings: true,
+        visibility: 'public' as const,
+      },
+    },
+    apns: {
+      payload: {
+        aps: {
+          sound: 'default',
+          alert: {
+            title: params.title,
+            body: params.body,
+          },
+        },
+      },
+    },
   });
 
   const results: FcmTokenSendResult[] = res.responses.map((response, index) => {
