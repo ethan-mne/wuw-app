@@ -27,10 +27,16 @@ import { defaultLocale } from '../routes/locales';
 
 export default function App() {
   useEffect(() => {
-    if (!getMobileSessionToken()) {
-      return;
-    }
-    void mobileDataService.syncPushTokenIfPermitted();
+    const syncPushWhenLoggedIn = () => {
+      if (!getMobileSessionToken()) {
+        return;
+      }
+      void mobileDataService.syncPushTokenIfPermitted();
+    };
+
+    syncPushWhenLoggedIn();
+    window.addEventListener('wuw-mobile-session', syncPushWhenLoggedIn);
+    return () => window.removeEventListener('wuw-mobile-session', syncPushWhenLoggedIn);
   }, []);
 
   return (

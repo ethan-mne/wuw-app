@@ -1,7 +1,7 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 
-import { isLikelyFcmRegistrationToken } from './fcmToken';
+import { isApnsDeviceToken, isLikelyFcmRegistrationToken } from './fcmToken';
 import { getStoredPushDeviceToken, setStoredPushDeviceToken } from './pushStorage';
 import { registerPushTokenWithServer, unregisterPushTokenWithServer } from '../services/pushDeviceApi';
 
@@ -120,48 +120,108 @@ async function getFcmPlugin() {
   return FCM;
 }
 
+function acceptPushRegistrationValue(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+  // On iOS, Capacitor `registration` is the APNs token — use @capacitor-community/fcm instead.
+  if (Capacitor.getPlatform() === 'ios' && isApnsDeviceToken(trimmed)) {
+    return false;
+  }
+  return isLikelyFcmRegistrationToken(trimmed);
+}
+
+/** Android often delivers the FCM token via `registration` before FCM.getToken() is ready. */
+function listenForFcmRegistrationToken(timeoutMs: number): {
+  promise: Promise<string | null>;
+  cleanup: () => Promise<void>;
+} {
+  let handle: PluginListenerHandle | undefined;
+  let settled = false;
+
+  const promise = new Promise<string | null>((resolve) => {
+    const timer = window.setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve(null);
+      }
+    }, timeoutMs);
+
+    void PushNotifications.addListener('registration', (ev) => {
+      const value = ev.value?.trim() ?? '';
+      if (!acceptPushRegistrationValue(value) || settled) {
+        return;
+      }
+      settled = true;
+      window.clearTimeout(timer);
+      resolve(value);
+    }).then((listener) => {
+      handle = listener;
+    });
+  });
+
+  return {
+    promise,
+    cleanup: async () => {
+      await handle?.remove();
+    },
+  };
+}
+
+async function pollFcmPluginForToken(): Promise<string | null> {
+  const FCM = await getFcmPlugin();
+  try {
+    await FCM.setAutoInit({ enabled: true });
+  } catch {
+    /* optional on some builds */
+  }
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    if (attempt > 0) {
+      await delay(600 * attempt);
+    }
+
+    try {
+      const { token } = await FCM.getToken();
+      if (token?.trim() && isLikelyFcmRegistrationToken(token)) {
+        return token.trim();
+      }
+    } catch {
+      /* retry */
+    }
+
+    try {
+      const { token } = await FCM.refreshToken();
+      if (token?.trim() && isLikelyFcmRegistrationToken(token)) {
+        return token.trim();
+      }
+    } catch {
+      /* retry */
+    }
+  }
+
+  return null;
+}
+
 /**
  * Register with the OS, then read the FCM token (not the APNs token from `registration` on iOS).
- * Retries because FCM can be slow right after PushNotifications.register().
+ * Uses both Capacitor `registration` (reliable on Android) and @capacitor-community/fcm.
  */
 async function registerForFcmToken(): Promise<string | null> {
+  const { promise: registrationToken, cleanup } = listenForFcmRegistrationToken(12_000);
+
   try {
-    const FCM = await getFcmPlugin();
-    try {
-      await FCM.setAutoInit({ enabled: true });
-    } catch {
-      /* optional on some builds */
-    }
-
     await PushNotifications.register();
-
-    for (let attempt = 0; attempt < 5; attempt++) {
-      if (attempt > 0) {
-        await delay(800 * attempt);
-      }
-
-      try {
-        const { token } = await FCM.getToken();
-        if (token?.trim() && isLikelyFcmRegistrationToken(token)) {
-          return token.trim();
-        }
-      } catch {
-        /* retry */
-      }
-
-      try {
-        const { token } = await FCM.refreshToken();
-        if (token?.trim() && isLikelyFcmRegistrationToken(token)) {
-          return token.trim();
-        }
-      } catch {
-        /* retry */
-      }
-    }
-
-    return null;
+    const [fromRegistration, fromFcm] = await Promise.all([
+      registrationToken,
+      pollFcmPluginForToken(),
+    ]);
+    return fromRegistration ?? fromFcm;
   } catch {
     return null;
+  } finally {
+    await cleanup();
   }
 }
 
