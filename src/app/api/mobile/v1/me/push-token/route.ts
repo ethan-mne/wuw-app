@@ -3,11 +3,24 @@ import { NextResponse } from 'next/server';
 import { MobileHttpError } from '@/server/mobile/http';
 import {
   deleteUserPushDeviceByToken,
+  getUserPushDeviceStatus,
   upsertPushDeviceSchema,
   upsertUserPushDevice,
 } from '@/server/mobile/push-devices.service';
 
 export const dynamic = 'force-dynamic';
+
+export async function GET() {
+  try {
+    const status = await getUserPushDeviceStatus();
+    return NextResponse.json({ data: status });
+  } catch (error) {
+    if (error instanceof MobileHttpError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
+  }
+}
 
 export async function POST(request: Request) {
   const json = (await request.json()) as unknown;

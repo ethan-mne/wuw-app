@@ -296,6 +296,7 @@ export async function requestPushPermissionAndRegister(): Promise<PushRegisterRe
 
 /**
  * User-initiated enable: system prompt when possible, otherwise app notification settings.
+ * Returns true once the user has allowed notifications (token registration may still run in the background).
  */
 export async function enablePushNotifications(): Promise<boolean> {
   if (!isNativePushPlatform()) {
@@ -304,11 +305,14 @@ export async function enablePushNotifications(): Promise<boolean> {
 
   const receive = await getPushReceivePermission();
   if (shouldShowPushPermissionPrompt(receive)) {
-    const result = await ensurePushRegisteredForAlerts();
-    if (result.ok) {
-      notifyPushPermissionChanged();
+    const perm = await PushNotifications.requestPermissions();
+    const after = normalizeReceivePermission(perm.receive);
+    if (after !== 'granted') {
+      return false;
     }
-    return result.ok;
+    notifyPushPermissionChanged();
+    void syncPushTokenIfPermitted();
+    return true;
   }
 
   if (receive === 'denied') {
@@ -317,9 +321,9 @@ export async function enablePushNotifications(): Promise<boolean> {
   }
 
   if (receive === 'granted') {
-    const result = await syncPushTokenIfPermitted();
     notifyPushPermissionChanged();
-    return result.ok;
+    void syncPushTokenIfPermitted();
+    return true;
   }
 
   return false;

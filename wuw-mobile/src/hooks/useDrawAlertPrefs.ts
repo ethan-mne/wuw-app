@@ -68,6 +68,11 @@ export function useDrawAlertPrefs(competitionId: string | undefined, enabled: bo
       const push = await mobileDataService.ensurePushRegisteredForAlerts();
       if (!push.ok) {
         setError(pushRegisterFailureMessage(push));
+        if (import.meta.env.DEV) {
+          console.warn('[draw-alert] push registration failed', push);
+        }
+      } else if (import.meta.env.DEV) {
+        console.info('[draw-alert] push registered', push.tokenPrefix);
       }
     } catch {
       setError('Could not enable alerts. Try again.');

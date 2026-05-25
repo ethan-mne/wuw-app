@@ -62,12 +62,12 @@ export function PushPermissionPrompt({ ready }: PushPermissionPromptProps) {
     setBusy(true);
     try {
       const ok = await enablePushNotifications();
-      if (ok) {
+      const receive = await getPushReceivePermission();
+      if (ok || receive === 'granted') {
         setOpen(false);
         notifyPushPermissionChanged();
         return;
       }
-      const receive = await getPushReceivePermission();
       if (receive === 'denied') {
         markPushPromptDismissedThisSession();
         setOpen(false);

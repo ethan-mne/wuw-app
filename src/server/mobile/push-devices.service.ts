@@ -43,3 +43,18 @@ export async function deleteUserPushDeviceByToken(token: string): Promise<void> 
     },
   });
 }
+
+export async function getUserPushDeviceStatus(): Promise<{
+  deviceCount: number;
+  platforms: Array<'android' | 'ios'>;
+}> {
+  const { userId } = await requireMobileSession('userId');
+  const devices = await db.userPushDevice.findMany({
+    where: { userId },
+    select: { platform: true },
+  });
+  return {
+    deviceCount: devices.length,
+    platforms: [...new Set(devices.map((d) => d.platform))],
+  };
+}

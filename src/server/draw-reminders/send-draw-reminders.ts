@@ -23,6 +23,8 @@ export type DrawReminderUserTargetDebug = {
   competitionId: string;
   userExists: boolean;
   pushDeviceCount: number;
+  /** Total rows in user_push_device (all users) — 0 means no device ever registered on prod. */
+  totalPushDevicesInDb: number;
   hasDrawAlert: boolean;
   hasConfirmedTicket: boolean;
   firebaseConfigured: boolean;
@@ -105,8 +107,14 @@ export async function getUserDrawReminderTargetDebug(
 ): Promise<DrawReminderUserTargetDebug> {
   const blockers: string[] = [];
   const firebaseConfigured = isFirebaseConfiguredForPush();
+  const totalPushDevicesInDb = await db.userPushDevice.count();
   if (!firebaseConfigured) {
     blockers.push('firebase_not_configured_on_server');
+  }
+  if (totalPushDevicesInDb === 0) {
+    blockers.push(
+      'no_push_devices_anywhere_in_db — mobile app never POSTed /api/mobile/v1/me/push-token successfully (rebuild app, allow notifications, tap Remind me)',
+    );
   }
 
   const user = await db.user.findUnique({
@@ -129,6 +137,7 @@ export async function getUserDrawReminderTargetDebug(
       competitionId,
       userExists: false,
       pushDeviceCount: 0,
+      totalPushDevicesInDb,
       hasDrawAlert: false,
       hasConfirmedTicket: false,
       firebaseConfigured,
@@ -152,6 +161,7 @@ export async function getUserDrawReminderTargetDebug(
     competitionId,
     userExists: true,
     pushDeviceCount,
+    totalPushDevicesInDb,
     hasDrawAlert,
     hasConfirmedTicket,
     firebaseConfigured,

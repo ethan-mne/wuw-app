@@ -36,6 +36,39 @@ export async function registerPushTokenWithServer(
   }
 }
 
+export async function getPushDeviceStatusFromServer(): Promise<{
+  deviceCount: number;
+  platforms: Array<'android' | 'ios'>;
+} | null> {
+  if (!API_BASE_URL) {
+    return null;
+  }
+  const session = getMobileSessionToken();
+  if (!session) {
+    return null;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/mobile/v1/me/push-token`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session}`,
+    },
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const json = (await response.json()) as {
+    data?: { deviceCount?: number; platforms?: Array<'android' | 'ios'> };
+  };
+  return {
+    deviceCount: json.data?.deviceCount ?? 0,
+    platforms: json.data?.platforms ?? [],
+  };
+}
+
 export async function unregisterPushTokenWithServer(token: string): Promise<void> {
   if (!API_BASE_URL) {
     return;
