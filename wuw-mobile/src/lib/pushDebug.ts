@@ -161,7 +161,7 @@ function buildChecks(input: {
       detail: plistOk
         ? 'FCM token obtained — plist likely bundled correctly'
         : input.fcmError ??
-          'No valid FCM token — add GoogleService-Info.plist and npm run ios:sync',
+          'No valid FCM token — run npm run ios:sync (links plist into Xcode), clean build, reinstall on device',
     });
 
     checks.push({

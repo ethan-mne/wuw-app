@@ -360,11 +360,10 @@ async function registerForFcmTokenInner(): Promise<string | null> {
   const platform = Capacitor.getPlatform();
 
   try {
-    await safePushRegister();
-
     if (platform === 'android') {
       const { promise: registrationToken, cleanup } = await createRegistrationTokenWaiter(8_000);
       try {
+        await safePushRegister();
         const token = await registrationToken;
         if (!token) {
           console.warn('[wuw-push] Android: no token from PushNotifications registration event');
@@ -376,11 +375,24 @@ async function registerForFcmTokenInner(): Promise<string | null> {
     }
 
     if (platform === 'ios') {
-      const token = await pollFcmPluginForToken({ maxAttempts: 8, getTokenTimeoutMs: 4_000 });
-      if (!token) {
-        console.warn('[wuw-push] iOS: no FCM token from @capacitor-community/fcm');
+      // Listener must be attached before register(); FCM needs APNs token from that event.
+      const apnsWaiter = await createApnsTokenWaiter(12_000);
+      try {
+        await safePushRegister();
+        const apns = await apnsWaiter.promise;
+        if (!apns) {
+          console.warn(
+            '[wuw-push] iOS: no APNs device token — check Push Notifications capability and use a real device (not Simulator)',
+          );
+        }
+        const token = await pollFcmPluginForToken({ maxAttempts: 8, getTokenTimeoutMs: 4_000 });
+        if (!token) {
+          console.warn('[wuw-push] iOS: no FCM token from @capacitor-community/fcm');
+        }
+        return token;
+      } finally {
+        await apnsWaiter.cleanup();
       }
-      return token;
     }
 
     return null;
@@ -431,7 +443,7 @@ export async function obtainPushToken(options?: { prompt?: boolean }): Promise<O
       reason: 'no_fcm_token',
       detail:
         platform === 'ios'
-          ? 'Check GoogleService-Info.plist and APNs key in Firebase Console.'
+          ? 'Rebuild the app with npm run ios:sync (GoogleService-Info.plist must be in the app bundle). On a real iPhone, allow notifications. In Firebase Console → Project settings → Cloud Messaging, upload your APNs authentication key (.p8) for bundle com.winuwatch.wuwapp.'
           : undefined,
     };
   }
@@ -533,11 +545,10 @@ async function readPushTokensWithRegister(): Promise<{
   const platform = Capacitor.getPlatform();
 
   try {
-    await safePushRegister();
-
     if (platform === 'android') {
       const { promise: registrationToken, cleanup } = await createRegistrationTokenWaiter(8_000);
       try {
+        await safePushRegister();
         const fcm = await registrationToken;
         return {
           fcm,
@@ -551,18 +562,21 @@ async function readPushTokensWithRegister(): Promise<{
 
     if (platform === 'ios') {
       const apnsWaiter = await createApnsTokenWaiter(8_000);
-      const [fcm, apns] = await Promise.all([
-        pollFcmPluginForToken({ maxAttempts: 8, getTokenTimeoutMs: 4_000 }),
-        apnsWaiter.promise,
-      ]);
-      await apnsWaiter.cleanup();
-
-      let fcmError: string | null = null;
-      if (!fcm) {
-        fcmError =
-          'No FCM token — check GoogleService-Info.plist in ios/App/App/ and npm run ios:sync';
+      try {
+        await safePushRegister();
+        const apns = await apnsWaiter.promise;
+        const fcm = await pollFcmPluginForToken({ maxAttempts: 8, getTokenTimeoutMs: 4_000 });
+        let fcmError: string | null = null;
+        if (!fcm) {
+          fcmError =
+            'No FCM token — run npm run ios:sync so GoogleService-Info.plist is bundled, rebuild on a real iPhone, and upload APNs key in Firebase.';
+        } else if (!apns) {
+          fcmError = 'No APNs token — use a real device and allow notifications.';
+        }
+        return { fcm, apns, fcmError };
+      } finally {
+        await apnsWaiter.cleanup();
       }
-      return { fcm, apns, fcmError };
     }
 
     return { fcm: null, apns: null, fcmError: 'Unsupported platform' };
