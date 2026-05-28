@@ -87,8 +87,12 @@ export function VerificationPage() {
       const pending = state.pendingDrawAlertCompetitionId;
       if (pending) {
         void (async () => {
-          await mobileDataService.subscribeDrawAlert(pending).catch(() => {});
-          await mobileDataService.ensurePushRegisteredForAlerts();
+          const push = await mobileDataService.obtainPushToken({ prompt: true });
+          if (push.ok) {
+            await mobileDataService
+              .subscribeDrawAlert(pending, { token: push.token, platform: push.platform })
+              .catch(() => {});
+          }
         })();
         void navigate(withLocale(locale, `competitions/${pending}`));
       } else {

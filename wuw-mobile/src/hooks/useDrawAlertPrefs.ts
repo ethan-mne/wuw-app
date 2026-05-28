@@ -62,18 +62,22 @@ export function useDrawAlertPrefs(competitionId: string | undefined, enabled: bo
     setError('');
     setBusy(true);
     try {
-      await mobileDataService.subscribeDrawAlert(id);
-      setSubscribed(true);
-
-      const push = await mobileDataService.ensurePushRegisteredForAlerts();
+      const push = await mobileDataService.obtainPushToken({ prompt: true });
       if (!push.ok) {
         setError(pushRegisterFailureMessage(push));
-        console.warn('[wuw-push] registration failed', push.reason, push.detail ?? '');
-      } else {
-        console.info('[wuw-push] registered', push.tokenPrefix);
+        console.warn('[wuw-push] token failed', push.reason, push.detail ?? '');
+        return;
       }
-    } catch {
-      setError('Could not enable alerts. Try again.');
+
+      await mobileDataService.subscribeDrawAlert(id, {
+        token: push.token,
+        platform: push.platform,
+      });
+      setSubscribed(true);
+      console.info('[wuw-push] draw alert + device registered');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      setError(message || 'Could not enable alerts. Try again.');
     } finally {
       setBusy(false);
     }

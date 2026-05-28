@@ -594,6 +594,10 @@ export const mobileDataService = {
     const { ensurePushRegisteredForAlerts } = await import('../lib/pushNotifications');
     return ensurePushRegisteredForAlerts();
   },
+  obtainPushToken: async (options?: { prompt?: boolean }) => {
+    const { obtainPushToken } = await import('../lib/pushNotifications');
+    return obtainPushToken(options);
+  },
   requestPushPermissionAndRegister: async () => {
     const { requestPushPermissionAndRegister } = await import('../lib/pushNotifications');
     const result = await requestPushPermissionAndRegister();
@@ -625,10 +629,16 @@ export const mobileDataService = {
       return false;
     }
   },
-  subscribeDrawAlert: async (competitionId: string): Promise<void> => {
+  subscribeDrawAlert: async (
+    competitionId: string,
+    push: { token: string; platform: 'ios' | 'android' },
+  ): Promise<void> => {
     await apiClient<{ ok: boolean }>(
       `/api/mobile/v1/competitions/${encodeURIComponent(competitionId)}/draw-alert`,
-      { method: 'POST' },
+      {
+        method: 'POST',
+        body: JSON.stringify(push),
+      },
     );
   },
   unsubscribeDrawAlert: async (competitionId: string): Promise<void> => {

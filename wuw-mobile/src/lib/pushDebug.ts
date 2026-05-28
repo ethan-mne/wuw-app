@@ -242,9 +242,18 @@ function buildChecks(input: {
       id: 'server-registered',
       label: 'Token registered on backend',
       status: 'fail',
-      detail: 'deviceCount=0 — tap Re-register on server',
+      detail:
+        'deviceCount=0 — tap Re-register on server, or use Remind me (registers FCM token + draw alert together)',
     });
   }
+
+  checks.push({
+    id: 'draw-alert-flow',
+    label: 'Draw reminder eligibility',
+    status: !input.native ? 'na' : input.serverPushStatus && input.serverPushStatus.deviceCount > 0 ? 'ok' : 'warn',
+    detail:
+      'Production cron notifies users with Remind me enabled for a competition and a valid FCM token in the database (ticket-only holders are not notified).',
+  });
 
   if (!input.backendHealth) {
     checks.push({

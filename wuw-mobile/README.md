@@ -31,7 +31,7 @@ Le backend mobile est expose par le projet `wuw-app` via des routes versionnees:
 - `GET /api/mobile/v1/competitions`
 - `GET /api/mobile/v1/competitions/:id`
 - `GET /api/mobile/v1/competitions/:id/draw-alert` (Bearer — statut d’alerte tirage)
-- `POST /api/mobile/v1/competitions/:id/draw-alert` (Bearer — s’abonner au rappel ~10 min avant)
+- `POST /api/mobile/v1/competitions/:id/draw-alert` (Bearer — body `{ token, platform }` — abonnement + enregistrement FCM atomiques)
 - `DELETE /api/mobile/v1/competitions/:id/draw-alert` (Bearer — se désabonner)
 - `POST /api/mobile/v1/auth/send-otp`
 - `POST /api/mobile/v1/auth/verify-otp`

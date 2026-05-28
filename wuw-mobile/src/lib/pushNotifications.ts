@@ -24,29 +24,33 @@ export type PushRegisterResult =
   | { ok: true; tokenPrefix: string }
   | { ok: false; reason: PushRegisterFailureReason; detail?: string };
 
+export type ObtainPushTokenResult =
+  | { ok: true; token: string; platform: 'ios' | 'android' }
+  | { ok: false; reason: PushRegisterFailureReason; detail?: string };
+
 /** User-facing message when push registration fails after a draw-alert subscribe. */
 export function pushRegisterFailureMessage(
-  push: Extract<PushRegisterResult, { ok: false }>,
+  push: Extract<PushRegisterResult | ObtainPushTokenResult, { ok: false }>,
 ): string {
   if (push.reason === 'permission_denied') {
     return push.detail
       ? push.detail
-      : 'Reminder saved. Allow notifications for Winuwatch in your phone settings to receive the push.';
+      : 'Allow notifications for Winuwatch in your phone settings to receive the push.';
   }
   if (push.reason === 'no_fcm_token' || push.reason === 'invalid_token_shape') {
     return push.detail
       ? push.detail
-      : 'Reminder saved. Could not register this device for push — allow notifications and try Remind me again.';
+      : 'Could not register this device for push — allow notifications and try Remind me again.';
   }
   if (push.reason === 'server_rejected') {
     return push.detail
-      ? `Reminder saved. ${push.detail}`
-      : 'Reminder saved. Server rejected push registration — try again in a moment.';
+      ? push.detail
+      : 'Server rejected push registration — try again in a moment.';
   }
   if (push.reason === 'not_logged_in') {
-    return 'Reminder saved. Sign in again, then tap Remind me to register this device.';
+    return 'Sign in again, then tap Remind me to register this device.';
   }
-  return 'Reminder saved. Push notifications require the installed app on a real device.';
+  return 'Push notifications require the installed app on a real device.';
 }
 
 /** True when we should show the in-app soft-ask before calling the OS dialog. */
@@ -58,7 +62,15 @@ export function isNativePushPlatform(): boolean {
   return Capacitor.isNativePlatform();
 }
 
+export function getNativePushPlatform(): 'ios' | 'android' | null {
+  if (!isNativePushPlatform()) {
+    return null;
+  }
+  return Capacitor.getPlatform() === 'ios' ? 'ios' : 'android';
+}
+
 const PUSH_PERMISSION_EVENT = 'wuw-push-permission';
+const REGISTER_FCM_TIMEOUT_MS = 20_000;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -150,7 +162,6 @@ export async function getPushReceivePermission(): Promise<PushReceivePermission 
 /**
  * iOS only — native FCMPlugin is in CapApp-SPM (Package.swift + FCMPlugin).
  * Android: community FCM native bridge is not available (Capacitor → "FCM.then() not implemented").
- * Web: FCMWeb throws "Not implemented on web" — never call there.
  */
 async function getFcmPlugin() {
   if (Capacitor.getPlatform() !== 'ios') {
@@ -165,17 +176,13 @@ function acceptPushRegistrationValue(value: string): boolean {
   if (!trimmed) {
     return false;
   }
-  // On iOS, Capacitor `registration` is the APNs token — use @capacitor-community/fcm instead.
   if (Capacitor.getPlatform() === 'ios' && isApnsDeviceToken(trimmed)) {
     return false;
   }
   return isLikelyFcmRegistrationToken(trimmed);
 }
 
-/**
- * Android: FCM registration token from PushNotifications `registration` (native FCM).
- * iOS: may also fire here but often returns APNs — still listen before register().
- */
+/** Android: FCM token from PushNotifications `registration` event. */
 async function createRegistrationTokenWaiter(timeoutMs: number): Promise<{
   promise: Promise<string | null>;
   cleanup: () => Promise<void>;
@@ -224,7 +231,7 @@ async function createRegistrationTokenWaiter(timeoutMs: number): Promise<{
   };
 }
 
-/** iOS debug: capture raw APNs device token from Capacitor registration (not valid for FCM HTTP v1). */
+/** iOS debug: capture raw APNs device token (not valid for FCM HTTP v1). */
 async function createApnsTokenWaiter(timeoutMs: number): Promise<{
   promise: Promise<string | null>;
   cleanup: () => Promise<void>;
@@ -346,39 +353,91 @@ async function pollFcmPluginForToken(options?: {
 
 /**
  * Register with the OS, then read the FCM token.
- * Android: PushNotifications `registration` only (FCM plugin not available).
- * iOS: @capacitor-community/fcm + registration fallback.
+ * Android: PushNotifications `registration` event.
+ * iOS: @capacitor-community/fcm only (Capacitor registration is APNs hex).
  */
 async function registerForFcmTokenInner(): Promise<string | null> {
-  const { promise: registrationToken, cleanup } = await createRegistrationTokenWaiter(8_000);
   const platform = Capacitor.getPlatform();
 
   try {
     await safePushRegister();
 
     if (platform === 'android') {
-      const token = await registrationToken;
+      const { promise: registrationToken, cleanup } = await createRegistrationTokenWaiter(8_000);
+      try {
+        const token = await registrationToken;
+        if (!token) {
+          console.warn('[wuw-push] Android: no token from PushNotifications registration event');
+        }
+        return token;
+      } finally {
+        await cleanup();
+      }
+    }
+
+    if (platform === 'ios') {
+      const token = await pollFcmPluginForToken({ maxAttempts: 8, getTokenTimeoutMs: 4_000 });
       if (!token) {
-        console.warn('[wuw-push] Android: no token from PushNotifications registration event');
+        console.warn('[wuw-push] iOS: no FCM token from @capacitor-community/fcm');
       }
       return token;
     }
 
-    const [fromRegistration, fromFcm] = await Promise.all([
-      registrationToken,
-      pollFcmPluginForToken({ maxAttempts: 4, getTokenTimeoutMs: 3_000 }),
-    ]);
-    return fromRegistration ?? fromFcm;
+    return null;
   } catch (error) {
     console.warn('[wuw-push] registerForFcmToken failed', error);
     return null;
-  } finally {
-    await cleanup();
   }
 }
 
 async function registerForFcmToken(): Promise<string | null> {
-  return withTimeout(registerForFcmTokenInner(), 16_000, null);
+  return withTimeout(registerForFcmTokenInner(), REGISTER_FCM_TIMEOUT_MS, null);
+}
+
+async function ensurePushPermission(prompt: boolean): Promise<PushReceivePermission | null> {
+  if (!isNativePushPlatform()) {
+    return null;
+  }
+
+  let receive = await getPushReceivePermission();
+  if (prompt && shouldShowPushPermissionPrompt(receive)) {
+    receive = await safeRequestPushPermissions();
+  }
+
+  return receive;
+}
+
+/**
+ * Obtain a valid FCM token on device (no server POST).
+ * Use with atomic draw-alert subscribe when persisting token via that endpoint.
+ */
+export async function obtainPushToken(options?: { prompt?: boolean }): Promise<ObtainPushTokenResult> {
+  const platform = getNativePushPlatform();
+  if (!platform) {
+    return { ok: false, reason: 'not_native' };
+  }
+
+  const receive = await ensurePushPermission(options?.prompt ?? false);
+  if (receive !== 'granted') {
+    console.warn('[wuw-push] permission not granted:', receive);
+    return { ok: false, reason: 'permission_denied' };
+  }
+
+  const token = await registerForFcmToken();
+  if (!token || !isLikelyFcmRegistrationToken(token)) {
+    console.warn('[wuw-push] no valid FCM token');
+    return {
+      ok: false,
+      reason: 'no_fcm_token',
+      detail:
+        platform === 'ios'
+          ? 'Check GoogleService-Info.plist and APNs key in Firebase Console.'
+          : undefined,
+    };
+  }
+
+  setStoredPushDeviceToken(token);
+  return { ok: true, token, platform };
 }
 
 async function persistTokenOnServer(token: string): Promise<PushRegisterResult> {
@@ -386,7 +445,11 @@ async function persistTokenOnServer(token: string): Promise<PushRegisterResult> 
     return { ok: false, reason: 'invalid_token_shape' };
   }
 
-  const platform: 'android' | 'ios' = Capacitor.getPlatform() === 'ios' ? 'ios' : 'android';
+  const platform = getNativePushPlatform();
+  if (!platform) {
+    return { ok: false, reason: 'not_native' };
+  }
+
   setStoredPushDeviceToken(token);
 
   try {
@@ -401,63 +464,31 @@ async function persistTokenOnServer(token: string): Promise<PushRegisterResult> 
   }
 }
 
+/**
+ * Permission (optional prompt) + FCM token + POST /me/push-token.
+ */
+export async function registerPushDevice(options?: { prompt?: boolean }): Promise<PushRegisterResult> {
+  const obtained = await obtainPushToken({ prompt: options?.prompt ?? false });
+  if (!obtained.ok) {
+    return obtained;
+  }
+  return persistTokenOnServer(obtained.token);
+}
+
 /** Permission + FCM token + backend upsert (for draw alerts and tests). */
 export async function ensurePushRegisteredForAlerts(): Promise<PushRegisterResult> {
-  if (!isNativePushPlatform()) {
-    return { ok: false, reason: 'not_native' };
-  }
-
-  let receive = await getPushReceivePermission();
-  if (shouldShowPushPermissionPrompt(receive)) {
-    receive = await safeRequestPushPermissions();
-  }
-
-  if (receive !== 'granted') {
-    console.warn('[wuw-push] permission not granted:', receive);
-    return { ok: false, reason: 'permission_denied' };
-  }
-
-  const token = await registerForFcmToken();
-  if (!token) {
-    console.warn('[wuw-push] no FCM token after register()');
-    return { ok: false, reason: 'no_fcm_token' };
-  }
-
-  return persistTokenOnServer(token);
+  return registerPushDevice({ prompt: true });
 }
 
 /** If notifications are already allowed, register the FCM token without prompting. */
 export async function syncPushTokenIfPermitted(): Promise<PushRegisterResult> {
-  if (!isNativePushPlatform()) {
-    return { ok: false, reason: 'not_native' };
-  }
-
-  const receive = await getPushReceivePermission();
-  if (receive !== 'granted') {
-    console.warn('[wuw-push] notifications not granted:', receive);
-    return { ok: false, reason: 'permission_denied' };
-  }
-
-  const token = await registerForFcmToken();
-  if (!token) {
-    console.warn('[wuw-push] no FCM token (sync)');
-    return { ok: false, reason: 'no_fcm_token' };
-  }
-
-  return persistTokenOnServer(token);
+  return registerPushDevice({ prompt: false });
 }
 
-/**
- * Ask for notification permission (must run from a user gesture on Android) and register the token.
- */
 export async function requestPushPermissionAndRegister(): Promise<PushRegisterResult> {
-  return ensurePushRegisteredForAlerts();
+  return registerPushDevice({ prompt: true });
 }
 
-/**
- * User-initiated enable: system prompt when possible, otherwise app notification settings.
- * Returns true once the user has allowed notifications (token registration may still run in the background).
- */
 export async function enablePushNotifications(): Promise<boolean> {
   if (!isNativePushPlatform()) {
     return false;
@@ -500,45 +531,44 @@ async function readPushTokensWithRegister(): Promise<{
   fcmError: string | null;
 }> {
   const platform = Capacitor.getPlatform();
-  const { promise: registrationToken, cleanup: cleanupRegistration } =
-    await createRegistrationTokenWaiter(8_000);
-  const apnsWaiter =
-    platform === 'ios' ? await createApnsTokenWaiter(8_000) : null;
 
   try {
     await safePushRegister();
 
     if (platform === 'android') {
-      const fcm = await registrationToken;
-      return {
-        fcm,
-        apns: null,
-        fcmError: fcm ? null : 'No FCM token from PushNotifications registration',
-      };
+      const { promise: registrationToken, cleanup } = await createRegistrationTokenWaiter(8_000);
+      try {
+        const fcm = await registrationToken;
+        return {
+          fcm,
+          apns: null,
+          fcmError: fcm ? null : 'No FCM token from PushNotifications registration',
+        };
+      } finally {
+        await cleanup();
+      }
     }
 
-    const [fromRegistration, fromFcm, apns] = await Promise.all([
-      registrationToken,
-      pollFcmPluginForToken({ maxAttempts: 4, getTokenTimeoutMs: 3_000 }),
-      apnsWaiter?.promise ?? Promise.resolve(null),
-    ]);
-    const fcm = fromRegistration ?? fromFcm;
-    let fcmError: string | null = null;
-    if (!fcm) {
-      fcmError =
-        'No FCM token — check GoogleService-Info.plist in ios/App/App/ and npm run ios:sync';
-    } else if (isApnsDeviceToken(fcm)) {
-      fcmError = 'Registration returned APNs hex token instead of FCM';
+    if (platform === 'ios') {
+      const apnsWaiter = await createApnsTokenWaiter(8_000);
+      const [fcm, apns] = await Promise.all([
+        pollFcmPluginForToken({ maxAttempts: 8, getTokenTimeoutMs: 4_000 }),
+        apnsWaiter.promise,
+      ]);
+      await apnsWaiter.cleanup();
+
+      let fcmError: string | null = null;
+      if (!fcm) {
+        fcmError =
+          'No FCM token — check GoogleService-Info.plist in ios/App/App/ and npm run ios:sync';
+      }
+      return { fcm, apns, fcmError };
     }
-    return { fcm, apns, fcmError };
+
+    return { fcm: null, apns: null, fcmError: 'Unsupported platform' };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     return { fcm: null, apns: null, fcmError: msg };
-  } finally {
-    await cleanupRegistration();
-    if (apnsWaiter) {
-      await apnsWaiter.cleanup();
-    }
   }
 }
 
@@ -607,45 +637,7 @@ async function registerPushForDebugInner(): Promise<PushRegisterResult> {
     return { ok: false, reason: 'not_logged_in' };
   }
 
-  let receive = await getPushReceivePermission();
-  if (shouldShowPushPermissionPrompt(receive)) {
-    receive = await safeRequestPushPermissions();
-  }
-
-  if (receive !== 'granted') {
-    return {
-      ok: false,
-      reason: 'permission_denied',
-      detail: 'Allow notifications for Winuwatch in iOS Settings, then try again.',
-    };
-  }
-
-  const stored = getStoredPushDeviceToken();
-  if (stored && isLikelyFcmRegistrationToken(stored)) {
-    const cached = await persistTokenOnServer(stored);
-    if (cached.ok) {
-      return cached;
-    }
-  }
-
-  if (Capacitor.getPlatform() === 'ios') {
-    const quick = await pollFcmPluginForToken({ maxAttempts: 2, getTokenTimeoutMs: 3_000 });
-    if (quick) {
-      return persistTokenOnServer(quick);
-    }
-  }
-
-  const token = await registerForFcmToken();
-  if (!token) {
-    return {
-      ok: false,
-      reason: 'no_fcm_token',
-      detail:
-        'Could not read FCM token. Check GoogleService-Info.plist, APNs key in Firebase, and try again.',
-    };
-  }
-
-  return persistTokenOnServer(token);
+  return registerPushDevice({ prompt: true });
 }
 
 /** Debug UI: permission + FCM + POST push-token (bounded so the UI never hangs). */

@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server';
 import { mapDrawAlertRouteError } from '@/server/mobile/draw-alert-errors';
 import {
   getDrawAlertSubscribed,
-  subscribeDrawAlert,
+  subscribeDrawAlertBodySchema,
+  subscribeDrawAlertWithPush,
   unsubscribeDrawAlert,
 } from '@/server/mobile/draw-alert.service';
 
@@ -28,13 +29,31 @@ export async function GET(_: Request, { params }: RouteContext) {
   }
 }
 
-export async function POST(_: Request, { params }: RouteContext) {
+export async function POST(request: Request, { params }: RouteContext) {
   try {
     const id = params.id?.trim() ?? '';
     if (!id) {
       return NextResponse.json({ error: 'Competition not found' }, { status: 404 });
     }
-    await subscribeDrawAlert(id);
+
+    let json: unknown;
+    try {
+      json = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON body — token and platform are required' },
+        { status: 400 },
+      );
+    }
+
+    const parsed = subscribeDrawAlertBodySchema.safeParse(json);
+    if (!parsed.success) {
+      const message =
+        parsed.error.issues[0]?.message ?? 'Invalid FCM token or payload';
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
+    await subscribeDrawAlertWithPush(id, parsed.data);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return mapDrawAlertRouteError(error);
