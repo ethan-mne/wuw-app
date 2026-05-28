@@ -1,0 +1,253 @@
+/**
+ * TEMPORARY push debug screen — exposes JWT + FCM tokens. Remove before a public store
+ * release unless you accept the risk of session token exposure on device.
+ */
+import { useCallback, useEffect, useState } from 'react';
+
+import { MobileFooter } from '../../components/MobileFooter';
+import {
+  collectPushDebugSnapshot,
+  type PushDebugCheckStatus,
+  type PushDebugSnapshot,
+} from '../../lib/pushDebug';
+import {
+  pushRegisterFailureMessage,
+  registerPushForDebug,
+} from '../../lib/pushNotifications';
+
+function checkIcon(status: PushDebugCheckStatus): string {
+  if (status === 'ok') {
+    return '✓';
+  }
+  if (status === 'warn') {
+    return '!';
+  }
+  if (status === 'fail') {
+    return '✗';
+  }
+  return '—';
+}
+
+async function copyText(value: string): Promise<boolean> {
+  if (!value) {
+    return false;
+  }
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = value;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+type TokenFieldProps = {
+  id: string;
+  label: string;
+  value: string | null;
+  emptyHint: string;
+};
+
+function TokenField({ id, label, value, emptyHint }: TokenFieldProps) {
+  const [copyLabel, setCopyLabel] = useState('Copy');
+
+  const onCopy = useCallback(async () => {
+    if (!value) {
+      return;
+    }
+    const ok = await copyText(value);
+    if (ok) {
+      setCopyLabel('Copied');
+      window.setTimeout(() => setCopyLabel('Copy'), 2000);
+    }
+  }, [value]);
+
+  return (
+    <div className="push-debug-token-block">
+      <div className="push-debug-token-header">
+        <label className="push-debug-token-label" htmlFor={id}>
+          {label}
+        </label>
+        <button
+          type="button"
+          className="action-link secondary push-debug-copy-btn"
+          disabled={!value}
+          onClick={() => void onCopy()}
+        >
+          {copyLabel}
+        </button>
+      </div>
+      <textarea
+        id={id}
+        className="push-debug-token-value"
+        readOnly
+        rows={4}
+        value={value ?? ''}
+        placeholder={emptyHint}
+      />
+    </div>
+  );
+}
+
+export function PushDebugPage() {
+  const [snapshot, setSnapshot] = useState<PushDebugSnapshot | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [registerMessage, setRegisterMessage] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setRegisterMessage(null);
+    try {
+      const data = await collectPushDebugSnapshot();
+      setSnapshot(data);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const onReRegister = useCallback(async () => {
+    setRegisterMessage('Registering…');
+    const result = await registerPushForDebug();
+    if (result.ok) {
+      setRegisterMessage(`OK — token ${result.tokenPrefix} sent to server`);
+    } else {
+      setRegisterMessage(pushRegisterFailureMessage(result));
+    }
+    await refresh();
+  }, [refresh]);
+
+  return (
+    <div className="push-debug-page">
+      <header className="push-debug-header">
+        <h1>Push debug</h1>
+        <p className="push-debug-lead">
+          Temporary tool: copy tokens for Firebase test messages or{' '}
+          <code>npm run draw-reminder:test:prod</code>. APNs key in Firebase Console cannot be
+          verified from the app.
+        </p>
+        <div className="push-debug-actions">
+          <button
+            type="button"
+            className="action-link"
+            disabled={loading}
+            onClick={() => void refresh()}
+          >
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <button
+            type="button"
+            className="action-link secondary"
+            disabled={loading}
+            onClick={() => void onReRegister()}
+          >
+            Re-register on server
+          </button>
+        </div>
+        {registerMessage ? (
+          <p className="push-debug-register-msg" role="status">
+            {registerMessage}
+          </p>
+        ) : null}
+      </header>
+
+      {snapshot ? (
+        <>
+          <section className="push-debug-meta" aria-label="Environment">
+            <p>
+              <strong>Platform:</strong> {snapshot.platform}
+              {snapshot.native ? ' (native)' : ' (web)'}
+            </p>
+            <p>
+              <strong>API:</strong>{' '}
+              {snapshot.apiBaseUrl || <em>VITE_API_BASE_URL not set</em>}
+            </p>
+            <p>
+              <strong>Permission:</strong> {snapshot.permission ?? 'n/a'}
+            </p>
+          </section>
+
+          <section className="push-debug-checks" aria-label="Status checks">
+            <h2>Status</h2>
+            <ul className="push-debug-checklist">
+              {snapshot.checks.map((check) => (
+                <li
+                  key={check.id}
+                  className={`push-debug-check push-debug-check--${check.status}`}
+                >
+                  <span className="push-debug-check-icon" aria-hidden>
+                    {checkIcon(check.status)}
+                  </span>
+                  <div className="push-debug-check-body">
+                    <strong>{check.label}</strong>
+                    <span>{check.detail}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="push-debug-tokens" aria-label="Tokens">
+            <h2>Tokens</h2>
+            <TokenField
+              id="push-debug-jwt"
+              label="Mobile session JWT"
+              value={snapshot.sessionToken}
+              emptyHint="Sign in via OTP"
+            />
+            <TokenField
+              id="push-debug-fcm"
+              label="FCM registration token (use for push)"
+              value={snapshot.fcmToken ?? snapshot.storedFcmToken}
+              emptyHint={
+                snapshot.fcmError ??
+                'Allow notifications on a physical device, then Refresh'
+              }
+            />
+            {snapshot.platform === 'ios' ? (
+              <TokenField
+                id="push-debug-apns"
+                label="APNs device token (informational — not for FCM API)"
+                value={snapshot.apnsToken}
+                emptyHint="May appear after Refresh on iOS"
+              />
+            ) : null}
+          </section>
+
+          <p className="push-debug-footnote">
+            Stored FCM in localStorage:{' '}
+            {snapshot.storedFcmToken
+              ? `${snapshot.storedFcmToken.slice(0, 12)}…`
+              : 'none'}
+            . Backend devices:{' '}
+            {snapshot.serverPushStatus
+              ? snapshot.serverPushStatus.deviceCount
+              : 'log in to check'}
+            .
+          </p>
+        </>
+      ) : loading ? (
+        <p className="push-debug-loading">Loading…</p>
+      ) : (
+        <p className="push-debug-loading">Could not load debug data.</p>
+      )}
+
+      <MobileFooter />
+    </div>
+  );
+}

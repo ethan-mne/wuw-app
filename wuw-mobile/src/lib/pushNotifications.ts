@@ -192,6 +192,49 @@ async function createRegistrationTokenWaiter(timeoutMs: number): Promise<{
   };
 }
 
+/** iOS debug: capture raw APNs device token from Capacitor registration (not valid for FCM HTTP v1). */
+async function createApnsTokenWaiter(timeoutMs: number): Promise<{
+  promise: Promise<string | null>;
+  cleanup: () => Promise<void>;
+}> {
+  let settled = false;
+  let timer = 0;
+  let resolveToken: (value: string | null) => void = () => {};
+
+  const promise = new Promise<string | null>((resolve) => {
+    resolveToken = resolve;
+    timer = window.setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve(null);
+      }
+    }, timeoutMs);
+  });
+
+  const finish = (value: string | null) => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    window.clearTimeout(timer);
+    resolveToken(value);
+  };
+
+  const handle = await PushNotifications.addListener('registration', (ev) => {
+    const value = ev.value?.trim() ?? '';
+    if (isApnsDeviceToken(value)) {
+      finish(value);
+    }
+  });
+
+  return {
+    promise,
+    cleanup: async () => {
+      await handle.remove();
+    },
+  };
+}
+
 async function pollFcmPluginForToken(): Promise<string | null> {
   const FCM = await getFcmPlugin();
   if (!FCM) {
@@ -385,6 +428,73 @@ export async function enablePushNotifications(): Promise<boolean> {
 /** @deprecated Prefer syncPushTokenIfPermitted + PushPermissionPrompt for new flows. */
 export async function registerPushAfterLogin(): Promise<void> {
   await syncPushTokenIfPermitted();
+}
+
+/** Debug UI: read FCM + APNs tokens without persisting to the server. */
+export async function readLocalPushTokensForDebug(): Promise<{
+  fcm: string | null;
+  apns: string | null;
+  fcmError: string | null;
+}> {
+  if (!isNativePushPlatform()) {
+    return { fcm: null, apns: null, fcmError: 'Not a native app (web preview)' };
+  }
+
+  const receive = await getPushReceivePermission();
+  if (receive !== 'granted') {
+    return {
+      fcm: null,
+      apns: null,
+      fcmError: `Notifications not granted (${receive ?? 'unknown'})`,
+    };
+  }
+
+  const platform = Capacitor.getPlatform();
+  const { promise: registrationToken, cleanup: cleanupRegistration } =
+    await createRegistrationTokenWaiter(12_000);
+  const apnsWaiter =
+    platform === 'ios' ? await createApnsTokenWaiter(12_000) : null;
+
+  try {
+    await PushNotifications.register();
+
+    if (platform === 'android') {
+      const fcm = await registrationToken;
+      return {
+        fcm,
+        apns: null,
+        fcmError: fcm ? null : 'No FCM token from PushNotifications registration',
+      };
+    }
+
+    const [fromRegistration, fromFcm, apns] = await Promise.all([
+      registrationToken,
+      pollFcmPluginForToken(),
+      apnsWaiter?.promise ?? Promise.resolve(null),
+    ]);
+    const fcm = fromRegistration ?? fromFcm;
+    let fcmError: string | null = null;
+    if (!fcm) {
+      fcmError =
+        'No FCM token — check GoogleService-Info.plist in ios/App/App/ and npm run ios:sync';
+    } else if (isApnsDeviceToken(fcm)) {
+      fcmError = 'Registration returned APNs hex token instead of FCM';
+    }
+    return { fcm, apns, fcmError };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    return { fcm: null, apns: null, fcmError: msg };
+  } finally {
+    await cleanupRegistration();
+    if (apnsWaiter) {
+      await apnsWaiter.cleanup();
+    }
+  }
+}
+
+/** Debug UI: permission + FCM + POST push-token (same as draw-alert flow). */
+export function registerPushForDebug(): Promise<PushRegisterResult> {
+  return ensurePushRegisteredForAlerts();
 }
 
 export async function unregisterPushDeviceIfAny(): Promise<void> {

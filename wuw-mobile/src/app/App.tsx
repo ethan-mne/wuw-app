@@ -23,6 +23,7 @@ import { HomePage } from '../pages/HomePage';
 import { LegalPage } from '../pages/legal/LegalPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { SupportPage } from '../pages/support/SupportPage';
+import { PushDebugPage } from '../pages/debug/PushDebugPage';
 import { WinnersPage } from '../pages/winners/WinnersPage';
 import { defaultLocale } from '../routes/locales';
 
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="account/history" element={<AccountHistoryPage />} />
         <Route path="account/referrals" element={<AccountReferralsPage />} />
         <Route path="winners" element={<WinnersPage />} />
+        <Route path="debug/push" element={<PushDebugPage />} />
         {supportPages.map((page) => (
           <Route
             key={page.path}

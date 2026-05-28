@@ -78,6 +78,9 @@ export function MobileFooter() {
       </section>
 
       <nav className="footer-legal-nav" aria-label="Legal navigation">
+        <Link className="footer-debug-link" to={withLocale(locale, 'debug/push')}>
+          Push debug
+        </Link>
         {legalNav.map(([label, slug]) => (
           <a
             key={slug}
