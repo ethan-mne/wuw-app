@@ -105,6 +105,7 @@ export function PushDebugPage() {
   const [snapshot, setSnapshot] = useState<PushDebugSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [registering, setRegistering] = useState(false);
   const [registerMessage, setRegisterMessage] = useState<string | null>(null);
   const snapshotRef = useRef<PushDebugSnapshot | null>(null);
   snapshotRef.current = snapshot;
@@ -139,14 +140,22 @@ export function PushDebugPage() {
   }, [refresh]);
 
   const onReRegister = useCallback(async () => {
+    setRegistering(true);
     setRegisterMessage('Registering…');
-    const result = await registerPushForDebug();
-    if (result.ok) {
-      setRegisterMessage(`OK — token ${result.tokenPrefix} sent to server`);
-    } else {
-      setRegisterMessage(pushRegisterFailureMessage(result));
+    try {
+      const result = await registerPushForDebug();
+      if (result.ok) {
+        setRegisterMessage(`OK — token ${result.tokenPrefix} sent to server`);
+      } else {
+        setRegisterMessage(pushRegisterFailureMessage(result));
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      setRegisterMessage(`Registration failed: ${msg}`);
+    } finally {
+      setRegistering(false);
+      await refresh();
     }
-    await refresh();
   }, [refresh]);
 
   return (
@@ -170,10 +179,10 @@ export function PushDebugPage() {
           <button
             type="button"
             className="action-link secondary"
-            disabled={loading || refreshing}
+            disabled={loading || refreshing || registering}
             onClick={() => void onReRegister()}
           >
-            Re-register on server
+            {registering ? 'Registering…' : 'Re-register on server'}
           </button>
         </div>
         {registerMessage ? (

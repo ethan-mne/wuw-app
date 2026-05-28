@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 
 import { isApnsDeviceToken, isLikelyFcmRegistrationToken } from './fcmToken';
+import { getMobileSessionToken } from './mobileSessionToken';
 import { getStoredPushDeviceToken, setStoredPushDeviceToken } from './pushStorage';
 import { registerPushTokenWithServer, unregisterPushTokenWithServer } from '../services/pushDeviceApi';
 
@@ -28,10 +29,14 @@ export function pushRegisterFailureMessage(
   push: Extract<PushRegisterResult, { ok: false }>,
 ): string {
   if (push.reason === 'permission_denied') {
-    return 'Reminder saved. Allow notifications for Winuwatch in your phone settings to receive the push.';
+    return push.detail
+      ? push.detail
+      : 'Reminder saved. Allow notifications for Winuwatch in your phone settings to receive the push.';
   }
   if (push.reason === 'no_fcm_token' || push.reason === 'invalid_token_shape') {
-    return 'Reminder saved. Could not register this device for push — allow notifications and try Remind me again.';
+    return push.detail
+      ? push.detail
+      : 'Reminder saved. Could not register this device for push — allow notifications and try Remind me again.';
   }
   if (push.reason === 'server_rejected') {
     return push.detail
@@ -71,6 +76,20 @@ async function safePushRegister(): Promise<void> {
     await Promise.race([PushNotifications.register(), delay(6_000)]);
   } catch (error) {
     console.warn('[wuw-push] PushNotifications.register failed', error);
+  }
+}
+
+async function safeRequestPushPermissions(): Promise<PushReceivePermission> {
+  try {
+    const perm = await withTimeout(
+      PushNotifications.requestPermissions(),
+      60_000,
+      { receive: 'prompt' },
+    );
+    return normalizeReceivePermission(perm.receive);
+  } catch (error) {
+    console.warn('[wuw-push] requestPermissions failed', error);
+    return 'prompt';
   }
 }
 
@@ -330,8 +349,8 @@ async function pollFcmPluginForToken(options?: {
  * Android: PushNotifications `registration` only (FCM plugin not available).
  * iOS: @capacitor-community/fcm + registration fallback.
  */
-async function registerForFcmToken(): Promise<string | null> {
-  const { promise: registrationToken, cleanup } = await createRegistrationTokenWaiter(12_000);
+async function registerForFcmTokenInner(): Promise<string | null> {
+  const { promise: registrationToken, cleanup } = await createRegistrationTokenWaiter(8_000);
   const platform = Capacitor.getPlatform();
 
   try {
@@ -347,7 +366,7 @@ async function registerForFcmToken(): Promise<string | null> {
 
     const [fromRegistration, fromFcm] = await Promise.all([
       registrationToken,
-      pollFcmPluginForToken(),
+      pollFcmPluginForToken({ maxAttempts: 4, getTokenTimeoutMs: 3_000 }),
     ]);
     return fromRegistration ?? fromFcm;
   } catch (error) {
@@ -356,6 +375,10 @@ async function registerForFcmToken(): Promise<string | null> {
   } finally {
     await cleanup();
   }
+}
+
+async function registerForFcmToken(): Promise<string | null> {
+  return withTimeout(registerForFcmTokenInner(), 16_000, null);
 }
 
 async function persistTokenOnServer(token: string): Promise<PushRegisterResult> {
@@ -386,8 +409,7 @@ export async function ensurePushRegisteredForAlerts(): Promise<PushRegisterResul
 
   let receive = await getPushReceivePermission();
   if (shouldShowPushPermissionPrompt(receive)) {
-    const perm = await PushNotifications.requestPermissions();
-    receive = normalizeReceivePermission(perm.receive);
+    receive = await safeRequestPushPermissions();
   }
 
   if (receive !== 'granted') {
@@ -576,9 +598,63 @@ export async function readLocalPushTokensForDebug(): Promise<{
   return fromRegister;
 }
 
-/** Debug UI: permission + FCM + POST push-token (same as draw-alert flow). */
+async function registerPushForDebugInner(): Promise<PushRegisterResult> {
+  if (!isNativePushPlatform()) {
+    return { ok: false, reason: 'not_native' };
+  }
+
+  if (!getMobileSessionToken()) {
+    return { ok: false, reason: 'not_logged_in' };
+  }
+
+  let receive = await getPushReceivePermission();
+  if (shouldShowPushPermissionPrompt(receive)) {
+    receive = await safeRequestPushPermissions();
+  }
+
+  if (receive !== 'granted') {
+    return {
+      ok: false,
+      reason: 'permission_denied',
+      detail: 'Allow notifications for Winuwatch in iOS Settings, then try again.',
+    };
+  }
+
+  const stored = getStoredPushDeviceToken();
+  if (stored && isLikelyFcmRegistrationToken(stored)) {
+    const cached = await persistTokenOnServer(stored);
+    if (cached.ok) {
+      return cached;
+    }
+  }
+
+  if (Capacitor.getPlatform() === 'ios') {
+    const quick = await pollFcmPluginForToken({ maxAttempts: 2, getTokenTimeoutMs: 3_000 });
+    if (quick) {
+      return persistTokenOnServer(quick);
+    }
+  }
+
+  const token = await registerForFcmToken();
+  if (!token) {
+    return {
+      ok: false,
+      reason: 'no_fcm_token',
+      detail:
+        'Could not read FCM token. Check GoogleService-Info.plist, APNs key in Firebase, and try again.',
+    };
+  }
+
+  return persistTokenOnServer(token);
+}
+
+/** Debug UI: permission + FCM + POST push-token (bounded so the UI never hangs). */
 export function registerPushForDebug(): Promise<PushRegisterResult> {
-  return ensurePushRegisteredForAlerts();
+  return withTimeout(registerPushForDebugInner(), 25_000, {
+    ok: false,
+    reason: 'no_fcm_token',
+    detail: 'Registration timed out (25s). Check network and notification permission, then retry.',
+  });
 }
 
 export async function unregisterPushDeviceIfAny(): Promise<void> {

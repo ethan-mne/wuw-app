@@ -1,6 +1,27 @@
 import { API_BASE_URL } from '../lib/config';
 import { getMobileSessionToken } from '../lib/mobileSessionToken';
 
+const DEFAULT_FETCH_TIMEOUT_MS = 12_000;
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs = DEFAULT_FETCH_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Request timed out after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
 export async function registerPushTokenWithServer(
   token: string,
   platform: 'android' | 'ios',
@@ -13,7 +34,7 @@ export async function registerPushTokenWithServer(
     throw new Error('Not logged in');
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/mobile/v1/me/push-token`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/mobile/v1/me/push-token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -48,7 +69,7 @@ export async function getPushDeviceStatusFromServer(): Promise<{
     return null;
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/mobile/v1/me/push-token`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/mobile/v1/me/push-token`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
