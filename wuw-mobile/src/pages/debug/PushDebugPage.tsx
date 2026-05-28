@@ -2,7 +2,7 @@
  * TEMPORARY push debug screen — exposes JWT + FCM tokens. Remove before a public store
  * release unless you accept the risk of session token exposure on device.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { MobileFooter } from '../../components/MobileFooter';
 import {
@@ -104,21 +104,38 @@ function TokenField({ id, label, value, emptyHint }: TokenFieldProps) {
 export function PushDebugPage() {
   const [snapshot, setSnapshot] = useState<PushDebugSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [registerMessage, setRegisterMessage] = useState<string | null>(null);
+  const snapshotRef = useRef<PushDebugSnapshot | null>(null);
+  snapshotRef.current = snapshot;
 
   const refresh = useCallback(async () => {
-    setLoading(true);
+    const isFirstLoad = snapshotRef.current === null;
+    if (isFirstLoad) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
     setRegisterMessage(null);
     try {
       const data = await collectPushDebugSnapshot();
       setSnapshot(data);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
     void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const onSession = () => {
+      void refresh();
+    };
+    window.addEventListener('wuw-mobile-session', onSession);
+    return () => window.removeEventListener('wuw-mobile-session', onSession);
   }, [refresh]);
 
   const onReRegister = useCallback(async () => {
@@ -145,15 +162,15 @@ export function PushDebugPage() {
           <button
             type="button"
             className="action-link"
-            disabled={loading}
+            disabled={loading || refreshing}
             onClick={() => void refresh()}
           >
-            {loading ? 'Refreshing…' : 'Refresh'}
+            {loading || refreshing ? 'Refreshing…' : 'Refresh'}
           </button>
           <button
             type="button"
             className="action-link secondary"
-            disabled={loading}
+            disabled={loading || refreshing}
             onClick={() => void onReRegister()}
           >
             Re-register on server
@@ -167,7 +184,11 @@ export function PushDebugPage() {
       </header>
 
       {snapshot ? (
-        <>
+        <div
+          className={
+            refreshing ? 'push-debug-body push-debug-body--refreshing' : 'push-debug-body'
+          }
+        >
           <section className="push-debug-meta" aria-label="Environment">
             <p>
               <strong>Platform:</strong> {snapshot.platform}
@@ -213,7 +234,7 @@ export function PushDebugPage() {
             <TokenField
               id="push-debug-fcm"
               label="FCM registration token (use for push)"
-              value={snapshot.fcmToken ?? snapshot.storedFcmToken}
+              value={snapshot.fcmToken}
               emptyHint={
                 snapshot.fcmError ??
                 'Allow notifications on a physical device, then Refresh'
@@ -240,7 +261,7 @@ export function PushDebugPage() {
               : 'log in to check'}
             .
           </p>
-        </>
+        </div>
       ) : loading ? (
         <p className="push-debug-loading">Loading…</p>
       ) : (

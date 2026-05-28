@@ -61,6 +61,19 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([promise, delay(ms).then(() => fallback)]);
+}
+
+/** Second call to register() on iOS can hang if already registered — never block indefinitely. */
+async function safePushRegister(): Promise<void> {
+  try {
+    await Promise.race([PushNotifications.register(), delay(6_000)]);
+  } catch (error) {
+    console.warn('[wuw-push] PushNotifications.register failed', error);
+  }
+}
+
 export function notifyPushPermissionChanged(): void {
   try {
     window.dispatchEvent(new Event(PUSH_PERMISSION_EVENT));
@@ -235,11 +248,57 @@ async function createApnsTokenWaiter(timeoutMs: number): Promise<{
   };
 }
 
-async function pollFcmPluginForToken(): Promise<string | null> {
+type FcmPlugin = NonNullable<Awaited<ReturnType<typeof getFcmPlugin>>>;
+
+async function fcmPluginGetToken(FCM: FcmPlugin, timeoutMs: number): Promise<string | null> {
+  try {
+    const { token } = await withTimeout(
+      FCM.getToken(),
+      timeoutMs,
+      { token: undefined as string | undefined },
+    );
+    if (token?.trim() && isLikelyFcmRegistrationToken(token)) {
+      return token.trim();
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('not implemented')) {
+      return null;
+    }
+  }
+  return null;
+}
+
+async function fcmPluginRefreshToken(FCM: FcmPlugin, timeoutMs: number): Promise<string | null> {
+  try {
+    const { token } = await withTimeout(
+      FCM.refreshToken(),
+      timeoutMs,
+      { token: undefined as string | undefined },
+    );
+    if (token?.trim() && isLikelyFcmRegistrationToken(token)) {
+      return token.trim();
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('not implemented')) {
+      return null;
+    }
+  }
+  return null;
+}
+
+async function pollFcmPluginForToken(options?: {
+  maxAttempts?: number;
+  getTokenTimeoutMs?: number;
+}): Promise<string | null> {
   const FCM = await getFcmPlugin();
   if (!FCM) {
     return null;
   }
+
+  const maxAttempts = options?.maxAttempts ?? 8;
+  const getTokenTimeoutMs = options?.getTokenTimeoutMs ?? 4_000;
 
   try {
     await FCM.setAutoInit({ enabled: true });
@@ -247,36 +306,19 @@ async function pollFcmPluginForToken(): Promise<string | null> {
     /* optional on some builds */
   }
 
-  for (let attempt = 0; attempt < 8; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) {
       await delay(600 * attempt);
     }
 
-    try {
-      const { token } = await FCM.getToken();
-      if (token?.trim() && isLikelyFcmRegistrationToken(token)) {
-        return token.trim();
-      }
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (msg.includes('not implemented')) {
-        console.warn('[wuw-push] iOS FCM plugin unavailable:', msg);
-        return null;
-      }
-      /* retry */
+    const fromGet = await fcmPluginGetToken(FCM, getTokenTimeoutMs);
+    if (fromGet) {
+      return fromGet;
     }
 
-    try {
-      const { token } = await FCM.refreshToken();
-      if (token?.trim() && isLikelyFcmRegistrationToken(token)) {
-        return token.trim();
-      }
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (msg.includes('not implemented')) {
-        return null;
-      }
-      /* retry */
+    const fromRefresh = await fcmPluginRefreshToken(FCM, getTokenTimeoutMs);
+    if (fromRefresh) {
+      return fromRefresh;
     }
   }
 
@@ -293,7 +335,7 @@ async function registerForFcmToken(): Promise<string | null> {
   const platform = Capacitor.getPlatform();
 
   try {
-    await PushNotifications.register();
+    await safePushRegister();
 
     if (platform === 'android') {
       const token = await registrationToken;
@@ -430,33 +472,19 @@ export async function registerPushAfterLogin(): Promise<void> {
   await syncPushTokenIfPermitted();
 }
 
-/** Debug UI: read FCM + APNs tokens without persisting to the server. */
-export async function readLocalPushTokensForDebug(): Promise<{
+async function readPushTokensWithRegister(): Promise<{
   fcm: string | null;
   apns: string | null;
   fcmError: string | null;
 }> {
-  if (!isNativePushPlatform()) {
-    return { fcm: null, apns: null, fcmError: 'Not a native app (web preview)' };
-  }
-
-  const receive = await getPushReceivePermission();
-  if (receive !== 'granted') {
-    return {
-      fcm: null,
-      apns: null,
-      fcmError: `Notifications not granted (${receive ?? 'unknown'})`,
-    };
-  }
-
   const platform = Capacitor.getPlatform();
   const { promise: registrationToken, cleanup: cleanupRegistration } =
-    await createRegistrationTokenWaiter(12_000);
+    await createRegistrationTokenWaiter(8_000);
   const apnsWaiter =
-    platform === 'ios' ? await createApnsTokenWaiter(12_000) : null;
+    platform === 'ios' ? await createApnsTokenWaiter(8_000) : null;
 
   try {
-    await PushNotifications.register();
+    await safePushRegister();
 
     if (platform === 'android') {
       const fcm = await registrationToken;
@@ -469,7 +497,7 @@ export async function readLocalPushTokensForDebug(): Promise<{
 
     const [fromRegistration, fromFcm, apns] = await Promise.all([
       registrationToken,
-      pollFcmPluginForToken(),
+      pollFcmPluginForToken({ maxAttempts: 4, getTokenTimeoutMs: 3_000 }),
       apnsWaiter?.promise ?? Promise.resolve(null),
     ]);
     const fcm = fromRegistration ?? fromFcm;
@@ -490,6 +518,62 @@ export async function readLocalPushTokensForDebug(): Promise<{
       await apnsWaiter.cleanup();
     }
   }
+}
+
+/** Debug UI: read FCM + APNs tokens without persisting to the server. */
+export async function readLocalPushTokensForDebug(): Promise<{
+  fcm: string | null;
+  apns: string | null;
+  fcmError: string | null;
+}> {
+  if (!isNativePushPlatform()) {
+    return { fcm: null, apns: null, fcmError: 'Not a native app (web preview)' };
+  }
+
+  const receive = await getPushReceivePermission();
+  if (receive !== 'granted') {
+    return {
+      fcm: null,
+      apns: null,
+      fcmError: `Notifications not granted (${receive ?? 'unknown'})`,
+    };
+  }
+
+  const stored = getStoredPushDeviceToken();
+  const platform = Capacitor.getPlatform();
+
+  if (platform === 'ios') {
+    const quickFcm = await pollFcmPluginForToken({ maxAttempts: 2, getTokenTimeoutMs: 3_000 });
+    if (quickFcm) {
+      return { fcm: quickFcm, apns: null, fcmError: null };
+    }
+  }
+
+  if (stored && isLikelyFcmRegistrationToken(stored)) {
+    return { fcm: stored, apns: null, fcmError: null };
+  }
+
+  const fromRegister = await withTimeout(readPushTokensWithRegister(), 14_000, {
+    fcm: stored,
+    apns: null,
+    fcmError: stored
+      ? null
+      : 'Timed out reading push tokens — tap Re-register on server, then Refresh',
+  });
+
+  if (fromRegister.fcm) {
+    return fromRegister;
+  }
+
+  if (stored && isLikelyFcmRegistrationToken(stored)) {
+    return {
+      fcm: stored,
+      apns: fromRegister.apns,
+      fcmError: fromRegister.fcmError,
+    };
+  }
+
+  return fromRegister;
 }
 
 /** Debug UI: permission + FCM + POST push-token (same as draw-alert flow). */

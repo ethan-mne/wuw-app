@@ -4190,3 +4190,8 @@ a.action-link.referral-whatsapp[aria-disabled='true'] {
   font-size: 0.85rem;
   color: #64748b;
 }
+
+.push-debug-body--refreshing {
+  opacity: 0.72;
+  pointer-events: none;
+}

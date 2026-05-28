@@ -39,6 +39,18 @@ export type PushDebugSnapshot = {
   checks: PushDebugCheck[];
 };
 
+const TOKEN_READ_TIMEOUT_MS = 12_000;
+const FETCH_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => {
+      window.setTimeout(() => resolve(fallback), ms);
+    }),
+  ]);
+}
+
 async function fetchBackendHealth(): Promise<PushDebugSnapshot['backendHealth']> {
   if (!API_BASE_URL) {
     return {
@@ -49,7 +61,18 @@ async function fetchBackendHealth(): Promise<PushDebugSnapshot['backendHealth']>
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/health`);
+    const response = await withTimeout(
+      fetch(`${API_BASE_URL}/api/health`),
+      FETCH_TIMEOUT_MS,
+      null,
+    );
+    if (!response) {
+      return {
+        firebaseConfigured: false,
+        cronSecretConfigured: false,
+        fetchError: 'Health check timed out',
+      };
+    }
     if (!response.ok) {
       return {
         firebaseConfigured: false,
@@ -256,6 +279,10 @@ function buildChecks(input: {
   return checks;
 }
 
+async function fetchServerPushStatus(): Promise<PushDebugSnapshot['serverPushStatus']> {
+  return withTimeout(getPushDeviceStatusFromServer(), FETCH_TIMEOUT_MS, null);
+}
+
 export async function collectPushDebugSnapshot(): Promise<PushDebugSnapshot> {
   const platform = Capacitor.getPlatform();
   const native = isNativePushPlatform();
@@ -263,28 +290,40 @@ export async function collectPushDebugSnapshot(): Promise<PushDebugSnapshot> {
   const sessionToken = getMobileSessionToken();
   const storedFcmToken = getStoredPushDeviceToken();
 
+  const tokenReadFallback = {
+    fcm: storedFcmToken,
+    apns: null as string | null,
+    fcmError: !native
+      ? 'Not a native app'
+      : permission !== 'granted'
+        ? `Notifications: ${permission ?? 'unknown'}`
+        : storedFcmToken
+          ? null
+          : 'Token read timed out — tap Re-register, then Refresh',
+  };
+
   const [tokenRead, backendHealth, serverPushStatus] = await Promise.all([
     native && permission === 'granted'
-      ? readLocalPushTokensForDebug()
+      ? withTimeout(readLocalPushTokensForDebug(), TOKEN_READ_TIMEOUT_MS, tokenReadFallback)
       : Promise.resolve({
           fcm: null as string | null,
           apns: null as string | null,
-          fcmError: !native
-            ? 'Not a native app'
-            : permission !== 'granted'
-              ? `Notifications: ${permission ?? 'unknown'}`
-              : null,
+          fcmError: tokenReadFallback.fcmError,
         }),
     fetchBackendHealth(),
-    sessionToken ? getPushDeviceStatusFromServer() : Promise.resolve(null),
+    sessionToken ? fetchServerPushStatus() : Promise.resolve(null),
   ]);
+
+  const fcmToken = tokenRead.fcm ?? storedFcmToken;
+  const fcmError =
+    fcmToken && isLikelyFcmRegistrationToken(fcmToken) ? null : tokenRead.fcmError;
 
   const checks = buildChecks({
     native,
     platform,
     permission,
-    fcmToken: tokenRead.fcm,
-    fcmError: tokenRead.fcmError,
+    fcmToken,
+    fcmError,
     sessionToken,
     serverPushStatus,
     backendHealth,
@@ -297,9 +336,9 @@ export async function collectPushDebugSnapshot(): Promise<PushDebugSnapshot> {
     permission,
     sessionToken,
     storedFcmToken,
-    fcmToken: tokenRead.fcm,
+    fcmToken,
     apnsToken: tokenRead.apns,
-    fcmError: tokenRead.fcmError,
+    fcmError,
     serverPushStatus,
     backendHealth,
     checks,
