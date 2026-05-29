@@ -25,7 +25,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // Restart any tasks that were paused while the application was inactive.
+        FirebaseBootstrap.reapplyApnsTokenIfNeeded()
     }
 
     func applicationWillTerminate(_ application: UIApplication) {

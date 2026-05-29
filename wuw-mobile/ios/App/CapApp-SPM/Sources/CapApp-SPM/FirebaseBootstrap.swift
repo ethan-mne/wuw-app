@@ -2,6 +2,8 @@ import Foundation
 import FirebaseCore
 import FirebaseMessaging
 
+private let apnsUserDefaultsKey = "wuw_last_apns_device_token"
+
 /// Called from AppDelegate so Firebase is ready before FCM.getToken() (TestFlight / production).
 public enum FirebaseBootstrap {
     public static func configureIfNeeded() {
@@ -16,7 +18,18 @@ public enum FirebaseBootstrap {
     }
 
     public static func setApnsToken(_ deviceToken: Data) {
+        UserDefaults.standard.set(deviceToken, forKey: apnsUserDefaultsKey)
         configureIfNeeded()
         Messaging.messaging().apnsToken = deviceToken
+    }
+
+    public static func reapplyApnsTokenIfNeeded() {
+        guard Messaging.messaging().apnsToken == nil,
+              let data = UserDefaults.standard.data(forKey: apnsUserDefaultsKey) else {
+            return
+        }
+        configureIfNeeded()
+        Messaging.messaging().apnsToken = data
+        print("[FirebaseBootstrap] Re-applied APNs token to Firebase Messaging")
     }
 }

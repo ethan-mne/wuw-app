@@ -10,6 +10,7 @@ import {
   readLocalPushTokensForDebug,
 } from './pushNotifications';
 import { getLastPushRegistrationError } from './pushNotificationSetup';
+import { getLastFcmPluginError } from './pushNotifications';
 import { getStoredPushDeviceToken } from './pushStorage';
 import { getPushDeviceStatusFromServer } from '../services/pushDeviceApi';
 
@@ -175,8 +176,9 @@ function buildChecks(input: {
       detail: plistOk
         ? 'FCM token obtained — plist bundled and Firebase initialized'
         : input.fcmError ??
+          getLastFcmPluginError() ??
           (apnsOk
-            ? 'APNs OK but no FCM token — on the Mac before Archive: place GoogleService-Info.plist in ios/App/App/, run npm run ios:sync, then new TestFlight build'
+            ? 'APNs OK but no FCM token — new TestFlight build after npm run ios:sync; confirm prod APNs key in Firebase'
             : 'Fix APNs first (see row above), then refresh'),
     });
 

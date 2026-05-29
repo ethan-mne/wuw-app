@@ -291,13 +291,18 @@ async function fcmPluginGetToken(FCM: FcmPlugin, timeoutMs: number): Promise<str
       { token: undefined as string | undefined },
     );
     if (token?.trim() && isLikelyFcmRegistrationToken(token)) {
+      lastFcmPluginError = null;
       return token.trim();
+    }
+    if (!token) {
+      lastFcmPluginError = lastFcmPluginError ?? 'FCM.getToken returned empty (timed out or Firebase not ready)';
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     if (msg.includes('not implemented')) {
       return null;
     }
+    lastFcmPluginError = msg;
     console.warn('[wuw-push] FCM.getToken failed', msg);
   }
   return null;
@@ -331,7 +336,11 @@ function describeIosFcmFailure(apns: string | null): string {
   if (!apns) {
     return 'No APNs token — TestFlight build needs Push capability on the App ID, notifications allowed, real iPhone. Reinstall after a new archive.';
   }
-  return 'APNs OK but no FCM token — run npm run ios:sync, clean build, reinstall. Firebase needs GoogleService-Info.plist in the app bundle.';
+  const fcmErr = getLastFcmPluginError();
+  if (fcmErr) {
+    return `APNs OK but FCM failed: ${fcmErr}`;
+  }
+  return 'APNs OK but no FCM token — archive again after npm run ios:sync (GoogleService-Info.plist in Copy Bundle Resources). Check Firebase APNs prod key for TestFlight.';
 }
 
 export function getIosApnsTokenForDebug(): string | null {
@@ -340,6 +349,11 @@ export function getIosApnsTokenForDebug(): string | null {
 
 /** Last APNs token seen during iOS registration (for error messages). */
 let lastIosApnsToken: string | null = null;
+let lastFcmPluginError: string | null = null;
+
+export function getLastFcmPluginError(): string | null {
+  return lastFcmPluginError;
+}
 
 /** iOS: register with APNs, then read FCM token via @capacitor-community/fcm. */
 async function acquireIosPushTokens(): Promise<{ fcm: string | null; apns: string | null }> {
@@ -357,12 +371,16 @@ async function acquireIosPushTokens(): Promise<{ fcm: string | null; apns: strin
     }
     const FCM = await getFcmPlugin();
     if (FCM) {
-      const fromRefresh = await fcmPluginRefreshToken(FCM, 8_000);
+      const fromRefresh = await fcmPluginRefreshToken(FCM, 25_000);
       if (fromRefresh) {
         return { fcm: fromRefresh, apns };
       }
+      const fromGet = await fcmPluginGetToken(FCM, 25_000);
+      if (fromGet) {
+        return { fcm: fromGet, apns };
+      }
     }
-    const fcm = await pollFcmPluginForToken({ maxAttempts: 10, getTokenTimeoutMs: 6_000 });
+    const fcm = await pollFcmPluginForToken({ maxAttempts: 6, getTokenTimeoutMs: 20_000 });
     return { fcm, apns };
   } finally {
     if (apnsWaiter) {
