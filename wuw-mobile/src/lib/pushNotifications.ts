@@ -353,9 +353,16 @@ async function acquireIosPushTokens(): Promise<{ fcm: string | null; apns: strin
       getCachedApnsDeviceToken();
     lastIosApnsToken = apns;
     if (apns) {
-      await delay(800);
+      await delay(1_500);
     }
-    const fcm = await pollFcmPluginForToken({ maxAttempts: 6, getTokenTimeoutMs: 5_000 });
+    const FCM = await getFcmPlugin();
+    if (FCM) {
+      const fromRefresh = await fcmPluginRefreshToken(FCM, 8_000);
+      if (fromRefresh) {
+        return { fcm: fromRefresh, apns };
+      }
+    }
+    const fcm = await pollFcmPluginForToken({ maxAttempts: 10, getTokenTimeoutMs: 6_000 });
     return { fcm, apns };
   } finally {
     if (apnsWaiter) {

@@ -176,7 +176,7 @@ function buildChecks(input: {
         ? 'FCM token obtained — plist bundled and Firebase initialized'
         : input.fcmError ??
           (apnsOk
-            ? 'APNs OK but no FCM token — run npm run ios:sync, clean build, reinstall on device'
+            ? 'APNs OK but no FCM token — on the Mac before Archive: place GoogleService-Info.plist in ios/App/App/, run npm run ios:sync, then new TestFlight build'
             : 'Fix APNs first (see row above), then refresh'),
     });
 
@@ -317,14 +317,16 @@ export async function collectPushDebugSnapshot(): Promise<PushDebugSnapshot> {
 
   const tokenReadFallback = {
     fcm: storedFcmToken,
-    apns: null as string | null,
+    apns: getIosApnsTokenForDebug(),
     fcmError: !native
       ? 'Not a native app'
       : permission !== 'granted'
         ? `Notifications: ${permission ?? 'unknown'}`
         : storedFcmToken
           ? null
-          : 'Still reading push tokens — wait up to 50s or tap Refresh',
+          : getIosApnsTokenForDebug()
+            ? 'APNs OK — still waiting for FCM (up to 50s). If it fails: GoogleService-Info.plist must be on the Mac before Archive.'
+            : 'Still reading push tokens — wait up to 50s or tap Refresh',
   };
 
   const [tokenRead, backendHealth, serverPushStatus] = await Promise.all([
