@@ -231,8 +231,19 @@ function buildChecks(input: {
     id: 'jwt',
     label: 'Mobile session JWT',
     status: input.sessionToken ? 'ok' : 'warn',
-    detail: input.sessionToken ? 'Present in localStorage' : 'Sign in via OTP to register push on server',
-  });
+      detail: input.sessionToken
+        ? 'Present in localStorage'
+        : 'Sign in via OTP to register push on server',
+    });
+
+  if (input.platform === 'ios' && input.backendHealth?.fetchError) {
+    checks.push({
+      id: 'backend-reachable',
+      label: 'Backend reachable from phone',
+      status: 'warn',
+      detail: `Health fetch failed: ${input.backendHealth.fetchError} (push debug uses a short timeout; Safari may still work)`,
+    });
+  }
 
   if (!input.sessionToken) {
     checks.push({

@@ -4,7 +4,7 @@ import FirebaseMessaging
 
 private let apnsUserDefaultsKey = "wuw_last_apns_device_token"
 
-/// Called from AppDelegate so Firebase is ready before FCM.getToken() (TestFlight / production).
+/// Firebase init + APNs token bridging for TestFlight (FCM token via patched @capacitor-community/fcm).
 public enum FirebaseBootstrap {
     public static func configureIfNeeded() {
         guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else {

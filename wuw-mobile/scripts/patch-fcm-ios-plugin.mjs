@@ -1,7 +1,9 @@
 /**
  * Patches @capacitor-community/fcm iOS plugin:
  * - Skip FirebaseApp.configure() when GoogleService-Info.plist is missing/invalid
- * - Re-apply cached APNs token before getToken/refreshToken (TestFlight / debug refresh)
+ * - Re-apply cached APNs token before getToken
+ * - Return cached FCM token from UserDefaults
+ * - Persist FCM token in UserDefaults when MessagingDelegate fires
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
@@ -19,6 +21,7 @@ if (!existsSync(pluginPath)) {
 
 const guardMarker = 'Valid GoogleService-Info.plist not in app bundle';
 const apnsMarker = 'wuwReapplyApnsTokenIfNeeded';
+const cacheMarker = 'wuw_fcm_registration_token';
 
 const guard = `        guard let plistPath = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
               let plist = NSDictionary(contentsOfFile: plistPath),
@@ -35,7 +38,6 @@ const guard = `        guard let plistPath = Bundle.main.path(forResource: "Goog
 `;
 
 const apnsHelper = `
-    /// Re-apply APNs token saved by AppDelegate (FCM getToken after debug refresh).
     private func wuwReapplyApnsTokenIfNeeded() {
         guard Messaging.messaging().apnsToken == nil,
               let data = UserDefaults.standard.data(forKey: "wuw_last_apns_device_token") else {
@@ -46,60 +48,102 @@ const apnsHelper = `
         }
         Messaging.messaging().apnsToken = data
     }
+
+    private func wuwCachedFcmToken() -> String? {
+        let token = UserDefaults.standard.string(forKey: "${cacheMarker}")
+        return (token ?? "").isEmpty ? nil : token
+    }
+`;
+
+const getTokenStart = `    @objc func getToken(_ call: CAPPluginCall) {
+        wuwReapplyApnsTokenIfNeeded()
+        if let cached = wuwCachedFcmToken() {
+            self.fcmToken = cached
+            call.resolve(["token": cached])
+            return
+        }
 `;
 
 let source = readFileSync(pluginPath, 'utf8');
 let changed = false;
+
+function markReplaced(next) {
+  if (next !== source) {
+    source = next;
+    changed = true;
+  }
+}
 
 if (!source.includes(guardMarker)) {
   const needle = `    override public func load() {
         if FirebaseApp.app() == nil {
             FirebaseApp.configure()
         }`;
-
   const oldGuard = `        guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else {
             print("[FCM] GoogleService-Info.plist not in app bundle — skipping Firebase")
             return
         }
 `;
-
   if (source.includes(oldGuard)) {
-    source = source.replace(oldGuard, `${guard}`);
-    changed = true;
+    markReplaced(source.replace(oldGuard, `${guard}`));
   } else if (source.includes(needle)) {
-    source = source.replace(
-      needle,
-      `    override public func load() {\n${guard}        if FirebaseApp.app() == nil {\n            FirebaseApp.configure()\n        }`,
+    markReplaced(
+      source.replace(
+        needle,
+        `    override public func load() {\n${guard}        if FirebaseApp.app() == nil {\n            FirebaseApp.configure()\n        }`,
+      ),
     );
-    changed = true;
-  } else {
-    console.warn('[patch-fcm-ios] Unexpected Plugin.swift shape for Firebase guard; skipping guard patch');
   }
 }
 
-if (!source.includes(apnsMarker)) {
-  if (!source.includes('private func wuwReapplyApnsTokenIfNeeded()')) {
-    source = source.replace(
+if (!source.includes(apnsMarker) && !source.includes('private func wuwReapplyApnsTokenIfNeeded()')) {
+  markReplaced(
+    source.replace(
       '    @objc func didRegisterWithToken(notification: NSNotification) {',
       `${apnsHelper}\n    @objc func didRegisterWithToken(notification: NSNotification) {`,
-    );
-    changed = true;
-  }
+    ),
+  );
+}
 
-  source = source.replace(
-    '    @objc func getToken(_ call: CAPPluginCall) {\n        if (fcmToken ?? "").isEmpty {',
-    `    @objc func getToken(_ call: CAPPluginCall) {\n        wuwReapplyApnsTokenIfNeeded()\n        if (fcmToken ?? "").isEmpty {`,
+if (!source.includes('wuwCachedFcmToken()')) {
+  if (source.includes('    @objc func getToken(_ call: CAPPluginCall) {\n        if (fcmToken ?? "").isEmpty {')) {
+    markReplaced(
+      source.replace(
+        '    @objc func getToken(_ call: CAPPluginCall) {\n        if (fcmToken ?? "").isEmpty {',
+        `${getTokenStart}        if (fcmToken ?? "").isEmpty {`,
+      ),
+    );
+  } else if (
+    source.includes(
+      '    @objc func getToken(_ call: CAPPluginCall) {\n        wuwReapplyApnsTokenIfNeeded()\n        if (fcmToken ?? "").isEmpty {',
+    )
+  ) {
+    markReplaced(
+      source.replace(
+        '    @objc func getToken(_ call: CAPPluginCall) {\n        wuwReapplyApnsTokenIfNeeded()\n        if (fcmToken ?? "").isEmpty {',
+        `${getTokenStart}        if (fcmToken ?? "").isEmpty {`,
+      ),
+    );
+  }
+}
+
+if (!source.includes('UserDefaults.standard.set(token, forKey: "wuw_fcm_registration_token")')) {
+  markReplaced(
+    source.replace(
+      '    @objc public func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {\n        self.fcmToken = fcmToken\n    }',
+      `    @objc public func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        self.fcmToken = fcmToken
+        if let token = fcmToken, !token.isEmpty {
+            UserDefaults.standard.set(token, forKey: "${cacheMarker}")
+        }
+    }`,
+    ),
   );
-  source = source.replace(
-    '    @objc func refreshToken(_ call: CAPPluginCall) {\n        // Delete FCM Token on Firebase',
-    `    @objc func refreshToken(_ call: CAPPluginCall) {\n        wuwReapplyApnsTokenIfNeeded()\n        // Delete FCM Token on Firebase`,
-  );
-  changed = true;
 }
 
 if (changed) {
   writeFileSync(pluginPath, source, 'utf8');
-  console.log('[patch-fcm-ios] Patched FCM iOS plugin (Firebase guard + APNs re-apply before getToken)');
+  console.log('[patch-fcm-ios] Patched FCM iOS plugin');
 } else {
   console.log('[patch-fcm-ios] FCM iOS plugin already patched');
 }

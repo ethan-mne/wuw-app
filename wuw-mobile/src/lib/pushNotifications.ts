@@ -371,16 +371,17 @@ async function acquireIosPushTokens(): Promise<{ fcm: string | null; apns: strin
     }
     const FCM = await getFcmPlugin();
     if (FCM) {
-      const fromRefresh = await fcmPluginRefreshToken(FCM, 25_000);
-      if (fromRefresh) {
-        return { fcm: fromRefresh, apns };
-      }
-      const fromGet = await fcmPluginGetToken(FCM, 25_000);
+      // Do not call refreshToken on iOS — it deletes FCM installation data before getToken.
+      const fromGet = await fcmPluginGetToken(FCM, 30_000);
       if (fromGet) {
         return { fcm: fromGet, apns };
       }
     }
-    const fcm = await pollFcmPluginForToken({ maxAttempts: 6, getTokenTimeoutMs: 20_000 });
+    const fcm = await pollFcmPluginForToken({
+      maxAttempts: 4,
+      getTokenTimeoutMs: 25_000,
+      skipRefresh: true,
+    });
     return { fcm, apns };
   } finally {
     if (apnsWaiter) {
@@ -392,6 +393,8 @@ async function acquireIosPushTokens(): Promise<{ fcm: string | null; apns: strin
 async function pollFcmPluginForToken(options?: {
   maxAttempts?: number;
   getTokenTimeoutMs?: number;
+  /** iOS: refreshToken() calls deleteData and breaks token acquisition. */
+  skipRefresh?: boolean;
 }): Promise<string | null> {
   const FCM = await getFcmPlugin();
   if (!FCM) {
@@ -417,9 +420,11 @@ async function pollFcmPluginForToken(options?: {
       return fromGet;
     }
 
-    const fromRefresh = await fcmPluginRefreshToken(FCM, getTokenTimeoutMs);
-    if (fromRefresh) {
-      return fromRefresh;
+    if (!options?.skipRefresh) {
+      const fromRefresh = await fcmPluginRefreshToken(FCM, getTokenTimeoutMs);
+      if (fromRefresh) {
+        return fromRefresh;
+      }
     }
   }
 
