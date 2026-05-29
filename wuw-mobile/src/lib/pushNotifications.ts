@@ -52,7 +52,7 @@ export function pushRegisterFailureMessage(
       : 'Server rejected push registration — try again in a moment.';
   }
   if (push.reason === 'not_logged_in') {
-    return 'Sign in again, then tap Remind me to register this device.';
+    return 'Sign in (OTP), then try again.';
   }
   return 'Push notifications require the installed app on a real device.';
 }

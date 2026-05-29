@@ -11,6 +11,9 @@ import {
   type PushDebugSnapshot,
 } from '../../lib/pushDebug';
 import {
+  enablePushNotifications,
+  getPushReceivePermission,
+  isNativePushPlatform,
   pushRegisterFailureMessage,
   registerPushForDebug,
 } from '../../lib/pushNotifications';
@@ -106,6 +109,7 @@ export function PushDebugPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [requestingPermission, setRequestingPermission] = useState(false);
   const [registerMessage, setRegisterMessage] = useState<string | null>(null);
   const snapshotRef = useRef<PushDebugSnapshot | null>(null);
   snapshotRef.current = snapshot;
@@ -139,6 +143,25 @@ export function PushDebugPage() {
     return () => window.removeEventListener('wuw-mobile-session', onSession);
   }, [refresh]);
 
+  const onAllowNotifications = useCallback(async () => {
+    setRequestingPermission(true);
+    setRegisterMessage(null);
+    try {
+      const ok = await enablePushNotifications();
+      const receive = await getPushReceivePermission();
+      if (ok || receive === 'granted') {
+        setRegisterMessage('Notifications allowed — wait up to 50s, then Refresh.');
+      } else if (receive === 'denied') {
+        setRegisterMessage('Notifications denied — enable them in iOS Settings, then Refresh.');
+      } else {
+        setRegisterMessage(`Permission: ${receive ?? 'unknown'}. Try again or use Settings.`);
+      }
+    } finally {
+      setRequestingPermission(false);
+      await refresh();
+    }
+  }, [refresh]);
+
   const onReRegister = useCallback(async () => {
     setRegistering(true);
     setRegisterMessage('Registering…');
@@ -146,6 +169,8 @@ export function PushDebugPage() {
       const result = await registerPushForDebug();
       if (result.ok) {
         setRegisterMessage(`OK — token ${result.tokenPrefix} sent to server`);
+      } else if (result.reason === 'not_logged_in') {
+        setRegisterMessage('Sign in (OTP) first — server registration needs your session.');
       } else {
         setRegisterMessage(pushRegisterFailureMessage(result));
       }
@@ -164,10 +189,20 @@ export function PushDebugPage() {
         <h1>Push debug</h1>
         <p className="push-debug-lead">
           Temporary tool: copy tokens for Firebase test messages or{' '}
-          <code>npm run draw-reminder:test:prod</code>. APNs key in Firebase Console cannot be
-          verified from the app.
+          <code>npm run draw-reminder:test:prod</code>. The main app only offers notifications
+          after sign-in; use <strong>Allow notifications</strong> here to test APNs/FCM first.
         </p>
         <div className="push-debug-actions">
+          {isNativePushPlatform() && snapshot?.permission !== 'granted' ? (
+            <button
+              type="button"
+              className="action-link"
+              disabled={loading || refreshing || requestingPermission}
+              onClick={() => void onAllowNotifications()}
+            >
+              {requestingPermission ? 'Requesting…' : 'Allow notifications'}
+            </button>
+          ) : null}
           <button
             type="button"
             className="action-link"
