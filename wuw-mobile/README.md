@@ -82,6 +82,13 @@ npx cap open ios
 
 **Crash iOS au lancement** : ne copiez **pas** `GoogleService-Info.plist.example` (valeurs `YOUR_IOS_*` → Firebase plante). Téléchargez le vrai plist depuis Firebase → `ios/App/App/GoogleService-Info.plist`, puis `npm run ios:sync`. Vérifier : `npm run ios:firebase-setup`.
 
+### Erreurs de build Xcode
+
+| Erreur | Action |
+|--------|--------|
+| `Failed to build module 'Capacitor'` (Swift 6.2 vs 6.3) | Sur le Mac : `npm run ios:reset-spm`, puis dans Xcode **File → Packages → Reset Package Caches**, **Clean Build Folder**, supprimer DerivedData du projet, `npm install && npm run ios:sync`, rouvrir le workspace. |
+| `wuwCachedFcmToken()` introuvable | Le patch FCM n’est pas appliqué : `npm install` (postinstall) ou `node scripts/patch-fcm-ios-plugin.mjs`. Le fichier source est versionné dans `patches/fcm-ios/Plugin.swift`. |
+
 ## Publication sur le Google Play Store
 
 ### Prérequis
