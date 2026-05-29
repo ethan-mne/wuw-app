@@ -4,10 +4,12 @@ import { isLikelyFcmRegistrationToken } from './fcmToken';
 import { API_BASE_URL } from './config';
 import { getMobileSessionToken } from './mobileSessionToken';
 import {
+  getIosApnsTokenForDebug,
   getPushReceivePermission,
   isNativePushPlatform,
   readLocalPushTokensForDebug,
 } from './pushNotifications';
+import { getLastPushRegistrationError } from './pushNotificationSetup';
 import { getStoredPushDeviceToken } from './pushStorage';
 import { getPushDeviceStatusFromServer } from '../services/pushDeviceApi';
 
@@ -151,6 +153,7 @@ function buildChecks(input: {
   }
 
   if (input.platform === 'ios') {
+    const regErr = getLastPushRegistrationError();
     const apnsOk = Boolean(input.apnsToken);
     checks.push({
       id: 'apns-token',
@@ -158,7 +161,9 @@ function buildChecks(input: {
       status: !input.native ? 'na' : apnsOk ? 'ok' : 'fail',
       detail: apnsOk
         ? 'Received from Apple — required before FCM can mint a token'
-        : 'Missing — real iPhone only (not Simulator), notifications allowed, Push capability in Xcode',
+        : regErr
+          ? `Registration error: ${regErr}`
+          : 'Missing — enable Push on App ID com.winuwatch.wuwapp (developer.apple.com), new TestFlight build, reinstall',
     });
 
     const fcmValid = Boolean(input.fcmToken && isLikelyFcmRegistrationToken(input.fcmToken));
@@ -340,6 +345,7 @@ export async function collectPushDebugSnapshot(): Promise<PushDebugSnapshot> {
   ]);
 
   const fcmToken = tokenRead.fcm ?? storedFcmToken;
+  const apnsToken = tokenRead.apns ?? getIosApnsTokenForDebug();
   const fcmError =
     fcmToken && isLikelyFcmRegistrationToken(fcmToken) ? null : tokenRead.fcmError;
 
@@ -348,7 +354,7 @@ export async function collectPushDebugSnapshot(): Promise<PushDebugSnapshot> {
     platform,
     permission,
     fcmToken,
-    apnsToken: tokenRead.apns,
+    apnsToken,
     fcmError,
     sessionToken,
     serverPushStatus,
@@ -363,7 +369,7 @@ export async function collectPushDebugSnapshot(): Promise<PushDebugSnapshot> {
     sessionToken,
     storedFcmToken,
     fcmToken,
-    apnsToken: tokenRead.apns,
+    apnsToken,
     fcmError,
     serverPushStatus,
     backendHealth,
