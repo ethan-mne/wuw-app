@@ -39,7 +39,7 @@ export type PushDebugSnapshot = {
   checks: PushDebugCheck[];
 };
 
-const TOKEN_READ_TIMEOUT_MS = 12_000;
+const TOKEN_READ_TIMEOUT_MS = 50_000;
 const FETCH_TIMEOUT_MS = 10_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
@@ -103,6 +103,7 @@ function buildChecks(input: {
   platform: string;
   permission: string | null;
   fcmToken: string | null;
+  apnsToken: string | null;
   fcmError: string | null;
   sessionToken: string | null;
   serverPushStatus: PushDebugSnapshot['serverPushStatus'];
@@ -150,24 +151,34 @@ function buildChecks(input: {
   }
 
   if (input.platform === 'ios') {
-    const plistOk =
-      input.native &&
-      input.permission === 'granted' &&
-      Boolean(input.fcmToken && isLikelyFcmRegistrationToken(input.fcmToken));
+    const apnsOk = Boolean(input.apnsToken);
+    checks.push({
+      id: 'apns-token',
+      label: 'APNs device token (iOS)',
+      status: !input.native ? 'na' : apnsOk ? 'ok' : 'fail',
+      detail: apnsOk
+        ? 'Received from Apple — required before FCM can mint a token'
+        : 'Missing — real iPhone only (not Simulator), notifications allowed, Push capability in Xcode',
+    });
+
+    const fcmValid = Boolean(input.fcmToken && isLikelyFcmRegistrationToken(input.fcmToken));
+    const plistOk = input.native && input.permission === 'granted' && fcmValid;
     checks.push({
       id: 'google-service-plist',
-      label: 'GoogleService-Info.plist (iOS, indirect)',
-      status: !input.native ? 'na' : plistOk ? 'ok' : 'fail',
+      label: 'GoogleService-Info.plist + Firebase (iOS)',
+      status: !input.native ? 'na' : plistOk ? 'ok' : apnsOk ? 'fail' : 'fail',
       detail: plistOk
-        ? 'FCM token obtained — plist likely bundled correctly'
+        ? 'FCM token obtained — plist bundled and Firebase initialized'
         : input.fcmError ??
-          'No valid FCM token — run npm run ios:sync (links plist into Xcode), clean build, reinstall on device',
+          (apnsOk
+            ? 'APNs OK but no FCM token — run npm run ios:sync, clean build, reinstall on device'
+            : 'Fix APNs first (see row above), then refresh'),
     });
 
     checks.push({
       id: 'apns-firebase',
       label: 'APNs key in Firebase (indirect)',
-      status: !input.native ? 'na' : plistOk ? 'warn' : 'fail',
+      status: !input.native ? 'na' : plistOk ? 'warn' : apnsOk ? 'warn' : 'fail',
       detail:
         'Cannot verify from the app. If FCM token is OK, upload the .p8 key in Firebase Console (dev + prod). Confirm with a real push or draw-reminder:test:prod.',
     });
@@ -308,12 +319,17 @@ export async function collectPushDebugSnapshot(): Promise<PushDebugSnapshot> {
         ? `Notifications: ${permission ?? 'unknown'}`
         : storedFcmToken
           ? null
-          : 'Token read timed out — tap Re-register, then Refresh',
+          : 'Still reading push tokens — wait up to 50s or tap Refresh',
   };
 
   const [tokenRead, backendHealth, serverPushStatus] = await Promise.all([
     native && permission === 'granted'
-      ? withTimeout(readLocalPushTokensForDebug(), TOKEN_READ_TIMEOUT_MS, tokenReadFallback)
+      ? withTimeout(readLocalPushTokensForDebug(), TOKEN_READ_TIMEOUT_MS, {
+          ...tokenReadFallback,
+          fcmError:
+            tokenReadFallback.fcmError ??
+            'Token read timed out after 50s — tap Re-register on server, then Refresh',
+        })
       : Promise.resolve({
           fcm: null as string | null,
           apns: null as string | null,
@@ -332,6 +348,7 @@ export async function collectPushDebugSnapshot(): Promise<PushDebugSnapshot> {
     platform,
     permission,
     fcmToken,
+    apnsToken: tokenRead.apns,
     fcmError,
     sessionToken,
     serverPushStatus,
