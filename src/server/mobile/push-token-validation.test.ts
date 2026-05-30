@@ -1,0 +1,42 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  isApnsDeviceToken,
+  isLikelyFcmRegistrationToken,
+  isValidPushTokenForPlatform,
+} from '@/server/mobile/push-token-validation';
+
+const SAMPLE_APNS =
+  'a9d0ed10e9cfd022a61cb08753f49c5a0b0dfb383697bf9f9d750a1003da19c7';
+const SAMPLE_FCM =
+  'fcmToken:APA91bExampleToken123456789012345678901234567890123456789012345678901234567890';
+
+describe('isValidPushTokenForPlatform', () => {
+  it('accepts APNs hex on iOS', () => {
+    expect(isValidPushTokenForPlatform(SAMPLE_APNS, 'ios')).toBe(true);
+  });
+
+  it('accepts legacy FCM shape on iOS during transition', () => {
+    expect(isValidPushTokenForPlatform(SAMPLE_FCM, 'ios')).toBe(true);
+  });
+
+  it('rejects APNs hex on Android', () => {
+    expect(isValidPushTokenForPlatform(SAMPLE_APNS, 'android')).toBe(false);
+  });
+
+  it('accepts FCM on Android', () => {
+    expect(isValidPushTokenForPlatform(SAMPLE_FCM, 'android')).toBe(true);
+  });
+});
+
+describe('token shape helpers', () => {
+  it('detects APNs device token', () => {
+    expect(isApnsDeviceToken(SAMPLE_APNS)).toBe(true);
+    expect(isApnsDeviceToken(SAMPLE_FCM)).toBe(false);
+  });
+
+  it('detects FCM registration token', () => {
+    expect(isLikelyFcmRegistrationToken(SAMPLE_FCM)).toBe(true);
+    expect(isLikelyFcmRegistrationToken(SAMPLE_APNS)).toBe(false);
+  });
+});

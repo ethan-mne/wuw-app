@@ -2,9 +2,14 @@ import type { Prisma } from '@prisma/client';
 
 import { db } from '@/server/db';
 
+export type DrawReminderPushDevice = {
+  token: string;
+  apnsEnvironment: 'sandbox' | 'production' | null;
+};
+
 export type DrawReminderRecipientUser = {
   id: string;
-  pushDevices: { token: string }[];
+  pushDevices: DrawReminderPushDevice[];
 };
 
 export type FindDrawReminderRecipientsOptions = {
@@ -42,7 +47,7 @@ export async function findDrawReminderRecipientUsers(
     where: buildDrawReminderRecipientWhere(options),
     select: {
       id: true,
-      pushDevices: { select: { token: true } },
+      pushDevices: { select: { token: true, apnsEnvironment: true } },
     },
   });
 }

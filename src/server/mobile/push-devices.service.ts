@@ -2,19 +2,31 @@ import { z } from 'zod';
 
 import { db } from '@/server/db';
 import { requireMobileSession } from '@/server/mobile/auth.service';
-import { isLikelyFcmRegistrationToken } from '@/server/mobile/push-token-validation';
+import { isValidPushTokenForPlatform } from '@/server/mobile/push-token-validation';
 
-export const upsertPushDeviceSchema = z.object({
-  token: z
-    .string()
-    .min(1)
-    .max(512)
-    .refine(isLikelyFcmRegistrationToken, {
+const pushTokenRefine = (
+  data: { token: string; platform: 'android' | 'ios' },
+  ctx: z.RefinementCtx,
+) => {
+  if (!isValidPushTokenForPlatform(data.token, data.platform)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
       message:
-        'Invalid FCM token (iOS must use FCM.getToken(), not the APNs token from PushNotifications registration)',
-    }),
-  platform: z.enum(['android', 'ios']),
-});
+        data.platform === 'ios'
+          ? 'Invalid push token (expected APNs device token or legacy FCM token)'
+          : 'Invalid FCM token',
+      path: ['token'],
+    });
+  }
+};
+
+export const upsertPushDeviceSchema = z
+  .object({
+    token: z.string().min(1).max(512),
+    platform: z.enum(['android', 'ios']),
+    apnsEnvironment: z.enum(['sandbox', 'production']).optional(),
+  })
+  .superRefine(pushTokenRefine);
 
 export type UpsertPushDeviceInput = z.infer<typeof upsertPushDeviceSchema>;
 
@@ -26,10 +38,14 @@ export async function upsertUserPushDevice(input: UpsertPushDeviceInput): Promis
       userId,
       token: input.token,
       platform: input.platform,
+      apnsEnvironment:
+        input.platform === 'ios' ? (input.apnsEnvironment ?? null) : null,
     },
     update: {
       userId,
       platform: input.platform,
+      apnsEnvironment:
+        input.platform === 'ios' ? (input.apnsEnvironment ?? null) : null,
     },
   });
 }

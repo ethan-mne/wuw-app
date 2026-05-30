@@ -1,9 +1,9 @@
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # Prisma on Alpine: OpenSSL + glibc compat for native engines
 RUN apk add --no-cache libc6-compat openssl
 
-# Pin pnpm 9.x (matches lockfile v9). Avoid Corepack + pnpm 11 on Node 18 (ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING).
+# Pin pnpm 9.x (matches lockfile v9).
 RUN npm install -g pnpm@9.15.9
 
 FROM base AS deps

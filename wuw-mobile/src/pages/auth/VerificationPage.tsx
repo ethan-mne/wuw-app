@@ -90,7 +90,11 @@ export function VerificationPage() {
           const push = await mobileDataService.obtainPushToken({ prompt: true });
           if (push.ok) {
             await mobileDataService
-              .subscribeDrawAlert(pending, { token: push.token, platform: push.platform })
+              .subscribeDrawAlert(pending, {
+                token: push.token,
+                platform: push.platform,
+                ...(push.apnsEnvironment ? { apnsEnvironment: push.apnsEnvironment } : {}),
+              })
               .catch(() => {});
           }
         })();

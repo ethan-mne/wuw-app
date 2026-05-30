@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   const parsed = upsertPushDeviceSchema.safeParse(json);
   if (!parsed.success) {
     const message =
-      parsed.error.issues[0]?.message ?? 'Invalid FCM token or payload';
+      parsed.error.issues[0]?.message ?? 'Invalid push token or payload';
     console.warn('[mobile/push-token] POST 400', message);
     return NextResponse.json({ error: message }, { status: 400 });
   }

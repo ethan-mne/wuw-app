@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 
-import { isApnsDeviceToken } from './fcmToken';
+import { isApnsDeviceToken } from './pushToken';
 
 /** Must match FCM `android.notification.channelId` on the server. */
 export const DRAW_REMINDER_CHANNEL_ID = 'draw_reminders';
@@ -10,11 +10,36 @@ let setupDone = false;
 
 /** Set by persistent registration listener (iOS). */
 let cachedApnsDeviceToken: string | null = null;
+const APNS_STORAGE_KEY = 'wuw_cached_apns_device_token';
 let lastPushRegistrationError: string | null = null;
 let iosRegistrationListenersInstalled = false;
 
+function readPersistedApnsToken(): string | null {
+  try {
+    const stored = localStorage.getItem(APNS_STORAGE_KEY)?.trim() ?? '';
+    return isApnsDeviceToken(stored) ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistApnsToken(value: string): void {
+  try {
+    localStorage.setItem(APNS_STORAGE_KEY, value);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function getCachedApnsDeviceToken(): string | null {
-  return cachedApnsDeviceToken;
+  if (cachedApnsDeviceToken && isApnsDeviceToken(cachedApnsDeviceToken)) {
+    return cachedApnsDeviceToken;
+  }
+  const persisted = readPersistedApnsToken();
+  if (persisted) {
+    cachedApnsDeviceToken = persisted;
+  }
+  return persisted;
 }
 
 export function getLastPushRegistrationError(): string | null {
@@ -31,6 +56,7 @@ async function installIosRegistrationListeners(): Promise<void> {
     const value = ev.value?.trim() ?? '';
     if (isApnsDeviceToken(value)) {
       cachedApnsDeviceToken = value;
+      persistApnsToken(value);
       lastPushRegistrationError = null;
       console.info('[wuw-push] cached APNs device token');
     }
@@ -49,7 +75,7 @@ async function installIosRegistrationListeners(): Promise<void> {
 /**
  * Android 8+ notification channel + listeners so FCM messages surface in the tray
  * (including MIUI / foreground handling via Capacitor).
- * iOS: cache APNs token from the first `registration` event (needed for FCM + debug).
+ * iOS: cache APNs token from the first `registration` event (sent directly to backend).
  */
 export async function setupPushNotificationHandlers(): Promise<void> {
   if (!Capacitor.isNativePlatform() || setupDone) {

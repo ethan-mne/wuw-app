@@ -60,8 +60,14 @@ export const env = createEnv({
     CRON_SECRET: z.string().min(1).optional(),
     /** Alternative to CRON_SECRET for draw-reminder route only. */
     DRAW_REMINDER_CRON_SECRET: z.string().min(1).optional(),
-    /** Firebase service account JSON string for FCM (server-side). */
+    /** Firebase service account JSON string for FCM (server-side, Android). */
     FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
+    /** Apple Push Notification service (.p8 auth key) for iOS direct sends. */
+    APNS_KEY_ID: z.string().optional(),
+    APNS_TEAM_ID: z.string().optional(),
+    APNS_KEY_P8: z.string().optional(),
+    APNS_BUNDLE_ID: z.string().optional(),
+    APNS_PRODUCTION: z.string().optional(),
   },
   /**
    * Specify your client-side environment variables schema here. This way you can ensure the app
@@ -130,6 +136,11 @@ export const env = createEnv({
     CRON_SECRET: process.env.CRON_SECRET,
     DRAW_REMINDER_CRON_SECRET: process.env.DRAW_REMINDER_CRON_SECRET,
     FIREBASE_SERVICE_ACCOUNT_JSON: process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+    APNS_KEY_ID: process.env.APNS_KEY_ID,
+    APNS_TEAM_ID: process.env.APNS_TEAM_ID,
+    APNS_KEY_P8: process.env.APNS_KEY_P8,
+    APNS_BUNDLE_ID: process.env.APNS_BUNDLE_ID,
+    APNS_PRODUCTION: process.env.APNS_PRODUCTION,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

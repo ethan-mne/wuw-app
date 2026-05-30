@@ -31,7 +31,7 @@ Le backend mobile est expose par le projet `wuw-app` via des routes versionnees:
 - `GET /api/mobile/v1/competitions`
 - `GET /api/mobile/v1/competitions/:id`
 - `GET /api/mobile/v1/competitions/:id/draw-alert` (Bearer — statut d’alerte tirage)
-- `POST /api/mobile/v1/competitions/:id/draw-alert` (Bearer — body `{ token, platform }` — abonnement + enregistrement FCM atomiques)
+- `POST /api/mobile/v1/competitions/:id/draw-alert` (Bearer — body `{ token, platform, apnsEnvironment? }` — abonnement + enregistrement push atomiques)
 - `DELETE /api/mobile/v1/competitions/:id/draw-alert` (Bearer — se désabonner)
 - `POST /api/mobile/v1/auth/send-otp`
 - `POST /api/mobile/v1/auth/verify-otp`
@@ -39,7 +39,7 @@ Le backend mobile est expose par le projet `wuw-app` via des routes versionnees:
 - `PUT /api/mobile/v1/me`
 - `GET /api/mobile/v1/me/summary`
 - `GET /api/mobile/v1/orders/history`
-- `POST /api/mobile/v1/me/push-token` (Bearer — enregistre le token FCM)
+- `POST /api/mobile/v1/me/push-token` (Bearer — enregistre le token push : APNs sur iOS, FCM sur Android)
 - `DELETE /api/mobile/v1/me/push-token` (Bearer — retire le token)
 - `GET /api/mobile/v1/winners?skip=0&take=20`
 
@@ -48,10 +48,13 @@ Configurez `VITE_API_BASE_URL` vers un backend qui expose bien ces routes `v1`.
 
 ### Notifications push (rappel tirage)
 
-1. **Firebase** : projet avec Cloud Messaging ; ajoutez `google-services.json` dans `android/app/` (le plugin Gradle est déjà en place si le fichier existe).
-2. **Backend** : définissez `FIREBASE_SERVICE_ACCOUNT_JSON` (JSON compte de service sur une ligne) et `CRON_SECRET` ou `DRAW_REMINDER_CRON_SECRET` (même valeur que le secret Cron Vercel si vous utilisez Vercel Cron). La route planifiée : `GET /api/cron/draw-reminders` (en-tête `Authorization: Bearer …`).
-3. **iOS** : le projet inclut `App.entitlements` (push) et les hooks `AppDelegate` requis par Capacitor. Ajoutez `GoogleService-Info.plist` (Firebase → app iOS `com.winuwatch.wuwapp`) dans `ios/App/App/`, uploadez la clé APNs dans Firebase, puis `npm run build:prod && npx cap sync ios`. Ouvrez Xcode, vérifiez **Signing & Capabilities → Push Notifications**, et lancez sur un appareil physique (les push ne fonctionnent pas sur le simulateur).
-4. Après connexion OTP, l’app enregistre le token sur `POST /api/mobile/v1/me/push-token` (uniquement sur shell natif Capacitor).
+1. **Android** : Firebase Cloud Messaging — `google-services.json` dans `android/app/`. Backend : `FIREBASE_SERVICE_ACCOUNT_JSON`.
+2. **iOS (APNs direct)** : plus de `GoogleService-Info.plist` ni Firebase SDK dans l’app. Capacitor enregistre le token APNs (64 hex) et le backend envoie via **APNs HTTP/2** avec la clé `.p8` Apple :
+   - [Apple Developer](https://developer.apple.com/account/resources/authkeys/list) → clé **APNs Auth Key** (.p8), noter Key ID + Team ID
+   - Sur Render : `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY_P8` (PEM sur une ligne, `\n` échappés), `APNS_BUNDLE_ID=com.winuwatch.wuwapp`, `APNS_PRODUCTION=true` (TestFlight/App Store)
+3. **Backend commun** : `CRON_SECRET` ou `DRAW_REMINDER_CRON_SECRET`. Route planifiée : `GET /api/cron/draw-reminders` (en-tête `Authorization: Bearer …`). Health : `GET /api/health` → `push.apnsConfigured` / `push.pushConfigured`.
+4. **iOS build** : `App.entitlements` (push dev) + `AppRelease.entitlements` (production). `npm run ios:sync` pour TestFlight (production APNs). Pour tests Xcode **Debug**, utiliser `npm run ios:sync:dev` (sandbox APNs via `.env.development`).
+5. Après connexion OTP, l’app enregistre le token sur `POST /api/mobile/v1/me/push-token`. **Remind me** enregistre token + abonnement tirage.
 
 ## Build web mobile
 
@@ -80,14 +83,13 @@ npm run ios:sync
 npx cap open ios
 ```
 
-**Crash iOS au lancement** : ne copiez **pas** `GoogleService-Info.plist.example` (valeurs `YOUR_IOS_*` → Firebase plante). Téléchargez le vrai plist depuis Firebase → `ios/App/App/GoogleService-Info.plist`, puis `npm run ios:sync`. Vérifier : `npm run ios:firebase-setup`.
+**iOS Archive** : `npm run build:prod && npm run ios:sync`, ouvrir Xcode, vérifier **Signing & Capabilities → Push Notifications**, Archive pour TestFlight.
 
 ### Erreurs de build Xcode
 
 | Erreur | Action |
 |--------|--------|
-| `Failed to build module 'Capacitor'` (Swift 6.2 vs 6.3) | Sur le Mac : `npm run ios:reset-spm`, puis dans Xcode **File → Packages → Reset Package Caches**, **Clean Build Folder**, supprimer DerivedData du projet, `npm install && npm run ios:sync`, rouvrir le workspace. |
-| `wuwCachedFcmToken()` introuvable | Le patch FCM n’est pas appliqué : `npm install` (postinstall) ou `node scripts/patch-fcm-ios-plugin.mjs`. Le fichier source est versionné dans `patches/fcm-ios/Plugin.swift`. |
+| `Failed to build module 'Capacitor'` (Swift 6.2 vs 6.3) | Sur le Mac : dans Xcode **File → Packages → Reset Package Caches**, **Clean Build Folder**, supprimer DerivedData, `npm install && npm run ios:sync`, rouvrir le workspace. |
 
 ## Publication sur le Google Play Store
 
@@ -96,7 +98,7 @@ npx cap open ios
 1. **Compte Google Play Developer** — [play.google.com/console](https://play.google.com/console) (frais unique ~25 USD).
 2. **Android Studio** — installe le JDK et le SDK Android. Sur Windows, le SDK est généralement dans `%LOCALAPPDATA%\Android\Sdk`.
 3. **Backend production** — `.env.production` pointe déjà vers `VITE_API_BASE_URL=https://wuw-backend.onrender.com`.
-4. **Firebase** (notifications push) — projet `winuwatch-bd56d` : `google-services.json` dans `android/app/`, et pour iOS ajoutez `GoogleService-Info.plist` dans `ios/App/App` (Xcode). **Android** : token FCM via `PushNotifications` (`registration`). **iOS** : `@capacitor-community/fcm` (`getToken`) — pas le token APNs seul de Capacitor.
+4. **Firebase (Android push only)** — `google-services.json` dans `android/app/`. **iOS** : token APNs via Capacitor `PushNotifications` (64 hex), envoi direct depuis le backend (`APNS_*` sur Render).
 
 ### 1. Clé de signature (upload keystore)
 
@@ -192,6 +194,16 @@ Routes support et legales conservees en skeletons :
 - `/{locale}/disclaimer`
 - `/{locale}/return-policy`
 - `/{locale}/refund-and-cancellation`
+
+## Déploiement push iOS (APNs direct) — checklist
+
+1. **Apple Developer** : créer/télécharger une clé APNs Auth (.p8), noter Key ID + Team ID (la clé Firebase Console n’est pas exportable).
+2. **Render** : ajouter `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY_P8`, `APNS_BUNDLE_ID=com.winuwatch.wuwapp`, `APNS_PRODUCTION=true`, plus `DRAW_REMINDER_CRON_SECRET` (et `FIREBASE_SERVICE_ACCOUNT_JSON` pour Android).
+3. **Backend** : déployer, puis `npm run push:debug:prod` → `push.apnsConfigured: true`.
+4. **DB** : `pnpm db:push` (colonne `apnsEnvironment` sur `user_push_device`).
+5. **Mac** : `cd wuw-mobile && npm run ios:sync`, Archive TestFlight.
+6. **iPhone** : login → Remind me → token 64 hex en base.
+7. **Test** : `npm run draw-reminder:test:prod -- --user-id=... --competition-id=...`
 
 ## Limites actuelles
 

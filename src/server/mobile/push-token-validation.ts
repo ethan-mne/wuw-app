@@ -16,3 +16,13 @@ export function isLikelyFcmRegistrationToken(token: string): boolean {
   }
   return false;
 }
+
+export function isValidPushTokenForPlatform(
+  token: string,
+  platform: 'ios' | 'android',
+): boolean {
+  if (platform === 'android') {
+    return isLikelyFcmRegistrationToken(token);
+  }
+  return isApnsDeviceToken(token) || isLikelyFcmRegistrationToken(token);
+}

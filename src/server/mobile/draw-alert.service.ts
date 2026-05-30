@@ -3,19 +3,26 @@ import { z } from 'zod';
 import { db } from '@/server/db';
 import { requireMobileSession } from '@/server/mobile/auth.service';
 import { MobileHttpError } from '@/server/mobile/http';
-import { isLikelyFcmRegistrationToken } from '@/server/mobile/push-token-validation';
+import { isValidPushTokenForPlatform } from '@/server/mobile/push-token-validation';
 
-export const subscribeDrawAlertBodySchema = z.object({
-  token: z
-    .string()
-    .min(1)
-    .max(512)
-    .refine(isLikelyFcmRegistrationToken, {
-      message:
-        'Invalid FCM token (iOS must use FCM.getToken(), not the APNs token from PushNotifications registration)',
-    }),
-  platform: z.enum(['android', 'ios']),
-});
+export const subscribeDrawAlertBodySchema = z
+  .object({
+    token: z.string().min(1).max(512),
+    platform: z.enum(['android', 'ios']),
+    apnsEnvironment: z.enum(['sandbox', 'production']).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!isValidPushTokenForPlatform(data.token, data.platform)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          data.platform === 'ios'
+            ? 'Invalid push token (expected APNs device token or legacy FCM token)'
+            : 'Invalid FCM token',
+        path: ['token'],
+      });
+    }
+  });
 
 export type SubscribeDrawAlertBody = z.infer<typeof subscribeDrawAlertBodySchema>;
 
@@ -51,7 +58,7 @@ export async function getDrawAlertSubscribed(competitionId: string): Promise<boo
   return row != null;
 }
 
-/** Subscribe to draw alert and register FCM device token in one transaction. */
+/** Subscribe to draw alert and register push device token in one transaction. */
 export async function subscribeDrawAlertWithPush(
   competitionId: string,
   body: SubscribeDrawAlertBody,
@@ -77,10 +84,14 @@ export async function subscribeDrawAlertWithPush(
         userId,
         token: body.token,
         platform: body.platform,
+        apnsEnvironment:
+          body.platform === 'ios' ? (body.apnsEnvironment ?? null) : null,
       },
       update: {
         userId,
         platform: body.platform,
+        apnsEnvironment:
+          body.platform === 'ios' ? (body.apnsEnvironment ?? null) : null,
       },
     }),
   ]);

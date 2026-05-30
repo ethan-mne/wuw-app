@@ -25,6 +25,7 @@ async function fetchWithTimeout(
 export async function registerPushTokenWithServer(
   token: string,
   platform: 'android' | 'ios',
+  apnsEnvironment?: 'sandbox' | 'production',
 ): Promise<void> {
   if (!API_BASE_URL) {
     throw new Error('VITE_API_BASE_URL is not configured.');
@@ -34,13 +35,22 @@ export async function registerPushTokenWithServer(
     throw new Error('Not logged in');
   }
 
+  const body: {
+    token: string;
+    platform: 'android' | 'ios';
+    apnsEnvironment?: 'sandbox' | 'production';
+  } = { token, platform };
+  if (platform === 'ios' && apnsEnvironment) {
+    body.apnsEnvironment = apnsEnvironment;
+  }
+
   const response = await fetchWithTimeout(`${API_BASE_URL}/api/mobile/v1/me/push-token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${session}`,
     },
-    body: JSON.stringify({ token, platform }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

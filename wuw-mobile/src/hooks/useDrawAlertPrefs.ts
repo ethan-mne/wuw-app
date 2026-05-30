@@ -72,6 +72,7 @@ export function useDrawAlertPrefs(competitionId: string | undefined, enabled: bo
       await mobileDataService.subscribeDrawAlert(id, {
         token: push.token,
         platform: push.platform,
+        ...(push.apnsEnvironment ? { apnsEnvironment: push.apnsEnvironment } : {}),
       });
       setSubscribed(true);
       console.info('[wuw-push] draw alert + device registered');

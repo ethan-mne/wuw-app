@@ -21,3 +21,12 @@ export function isDrawReminderCronSecretConfigured(): boolean {
 export function isFirebaseConfiguredForPush(): boolean {
   return Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim());
 }
+
+import { isApnsConfiguredForPush } from '@/server/draw-reminders/apns';
+
+export { isApnsConfiguredForPush };
+
+/** True when at least one push transport is configured (FCM for Android, APNs for iOS). */
+export function isPushConfiguredForDrawReminders(): boolean {
+  return isFirebaseConfiguredForPush() || isApnsConfiguredForPush();
+}

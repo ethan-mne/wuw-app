@@ -66,6 +66,8 @@ const probeRegister = process.argv.includes('--probe-register');
 /** Shape accepted by server validation (not a real device). */
 const PROBE_FCM_TOKEN =
   'debugProbe:APA91bDebugProbeToken123456789012345678901234567890123456789012345678901234';
+const PROBE_APNS_TOKEN =
+  'a9d0ed10e9cfd022a61cb08753f49c5a0b0dfb383697bf9f9d750a1003da19c7';
 
 async function request(method, path, { body, bearer } = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -93,11 +95,17 @@ function section(title) {
 
 console.log(`API: ${baseUrl} (${useProd ? 'production' : 'local'})`);
 
-section('1. Health / Firebase');
+section('1. Health / push transports');
 const health = await request('GET', '/api/health');
 console.log('GET /api/health →', health.status, JSON.stringify(health.json, null, 2));
+if (health.json?.push?.pushConfigured === false) {
+  console.log('⚠ Configure APNS_* (iOS) and/or FIREBASE_SERVICE_ACCOUNT_JSON (Android) on Render.');
+}
+if (health.json?.push?.apnsConfigured === false) {
+  console.log('⚠ APNS_* missing — iOS APNs direct sends will be skipped.');
+}
 if (health.json?.push?.firebaseConfigured === false) {
-  console.log('⚠ FIREBASE_SERVICE_ACCOUNT_JSON missing on server — pushes cannot send.');
+  console.log('⚠ FIREBASE_SERVICE_ACCOUNT_JSON missing — Android FCM sends will be skipped.');
 }
 
 section('2. Route push-token déployée ?');
@@ -136,7 +144,7 @@ if (!jwt) {
   const status = await request('GET', '/api/mobile/v1/me/push-token', { bearer: jwt });
   console.log('GET /api/mobile/v1/me/push-token →', status.status, JSON.stringify(status.json, null, 2));
   if (status.status === 200 && status.json?.data?.deviceCount === 0) {
-    console.log('✗ Aucun token FCM enregistré pour ce JWT — l’app n’a pas réussi POST push-token.');
+    console.log('✗ Aucun token push enregistré pour ce JWT — l’app n’a pas réussi POST push-token.');
   } else if (status.status === 200 && status.json?.data?.deviceCount > 0) {
     console.log('✓ Token(s) présent(s) pour ce compte.');
   } else if (status.status === 401) {
@@ -196,7 +204,8 @@ console.log(`
 2. Notifications autorisées (Réglages → Winuwatch)
 3. App native (pas navigateur) + connecté avec le même compte
 4. Draws → Remind me (ou bannière « Enable notifications »)
-5. Si message orange « Remind saved… » → push local a échoué, permissions / FCM
-6. Revérifier : npm run draw-reminder:test:prod -- --user-id=... --debug
+5. Si message orange « Remind saved… » → push local a échoué, permissions / token
+6. iOS: token en base = 64 hex (APNs). Android: token FCM avec « : ».
+7. Revérifier : npm run draw-reminder:test:prod -- --user-id=... --debug
    → pushDeviceCount doit passer à 1
 `);

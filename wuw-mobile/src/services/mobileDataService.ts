@@ -631,7 +631,11 @@ export const mobileDataService = {
   },
   subscribeDrawAlert: async (
     competitionId: string,
-    push: { token: string; platform: 'ios' | 'android' },
+    push: {
+      token: string;
+      platform: 'ios' | 'android';
+      apnsEnvironment?: 'sandbox' | 'production';
+    },
   ): Promise<void> => {
     await apiClient<{ ok: boolean }>(
       `/api/mobile/v1/competitions/${encodeURIComponent(competitionId)}/draw-alert`,

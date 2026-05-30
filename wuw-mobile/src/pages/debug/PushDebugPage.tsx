@@ -276,28 +276,40 @@ export function PushDebugPage() {
               emptyHint="Sign in via OTP"
             />
             <TokenField
-              id="push-debug-fcm"
-              label="FCM registration token (use for push)"
-              value={snapshot.fcmToken}
+              id="push-debug-token"
+              label={
+                snapshot.platform === 'ios'
+                  ? 'APNs push token (registered on server)'
+                  : 'FCM registration token (registered on server)'
+              }
+              value={snapshot.pushToken}
               emptyHint={
-                snapshot.fcmError ??
+                snapshot.pushError ??
                 'Allow notifications on a physical device, then Refresh'
               }
             />
             {snapshot.platform === 'ios' ? (
-              <TokenField
-                id="push-debug-apns"
-                label="APNs device token (informational — not for FCM API)"
-                value={snapshot.apnsToken}
-                emptyHint="May appear after Refresh on iOS"
-              />
+              <>
+                <TokenField
+                  id="push-debug-apns-env"
+                  label="APNs environment (client)"
+                  value={snapshot.apnsEnvironment}
+                  emptyHint="—"
+                />
+                <TokenField
+                  id="push-debug-apns"
+                  label="APNs device token (same as push token on iOS)"
+                  value={snapshot.apnsToken}
+                  emptyHint="May appear after Refresh on iOS"
+                />
+              </>
             ) : null}
           </section>
 
           <p className="push-debug-footnote">
-            Stored FCM in localStorage:{' '}
-            {snapshot.storedFcmToken
-              ? `${snapshot.storedFcmToken.slice(0, 12)}…`
+            Stored push token in localStorage:{' '}
+            {snapshot.storedPushToken
+              ? `${snapshot.storedPushToken.slice(0, 12)}…`
               : 'none'}
             . Backend devices:{' '}
             {snapshot.serverPushStatus

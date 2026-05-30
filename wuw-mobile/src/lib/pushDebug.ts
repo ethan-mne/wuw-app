@@ -1,6 +1,11 @@
 import { Capacitor } from '@capacitor/core';
 
-import { isLikelyFcmRegistrationToken } from './fcmToken';
+import {
+  getIosApnsEnvironment,
+  isApnsDeviceToken,
+  isLikelyFcmRegistrationToken,
+  isValidNativePushToken,
+} from './pushToken';
 import { API_BASE_URL } from './config';
 import { getMobileSessionToken } from './mobileSessionToken';
 import {
@@ -10,7 +15,6 @@ import {
   readLocalPushTokensForDebug,
 } from './pushNotifications';
 import { getLastPushRegistrationError } from './pushNotificationSetup';
-import { getLastFcmPluginError } from './pushNotifications';
 import { getStoredPushDeviceToken } from './pushStorage';
 import { getPushDeviceStatusFromServer } from '../services/pushDeviceApi';
 
@@ -29,20 +33,23 @@ export type PushDebugSnapshot = {
   native: boolean;
   permission: string | null;
   sessionToken: string | null;
-  storedFcmToken: string | null;
-  fcmToken: string | null;
+  storedPushToken: string | null;
+  pushToken: string | null;
   apnsToken: string | null;
-  fcmError: string | null;
+  apnsEnvironment: string | null;
+  pushError: string | null;
   serverPushStatus: { deviceCount: number; platforms: Array<'android' | 'ios'> } | null;
   backendHealth: {
     firebaseConfigured: boolean;
+    apnsConfigured: boolean;
+    pushConfigured: boolean;
     cronSecretConfigured: boolean;
     fetchError: string | null;
   } | null;
   checks: PushDebugCheck[];
 };
 
-const TOKEN_READ_TIMEOUT_MS = 50_000;
+const TOKEN_READ_TIMEOUT_MS = 25_000;
 const FETCH_TIMEOUT_MS = 10_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
@@ -54,10 +61,25 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   ]);
 }
 
+function isPushTokenValid(token: string | null, platform: string): boolean {
+  if (!token) {
+    return false;
+  }
+  if (platform === 'ios') {
+    return isApnsDeviceToken(token);
+  }
+  if (platform === 'android') {
+    return isLikelyFcmRegistrationToken(token);
+  }
+  return false;
+}
+
 async function fetchBackendHealth(): Promise<PushDebugSnapshot['backendHealth']> {
   if (!API_BASE_URL) {
     return {
       firebaseConfigured: false,
+      apnsConfigured: false,
+      pushConfigured: false,
       cronSecretConfigured: false,
       fetchError: 'VITE_API_BASE_URL not set',
     };
@@ -72,6 +94,8 @@ async function fetchBackendHealth(): Promise<PushDebugSnapshot['backendHealth']>
     if (!response) {
       return {
         firebaseConfigured: false,
+        apnsConfigured: false,
+        pushConfigured: false,
         cronSecretConfigured: false,
         fetchError: 'Health check timed out',
       };
@@ -79,15 +103,24 @@ async function fetchBackendHealth(): Promise<PushDebugSnapshot['backendHealth']>
     if (!response.ok) {
       return {
         firebaseConfigured: false,
+        apnsConfigured: false,
+        pushConfigured: false,
         cronSecretConfigured: false,
         fetchError: `HTTP ${response.status}`,
       };
     }
     const json = (await response.json()) as {
-      push?: { firebaseConfigured?: boolean; cronSecretConfigured?: boolean };
+      push?: {
+        firebaseConfigured?: boolean;
+        apnsConfigured?: boolean;
+        pushConfigured?: boolean;
+        cronSecretConfigured?: boolean;
+      };
     };
     return {
       firebaseConfigured: Boolean(json.push?.firebaseConfigured),
+      apnsConfigured: Boolean(json.push?.apnsConfigured),
+      pushConfigured: Boolean(json.push?.pushConfigured),
       cronSecretConfigured: Boolean(json.push?.cronSecretConfigured),
       fetchError: null,
     };
@@ -95,6 +128,8 @@ async function fetchBackendHealth(): Promise<PushDebugSnapshot['backendHealth']>
     const msg = error instanceof Error ? error.message : String(error);
     return {
       firebaseConfigured: false,
+      apnsConfigured: false,
+      pushConfigured: false,
       cronSecretConfigured: false,
       fetchError: msg,
     };
@@ -105,14 +140,15 @@ function buildChecks(input: {
   native: boolean;
   platform: string;
   permission: string | null;
-  fcmToken: string | null;
+  pushToken: string | null;
   apnsToken: string | null;
-  fcmError: string | null;
+  pushError: string | null;
   sessionToken: string | null;
   serverPushStatus: PushDebugSnapshot['serverPushStatus'];
   backendHealth: PushDebugSnapshot['backendHealth'];
 }): PushDebugCheck[] {
   const checks: PushDebugCheck[] = [];
+  const pushValid = isPushTokenValid(input.pushToken, input.platform);
 
   checks.push({
     id: 'native',
@@ -155,93 +191,47 @@ function buildChecks(input: {
 
   if (input.platform === 'ios') {
     const regErr = getLastPushRegistrationError();
-    const apnsOk = Boolean(input.apnsToken);
+    const apnsOk = Boolean(input.apnsToken && isApnsDeviceToken(input.apnsToken));
     checks.push({
       id: 'apns-token',
       label: 'APNs device token (iOS)',
       status: !input.native ? 'na' : apnsOk ? 'ok' : 'fail',
       detail: apnsOk
-        ? 'Received from Apple — required before FCM can mint a token'
+        ? `Received from Apple — sent directly to backend (env: ${getIosApnsEnvironment()})`
         : regErr
           ? `Registration error: ${regErr}`
-          : 'Missing — enable Push on App ID com.winuwatch.wuwapp (developer.apple.com), new TestFlight build, reinstall',
-    });
-
-    const fcmValid = Boolean(input.fcmToken && isLikelyFcmRegistrationToken(input.fcmToken));
-    const plistOk = input.native && input.permission === 'granted' && fcmValid;
-    checks.push({
-      id: 'google-service-plist',
-      label: 'GoogleService-Info.plist + Firebase (iOS)',
-      status: !input.native ? 'na' : plistOk ? 'ok' : apnsOk ? 'fail' : 'fail',
-      detail: plistOk
-        ? 'FCM token obtained — plist bundled and Firebase initialized'
-        : input.fcmError ??
-          getLastFcmPluginError() ??
-          (apnsOk
-            ? 'APNs OK but no FCM token — new TestFlight build after npm run ios:sync; confirm prod APNs key in Firebase'
-            : 'Fix APNs first (see row above), then refresh'),
-    });
-
-    checks.push({
-      id: 'apns-firebase',
-      label: 'APNs key in Firebase (indirect)',
-      status: !input.native ? 'na' : plistOk ? 'warn' : apnsOk ? 'warn' : 'fail',
-      detail:
-        'Cannot verify from the app. If FCM token is OK, upload the .p8 key in Firebase Console (dev + prod). Confirm with a real push or draw-reminder:test:prod.',
-    });
-  } else if (input.platform === 'android') {
-    checks.push({
-      id: 'google-service-plist',
-      label: 'GoogleService-Info.plist (iOS)',
-      status: 'na',
-      detail: 'Android uses google-services.json',
-    });
-    checks.push({
-      id: 'apns-firebase',
-      label: 'APNs (iOS only)',
-      status: 'na',
-      detail: 'Not applicable on Android',
-    });
-  } else {
-    checks.push({
-      id: 'google-service-plist',
-      label: 'GoogleService-Info.plist',
-      status: 'na',
-      detail: 'Native iOS only',
-    });
-    checks.push({
-      id: 'apns-firebase',
-      label: 'APNs in Firebase',
-      status: 'na',
-      detail: 'Native iOS only',
+          : 'Missing — real iPhone, notifications allowed, Push capability on App ID com.winuwatch.wuwapp',
     });
   }
 
-  const fcmValid = Boolean(input.fcmToken && isLikelyFcmRegistrationToken(input.fcmToken));
+  const tokenLabel =
+    input.platform === 'ios' ? 'Push token (APNs, registered on server)' : 'FCM registration token';
   checks.push({
-    id: 'fcm-token',
-    label: 'FCM registration token',
-    status: !input.native ? 'na' : fcmValid ? 'ok' : 'fail',
-    detail: fcmValid
-      ? 'Valid shape for firebase-admin'
-      : input.fcmError ?? 'Missing or invalid FCM token',
+    id: 'push-token',
+    label: tokenLabel,
+    status: !input.native ? 'na' : pushValid ? 'ok' : 'fail',
+    detail: pushValid
+      ? input.platform === 'ios'
+        ? '64-char APNs token — valid for direct APNs send'
+        : 'Valid shape for firebase-admin'
+      : input.pushError ?? 'Missing or invalid push token',
   });
 
   checks.push({
     id: 'jwt',
     label: 'Mobile session JWT',
     status: input.sessionToken ? 'ok' : 'warn',
-      detail: input.sessionToken
-        ? 'Present in localStorage'
-        : 'Sign in via OTP to register push on server',
-    });
+    detail: input.sessionToken
+      ? 'Present in localStorage'
+      : 'Sign in via OTP to register push on server',
+  });
 
   if (input.platform === 'ios' && input.backendHealth?.fetchError) {
     checks.push({
       id: 'backend-reachable',
       label: 'Backend reachable from phone',
       status: 'warn',
-      detail: `Health fetch failed: ${input.backendHealth.fetchError} (push debug uses a short timeout; Safari may still work)`,
+      detail: `Health fetch failed: ${input.backendHealth.fetchError}`,
     });
   }
 
@@ -272,45 +262,63 @@ function buildChecks(input: {
       label: 'Token registered on backend',
       status: 'fail',
       detail:
-        'deviceCount=0 — tap Re-register on server, or use Remind me (registers FCM token + draw alert together)',
+        'deviceCount=0 — tap Re-register on server, or use Remind me (registers token + draw alert together)',
     });
   }
 
   checks.push({
     id: 'draw-alert-flow',
     label: 'Draw reminder eligibility',
-    status: !input.native ? 'na' : input.serverPushStatus && input.serverPushStatus.deviceCount > 0 ? 'ok' : 'warn',
+    status:
+      !input.native
+        ? 'na'
+        : input.serverPushStatus && input.serverPushStatus.deviceCount > 0
+          ? 'ok'
+          : 'warn',
     detail:
-      'Production cron notifies users with Remind me enabled for a competition and a valid FCM token in the database (ticket-only holders are not notified).',
+      'Production cron notifies users with Remind me enabled for a competition and a valid push token in the database.',
   });
 
   if (!input.backendHealth) {
     checks.push({
-      id: 'backend-firebase',
-      label: 'Backend FIREBASE_SERVICE_ACCOUNT_JSON',
+      id: 'backend-push',
+      label: 'Backend push transport',
       status: 'warn',
       detail: 'Health check not run',
     });
   } else if (input.backendHealth.fetchError) {
     checks.push({
-      id: 'backend-firebase',
-      label: 'Backend FIREBASE_SERVICE_ACCOUNT_JSON',
+      id: 'backend-push',
+      label: 'Backend push transport',
       status: 'fail',
       detail: input.backendHealth.fetchError,
     });
-  } else if (input.backendHealth.firebaseConfigured) {
+  } else if (input.platform === 'ios') {
+    checks.push({
+      id: 'backend-apns',
+      label: 'Backend APNS_* (iOS direct)',
+      status: input.backendHealth.apnsConfigured ? 'ok' : 'fail',
+      detail: input.backendHealth.apnsConfigured
+        ? 'APNs .p8 configured on server (Render)'
+        : 'Not configured — set APNS_KEY_ID, APNS_TEAM_ID, APNS_KEY_P8 on Render',
+    });
+  } else if (input.platform === 'android') {
     checks.push({
       id: 'backend-firebase',
       label: 'Backend FIREBASE_SERVICE_ACCOUNT_JSON',
-      status: 'ok',
-      detail: 'Configured on server (Render)',
+      status: input.backendHealth.firebaseConfigured ? 'ok' : 'fail',
+      detail: input.backendHealth.firebaseConfigured
+        ? 'Configured on server (Render)'
+        : 'Not configured — Android pushes will be skipped',
     });
   } else {
     checks.push({
-      id: 'backend-firebase',
-      label: 'Backend FIREBASE_SERVICE_ACCOUNT_JSON',
-      status: 'fail',
-      detail: 'Not configured — pushes will be skipped server-side',
+      id: 'backend-push',
+      label: 'Backend push configured',
+      status: input.backendHealth.pushConfigured ? 'ok' : 'fail',
+      detail: input.backendHealth.pushConfigured
+        ? 'APNs and/or Firebase configured'
+        : 'Configure APNS_* and/or FIREBASE_SERVICE_ACCOUNT_JSON',
     });
   }
 
@@ -326,51 +334,49 @@ export async function collectPushDebugSnapshot(): Promise<PushDebugSnapshot> {
   const native = isNativePushPlatform();
   const permission = await getPushReceivePermission();
   const sessionToken = getMobileSessionToken();
-  const storedFcmToken = getStoredPushDeviceToken();
+  const storedPushToken = getStoredPushDeviceToken();
 
   const tokenReadFallback = {
-    fcm: storedFcmToken,
-    apns: getIosApnsTokenForDebug(),
-    fcmError: !native
+    pushToken: storedPushToken,
+    apnsToken: getIosApnsTokenForDebug(),
+    pushError: !native
       ? 'Not a native app'
       : permission !== 'granted'
         ? `Notifications: ${permission ?? 'unknown'}`
-        : storedFcmToken
+        : storedPushToken && isValidNativePushToken(storedPushToken, platform === 'ios' ? 'ios' : 'android')
           ? null
-          : getIosApnsTokenForDebug()
-            ? 'APNs OK — still waiting for FCM (up to 50s). If it fails: GoogleService-Info.plist must be on the Mac before Archive.'
-            : 'Still reading push tokens — wait up to 50s or tap Refresh',
+          : 'Still reading push tokens — tap Refresh',
   };
 
   const [tokenRead, backendHealth, serverPushStatus] = await Promise.all([
     native && permission === 'granted'
       ? withTimeout(readLocalPushTokensForDebug(), TOKEN_READ_TIMEOUT_MS, {
           ...tokenReadFallback,
-          fcmError:
-            tokenReadFallback.fcmError ??
-            'Token read timed out after 50s — tap Re-register on server, then Refresh',
+          pushError:
+            tokenReadFallback.pushError ??
+            'Token read timed out — tap Re-register on server, then Refresh',
         })
       : Promise.resolve({
-          fcm: null as string | null,
-          apns: null as string | null,
-          fcmError: tokenReadFallback.fcmError,
+          pushToken: null as string | null,
+          apnsToken: null as string | null,
+          pushError: tokenReadFallback.pushError,
         }),
     fetchBackendHealth(),
     sessionToken ? fetchServerPushStatus() : Promise.resolve(null),
   ]);
 
-  const fcmToken = tokenRead.fcm ?? storedFcmToken;
-  const apnsToken = tokenRead.apns ?? getIosApnsTokenForDebug();
-  const fcmError =
-    fcmToken && isLikelyFcmRegistrationToken(fcmToken) ? null : tokenRead.fcmError;
+  const pushToken = tokenRead.pushToken ?? storedPushToken;
+  const apnsToken = tokenRead.apnsToken ?? getIosApnsTokenForDebug();
+  const pushError =
+    pushToken && isPushTokenValid(pushToken, platform) ? null : tokenRead.pushError;
 
   const checks = buildChecks({
     native,
     platform,
     permission,
-    fcmToken,
+    pushToken,
     apnsToken,
-    fcmError,
+    pushError,
     sessionToken,
     serverPushStatus,
     backendHealth,
@@ -382,10 +388,11 @@ export async function collectPushDebugSnapshot(): Promise<PushDebugSnapshot> {
     native,
     permission,
     sessionToken,
-    storedFcmToken,
-    fcmToken,
+    storedPushToken,
+    pushToken,
     apnsToken,
-    fcmError,
+    apnsEnvironment: platform === 'ios' ? getIosApnsEnvironment() : null,
+    pushError,
     serverPushStatus,
     backendHealth,
     checks,
