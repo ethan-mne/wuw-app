@@ -12,7 +12,7 @@ import {
   type SendLoginOtpOutcome,
 } from '../../services/authApi';
 import { mobileDataService } from '../../services/mobileDataService';
-import type { LoginRouteState } from '../../types';
+import type { Locale, LoginRouteState } from '../../types';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -73,7 +73,7 @@ function demoOutcomeToMessage(outcome: DemoLoginOutcome): string {
 
 async function finishMobileLogin(
   token: string,
-  locale: string,
+  locale: Locale,
   loginExtras: LoginRouteState | undefined,
   navigate: NavigateFunction,
 ) {
