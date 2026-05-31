@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 
 import { db } from '@/server/db';
 import { requireMobileSession } from '@/server/mobile/auth.service';
@@ -83,7 +84,7 @@ export async function subscribeDrawAlertWithPush(
   }
   await assertCompetitionAllowsDrawAlerts(trimmed);
 
-  const ops = [
+  const ops: Prisma.PrismaPromise<unknown>[] = [
     db.drawAlertSubscription.upsert({
       where: {
         userId_competitionId: { userId, competitionId: trimmed },
