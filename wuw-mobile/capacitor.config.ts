@@ -6,7 +6,10 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   plugins: {
     SplashScreen: {
-      launchAutoHide: false,
+      // Auto-hide as fallback so the app never stays stuck on the native icon splash.
+      launchAutoHide: true,
+      launchShowDuration: 500,
+      launchFadeOutDuration: 200,
       backgroundColor: '#1d1b1c',
       showSpinner: false,
     },
