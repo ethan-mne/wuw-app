@@ -117,3 +117,50 @@ export async function verifyMobileOtp(
 
   return { status: 'ok', token: json.token };
 }
+
+export type DemoLoginOutcome =
+  | { status: 'ok'; token: string }
+  | { status: 'disabled' }
+  | { status: 'error'; code: 'invalid_email' | 'unexpected' }
+  | { status: 'client_error'; code: 'missing_api_url' | 'network' | 'bad_response' };
+
+export async function demoLogin(email: string): Promise<DemoLoginOutcome> {
+  if (!API_BASE_URL) {
+    return { status: 'client_error', code: 'missing_api_url' };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/mobile/v1/auth/demo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+  } catch {
+    return { status: 'client_error', code: 'network' };
+  }
+
+  if (response.status === 403) {
+    return { status: 'disabled' };
+  }
+
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch {
+    return { status: 'client_error', code: 'bad_response' };
+  }
+
+  if (!response.ok) {
+    if (isRecord(json) && json.status === 'error' && json.code === 'invalid_email') {
+      return { status: 'error', code: 'invalid_email' };
+    }
+    return { status: 'client_error', code: 'bad_response' };
+  }
+
+  if (!isRecord(json) || typeof json.token !== 'string' || !json.token) {
+    return { status: 'client_error', code: 'bad_response' };
+  }
+
+  return { status: 'ok', token: json.token };
+}

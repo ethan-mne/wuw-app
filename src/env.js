@@ -56,6 +56,8 @@ export const env = createEnv({
     PAYMENT_GATEWAY_URL_TWELVE: z.string().min(1),
     STRIPE_ACCOUNT_PERCENTAGES: z.string().default('30,65,5'),
     DASHBOARD_DEV_BYPASS: z.enum(['true', 'false']).default('false'),
+    /** Mobile demo login: skip OTP and sign in with email only. Keep false in production. */
+    DEMO_AUTH_ENABLED: z.enum(['true', 'false']).default('false'),
     /** Vercel Cron: set in project env; sent as `Authorization: Bearer …` when CRON_SECRET is set in Vercel. */
     CRON_SECRET: z.string().min(1).optional(),
     /** Alternative to CRON_SECRET for draw-reminder route only. */
@@ -95,6 +97,7 @@ export const env = createEnv({
     PAYMENT_METHODS: process.env.PAYMENT_METHODS,
     STRIPE_ACCOUNT_PERCENTAGES: process.env.STRIPE_ACCOUNT_PERCENTAGES,
     DASHBOARD_DEV_BYPASS: process.env.DASHBOARD_DEV_BYPASS,
+    DEMO_AUTH_ENABLED: process.env.DEMO_AUTH_ENABLED,
     WORLD_CARD_URL: process.env.NEXT_PUBLIC_WORLD_CARD_URL,
     NEXT_PUBLIC_WORLD_CARD_URL: process.env.NEXT_PUBLIC_WORLD_CARD_URL,
     WORLD_CARD_ENTITY_ID: process.env.WORLD_CARD_ENTITY_ID,

@@ -1,10 +1,17 @@
 import { type FormEvent, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { type NavigateFunction, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { Card, PageHeader } from '../../components/ui';
-import { clearMobileSession } from '../../lib/mobileSessionToken';
+import { DEMO_AUTH_ENABLED } from '../../lib/config';
+import { clearMobileSession, setMobileSessionToken } from '../../lib/mobileSessionToken';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
-import { sendLoginOtp, type SendLoginOtpOutcome } from '../../services/authApi';
+import {
+  demoLogin,
+  sendLoginOtp,
+  type DemoLoginOutcome,
+  type SendLoginOtpOutcome,
+} from '../../services/authApi';
+import { mobileDataService } from '../../services/mobileDataService';
 import type { LoginRouteState } from '../../types';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -39,6 +46,60 @@ function outcomeToMessage(outcome: SendLoginOtpOutcome): string {
   return '';
 }
 
+function demoOutcomeToMessage(outcome: DemoLoginOutcome): string {
+  if (outcome.status === 'client_error') {
+    switch (outcome.code) {
+      case 'missing_api_url':
+        return 'Cannot connect: API URL is not configured.';
+      case 'network':
+        return 'Network error. Check your connection and try again.';
+      case 'bad_response':
+        return 'Something went wrong. Please try again.';
+    }
+  }
+  if (outcome.status === 'disabled') {
+    return 'Demo login is not enabled on the server.';
+  }
+  if (outcome.status === 'error') {
+    switch (outcome.code) {
+      case 'invalid_email':
+        return 'Enter a valid email address.';
+      case 'unexpected':
+        return 'Something went wrong. Please try again.';
+    }
+  }
+  return '';
+}
+
+async function finishMobileLogin(
+  token: string,
+  locale: string,
+  loginExtras: LoginRouteState | undefined,
+  navigate: NavigateFunction,
+) {
+  await clearMobileSession();
+  setMobileSessionToken(token);
+  const pending = loginExtras?.pendingDrawAlertCompetitionId;
+  if (pending) {
+    void (async () => {
+      const push = await mobileDataService.obtainPushToken({ prompt: true });
+      if (push.ok) {
+        await mobileDataService
+          .subscribeDrawAlert(pending, {
+            token: push.token,
+            platform: push.platform,
+            ...(push.apnsEnvironment ? { apnsEnvironment: push.apnsEnvironment } : {}),
+          })
+          .catch(() => {});
+      }
+    })();
+    void navigate(withLocale(locale, `competitions/${pending}`));
+  } else {
+    void mobileDataService.syncPushTokenIfPermitted();
+    void navigate(withLocale(locale, 'account/dashboard'));
+  }
+}
+
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [formError, setFormError] = useState('');
@@ -60,6 +121,20 @@ export function LoginPage() {
     }
 
     setSubmitting(true);
+
+    if (DEMO_AUTH_ENABLED) {
+      const outcome = await demoLogin(normalized);
+      setSubmitting(false);
+
+      if (outcome.status === 'ok') {
+        await finishMobileLogin(outcome.token, locale, loginExtras, navigate);
+        return;
+      }
+
+      setFormError(demoOutcomeToMessage(outcome));
+      return;
+    }
+
     const outcome = await sendLoginOtp(normalized);
     setSubmitting(false);
 
@@ -84,8 +159,12 @@ export function LoginPage() {
     <section className="page-stack page-content-pad">
       <PageHeader
         eyebrow="Login"
-        title="Sign in with email"
-        description="We will email you a one-time code to verify it is you."
+        title={DEMO_AUTH_ENABLED ? 'Demo sign in' : 'Sign in with email'}
+        description={
+          DEMO_AUTH_ENABLED
+            ? 'Demo mode: enter any email to sign in instantly, no verification code.'
+            : 'We will email you a one-time code to verify it is you.'
+        }
       />
       <Card>
         <form className="login-form" onSubmit={onSubmit}>
@@ -108,7 +187,13 @@ export function LoginPage() {
             </div>
           ) : null}
           <button className="action-link primary" disabled={submitting} type="submit">
-            {submitting ? 'Sending…' : 'Send code'}
+            {submitting
+              ? DEMO_AUTH_ENABLED
+                ? 'Signing in…'
+                : 'Sending…'
+              : DEMO_AUTH_ENABLED
+                ? 'Sign in'
+                : 'Send code'}
           </button>
         </form>
       </Card>
