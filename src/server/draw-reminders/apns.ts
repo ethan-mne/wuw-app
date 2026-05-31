@@ -4,6 +4,7 @@ import {
   alternateApnsEnvironment,
   getDefaultApnsEnvironment,
   isApnsEnvironmentMismatch,
+  normalizeP8Key,
   type ApnsEnvironment,
 } from '@/server/draw-reminders/apns-environment';
 
@@ -12,6 +13,7 @@ export {
   alternateApnsEnvironment,
   getDefaultApnsEnvironment,
   isApnsEnvironmentMismatch,
+  normalizeP8Key,
 } from '@/server/draw-reminders/apns-environment';
 
 export type ApnsTokenSendResult = {
@@ -34,8 +36,8 @@ function tokenPrefix(token: string): string {
   return `${token.slice(0, 8)}…${token.slice(-4)}`;
 }
 
-function normalizeP8Key(raw: string): Buffer {
-  return Buffer.from(raw.replace(/\\n/g, '\n'), 'utf8');
+function normalizeP8KeyBuffer(raw: string): Buffer {
+  return Buffer.from(normalizeP8Key(raw), 'utf8');
 }
 
 type ApnsConfig = {
@@ -58,7 +60,7 @@ function getApnsConfig(): ApnsConfig | null {
   return {
     keyId,
     teamId,
-    signingKey: normalizeP8Key(keyP8),
+    signingKey: normalizeP8KeyBuffer(keyP8),
     bundleId,
   };
 }

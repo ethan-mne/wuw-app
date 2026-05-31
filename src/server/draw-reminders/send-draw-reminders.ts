@@ -76,7 +76,13 @@ type CompetitionReminderRow = {
 };
 
 function resolveApnsEnvironment(device: DrawReminderPushDevice): ApnsEnvironment {
-  return device.apnsEnvironment ?? getDefaultApnsEnvironment();
+  const serverDefault = getDefaultApnsEnvironment();
+  // Production backend (Render): TestFlight tokens must use production APNs.
+  // Stored "sandbox" labels from Xcode debug often block delivery otherwise.
+  if (serverDefault === 'production') {
+    return 'production';
+  }
+  return device.apnsEnvironment ?? serverDefault;
 }
 
 function groupApnsDevicesByEnvironment(
