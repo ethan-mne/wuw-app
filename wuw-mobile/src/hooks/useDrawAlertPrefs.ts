@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 
-import { pushRegisterFailureMessage } from '../lib/pushNotifications';
+import { disableDrawReminder, enableDrawReminder } from '../lib/drawReminderSubscribe';
 import { getMobileSessionToken } from '../lib/mobileSessionToken';
 import { withLocale } from '../routes/locales';
 import { mobileDataService } from '../services/mobileDataService';
-import type { Locale, OrderSummary } from '../types';
+import type { Competition, Locale, OrderSummary } from '../types';
 
-export function useDrawAlertPrefs(competitionId: string | undefined, enabled: boolean) {
-  const id = competitionId?.trim() ?? '';
+export type DrawAlertCompetition = Pick<
+  Competition,
+  'id' | 'name' | 'drawingDate' | 'endDate'
+>;
+
+export function useDrawAlertPrefs(
+  competition: DrawAlertCompetition | undefined,
+  enabled: boolean,
+) {
+  const id = competition?.id?.trim() ?? '';
   const active = enabled && id.length > 0;
 
   const [hasTicket, setHasTicket] = useState<boolean | null>(null);
@@ -59,23 +67,29 @@ export function useDrawAlertPrefs(competitionId: string | undefined, enabled: bo
   };
 
   const subscribe = async () => {
+    if (!competition) {
+      return;
+    }
     setError('');
     setBusy(true);
     try {
-      const push = await mobileDataService.obtainPushToken({ prompt: true });
-      if (!push.ok) {
-        setError(pushRegisterFailureMessage(push));
-        console.warn('[wuw-push] token failed', push.reason, push.detail ?? '');
+      const drawingDateIso = competition.drawingDate ?? competition.endDate;
+      const drawMs = new Date(drawingDateIso).getTime();
+      if (!Number.isFinite(drawMs) || drawMs <= Date.now()) {
+        setError('This draw has already started or ended.');
         return;
       }
 
-      await mobileDataService.subscribeDrawAlert(id, {
-        token: push.token,
-        platform: push.platform,
-        ...(push.apnsEnvironment ? { apnsEnvironment: push.apnsEnvironment } : {}),
+      const result = await enableDrawReminder({
+        competitionId: id,
+        competitionName: competition.name,
+        drawingDateIso,
       });
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
       setSubscribed(true);
-      console.info('[wuw-push] draw alert + device registered');
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
       setError(message || 'Could not enable alerts. Try again.');
@@ -88,7 +102,7 @@ export function useDrawAlertPrefs(competitionId: string | undefined, enabled: bo
     setError('');
     setBusy(true);
     try {
-      await mobileDataService.unsubscribeDrawAlert(id);
+      await disableDrawReminder(id);
       setSubscribed(false);
     } catch {
       setError('Could not turn off alerts. Try again.');

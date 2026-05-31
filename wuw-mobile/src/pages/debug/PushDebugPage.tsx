@@ -6,6 +6,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { MobileFooter } from '../../components/MobileFooter';
 import {
+  listPendingDrawReminders,
+  scheduleDrawReminderTest,
+} from '../../lib/drawLocalNotifications';
+import {
   collectPushDebugSnapshot,
   type PushDebugCheckStatus,
   type PushDebugSnapshot,
@@ -106,6 +110,10 @@ function TokenField({ id, label, value, emptyHint }: TokenFieldProps) {
 
 export function PushDebugPage() {
   const [snapshot, setSnapshot] = useState<PushDebugSnapshot | null>(null);
+  const [localTestMessage, setLocalTestMessage] = useState<string | null>(null);
+  const [pendingReminders, setPendingReminders] = useState<
+    Array<{ id: number; title?: string; body?: string; at?: string }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [registering, setRegistering] = useState(false);
@@ -125,6 +133,7 @@ export function PushDebugPage() {
     try {
       const data = await collectPushDebugSnapshot();
       setSnapshot(data);
+      setPendingReminders(await listPendingDrawReminders());
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -304,6 +313,60 @@ export function PushDebugPage() {
                 />
               </>
             ) : null}
+          </section>
+
+          <section className="push-debug-tokens" aria-label="Local draw reminders">
+            <h2>Local draw reminders</h2>
+            <p className="push-debug-footnote">
+              Remind me schedules a notification on this device ~10 minutes before the draw. Use
+              the test button to verify notifications without waiting for the real draw date.
+            </p>
+            <div className="push-debug-actions">
+              <button
+                type="button"
+                className="checkout-flow-button checkout-flow-button--light"
+                onClick={() => {
+                  void (async () => {
+                    setLocalTestMessage(null);
+                    const result = await scheduleDrawReminderTest(15);
+                    if (result.ok) {
+                      setLocalTestMessage(
+                        `Test reminder scheduled — expect a notification in ~15 seconds (${new Date(result.fireAtMs).toLocaleTimeString()}).`,
+                      );
+                      setPendingReminders(await listPendingDrawReminders());
+                    } else {
+                      setLocalTestMessage(result.message);
+                    }
+                  })();
+                }}
+              >
+                Test local reminder in 15s
+              </button>
+            </div>
+            {localTestMessage ? (
+              <p className="push-debug-register-msg" role="status">
+                {localTestMessage}
+              </p>
+            ) : null}
+            {pendingReminders.length > 0 ? (
+              <ul className="push-debug-checklist">
+                {pendingReminders.map((n) => (
+                  <li key={n.id} className="push-debug-check push-debug-check--ok">
+                    <span className="push-debug-check-icon" aria-hidden>
+                      ✓
+                    </span>
+                    <div className="push-debug-check-body">
+                      <strong>{n.title ?? `Notification #${n.id}`}</strong>
+                      <span>
+                        {n.at ? `Scheduled: ${new Date(n.at).toLocaleString()}` : n.body ?? '—'}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="push-debug-footnote">No pending local reminders on this device.</p>
+            )}
           </section>
 
           <p className="push-debug-footnote">

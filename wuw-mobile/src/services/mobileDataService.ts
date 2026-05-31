@@ -627,7 +627,7 @@ export const mobileDataService = {
   },
   subscribeDrawAlert: async (
     competitionId: string,
-    push: {
+    push?: {
       token: string;
       platform: 'ios' | 'android';
       apnsEnvironment?: 'sandbox' | 'production';
@@ -637,7 +637,11 @@ export const mobileDataService = {
       `/api/mobile/v1/competitions/${encodeURIComponent(competitionId)}/draw-alert`,
       {
         method: 'POST',
-        body: JSON.stringify(push),
+        body: JSON.stringify(
+          push
+            ? { ...push, delivery: 'push' as const }
+            : { delivery: 'local' as const },
+        ),
       },
     );
   },

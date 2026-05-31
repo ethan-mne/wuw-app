@@ -3,6 +3,7 @@ import { type NavigateFunction, useLocation, useNavigate, useParams } from 'reac
 
 import { Card, PageHeader } from '../../components/ui';
 import { DEMO_AUTH_ENABLED } from '../../lib/config';
+import { enableDrawReminderForCompetitionId } from '../../lib/drawReminderSubscribe';
 import { clearMobileSession, setMobileSessionToken } from '../../lib/mobileSessionToken';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import {
@@ -81,18 +82,7 @@ async function finishMobileLogin(
   setMobileSessionToken(token);
   const pending = loginExtras?.pendingDrawAlertCompetitionId;
   if (pending) {
-    void (async () => {
-      const push = await mobileDataService.obtainPushToken({ prompt: true });
-      if (push.ok) {
-        await mobileDataService
-          .subscribeDrawAlert(pending, {
-            token: push.token,
-            platform: push.platform,
-            ...(push.apnsEnvironment ? { apnsEnvironment: push.apnsEnvironment } : {}),
-          })
-          .catch(() => {});
-      }
-    })();
+    void enableDrawReminderForCompetitionId(pending).catch(() => {});
     void navigate(withLocale(locale, `competitions/${pending}`));
   } else {
     void mobileDataService.syncPushTokenIfPermitted();

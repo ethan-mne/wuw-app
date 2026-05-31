@@ -7,11 +7,24 @@ import { isValidPushTokenForPlatform } from '@/server/mobile/push-token-validati
 
 export const subscribeDrawAlertBodySchema = z
   .object({
-    token: z.string().min(1).max(512),
-    platform: z.enum(['android', 'ios']),
+    token: z.string().min(1).max(512).optional(),
+    platform: z.enum(['android', 'ios']).optional(),
     apnsEnvironment: z.enum(['sandbox', 'production']).optional(),
+    /** `local` = on-device schedule only; `push` or omitted with token = legacy push registration. */
+    delivery: z.enum(['local', 'push']).optional(),
   })
   .superRefine((data, ctx) => {
+    if (!data.token) {
+      return;
+    }
+    if (!data.platform) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'platform is required when token is provided',
+        path: ['platform'],
+      });
+      return;
+    }
     if (!isValidPushTokenForPlatform(data.token, data.platform)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -58,7 +71,7 @@ export async function getDrawAlertSubscribed(competitionId: string): Promise<boo
   return row != null;
 }
 
-/** Subscribe to draw alert and register push device token in one transaction. */
+/** Subscribe to draw alert; optionally register push device token in the same transaction. */
 export async function subscribeDrawAlertWithPush(
   competitionId: string,
   body: SubscribeDrawAlertBody,
@@ -70,7 +83,7 @@ export async function subscribeDrawAlertWithPush(
   }
   await assertCompetitionAllowsDrawAlerts(trimmed);
 
-  await db.$transaction([
+  const ops = [
     db.drawAlertSubscription.upsert({
       where: {
         userId_competitionId: { userId, competitionId: trimmed },
@@ -78,23 +91,30 @@ export async function subscribeDrawAlertWithPush(
       create: { userId, competitionId: trimmed },
       update: {},
     }),
-    db.userPushDevice.upsert({
-      where: { token: body.token },
-      create: {
-        userId,
-        token: body.token,
-        platform: body.platform,
-        apnsEnvironment:
-          body.platform === 'ios' ? (body.apnsEnvironment ?? null) : null,
-      },
-      update: {
-        userId,
-        platform: body.platform,
-        apnsEnvironment:
-          body.platform === 'ios' ? (body.apnsEnvironment ?? null) : null,
-      },
-    }),
-  ]);
+  ];
+
+  if (body.token && body.platform) {
+    ops.push(
+      db.userPushDevice.upsert({
+        where: { token: body.token },
+        create: {
+          userId,
+          token: body.token,
+          platform: body.platform,
+          apnsEnvironment:
+            body.platform === 'ios' ? (body.apnsEnvironment ?? null) : null,
+        },
+        update: {
+          userId,
+          platform: body.platform,
+          apnsEnvironment:
+            body.platform === 'ios' ? (body.apnsEnvironment ?? null) : null,
+        },
+      }),
+    );
+  }
+
+  await db.$transaction(ops);
 }
 
 export async function unsubscribeDrawAlert(competitionId: string): Promise<void> {

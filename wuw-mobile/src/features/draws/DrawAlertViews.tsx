@@ -10,7 +10,7 @@ import type { Competition, Locale } from '../../types';
 export function DrawAlertPanel({ competition, locale }: { competition: Competition; locale: Locale }) {
   const navigate = useNavigate();
   const eligible = isDrawAlertEligible(competition, Date.now());
-  const p = useDrawAlertPrefs(competition.id, eligible);
+  const p = useDrawAlertPrefs(competition, eligible);
 
   if (!eligible) {
     return null;
@@ -84,7 +84,7 @@ export function DrawAlertHeroStrip({
   const navigate = useNavigate();
   const inLiveBuffer = isInHeroLiveBuffer(competition, nowMs);
   const eligible = isDrawAlertEligible(competition, nowMs);
-  const p = useDrawAlertPrefs(competition.id, eligible);
+  const p = useDrawAlertPrefs(competition, eligible);
 
   if (inLiveBuffer) {
     return (
@@ -110,7 +110,7 @@ export function DrawAlertHeroStrip({
     return null;
   }
 
-  const remindLabel = 'Get a push about 10 minutes before this live draw';
+  const remindLabel = 'Get a reminder on this device about 10 minutes before the live draw';
 
   return (
     <div className="draws-hero-draw-alert">
@@ -171,7 +171,7 @@ export function DrawThinRowAlertButton({
 }) {
   const navigate = useNavigate();
   const eligible = isDrawAlertEligible(competition, nowMs);
-  const p = useDrawAlertPrefs(competition.id, eligible);
+  const p = useDrawAlertPrefs(competition, eligible);
 
   if (!eligible) {
     return null;
@@ -179,7 +179,7 @@ export function DrawThinRowAlertButton({
 
   const session = getMobileSessionToken();
   const loadingGate = Boolean(session) && p.alertPrefsLoading;
-  const remindLabel = 'Get a push about 10 minutes before this live draw';
+  const remindLabel = 'Get a reminder on this device about 10 minutes before the live draw';
 
   const btnClass = 'draws-thin-row-remind-btn draws-thin-row-remind-btn--inline';
 

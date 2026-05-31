@@ -36,20 +36,19 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: 'Competition not found' }, { status: 404 });
     }
 
-    let json: unknown;
+    let json: unknown = {};
     try {
-      json = await request.json();
+      const text = await request.text();
+      if (text.trim()) {
+        json = JSON.parse(text) as unknown;
+      }
     } catch {
-      return NextResponse.json(
-        { error: 'Invalid JSON body — token and platform are required' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
     const parsed = subscribeDrawAlertBodySchema.safeParse(json);
     if (!parsed.success) {
-      const message =
-        parsed.error.issues[0]?.message ?? 'Invalid FCM token or payload';
+      const message = parsed.error.issues[0]?.message ?? 'Invalid payload';
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
