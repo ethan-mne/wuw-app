@@ -4,11 +4,16 @@ import {
   scheduleDrawReminder,
   type DrawReminderScheduleInput,
 } from './drawLocalNotifications';
+import {
+  isDrawReminderSubscribedLocally,
+  removeDrawReminderLocally,
+  saveDrawReminderLocally,
+} from './drawReminderLocalStorage';
 import { mobileDataService } from '../services/mobileDataService';
 
 export type EnableDrawReminderResult = { ok: true } | { ok: false; message: string };
 
-/** Schedule a on-device reminder and persist subscription on the server (no push token). */
+/** Schedule on-device reminder; persist locally; sync server subscription when available. */
 export async function enableDrawReminder(
   input: DrawReminderScheduleInput,
 ): Promise<EnableDrawReminderResult> {
@@ -17,12 +22,15 @@ export async function enableDrawReminder(
     return { ok: false, message: drawReminderFailureMessage(scheduled) };
   }
 
+  saveDrawReminderLocally(input.competitionId, {
+    competitionName: input.competitionName,
+    fireAtMs: scheduled.fireAtMs,
+  });
+
   try {
     await mobileDataService.subscribeDrawAlert(input.competitionId);
   } catch (err) {
-    await cancelDrawReminder(input.competitionId);
-    const message = err instanceof Error ? err.message : 'Could not save your reminder. Try again.';
-    return { ok: false, message: message || 'Could not save your reminder. Try again.' };
+    console.warn('[draw-reminder] local schedule ok; server sync failed', err);
   }
 
   return { ok: true };
@@ -30,7 +38,19 @@ export async function enableDrawReminder(
 
 export async function disableDrawReminder(competitionId: string): Promise<void> {
   await cancelDrawReminder(competitionId);
-  await mobileDataService.unsubscribeDrawAlert(competitionId);
+  removeDrawReminderLocally(competitionId);
+  try {
+    await mobileDataService.unsubscribeDrawAlert(competitionId);
+  } catch (err) {
+    console.warn('[draw-reminder] local cancel ok; server sync failed', err);
+  }
+}
+
+export async function isDrawReminderEnabled(competitionId: string): Promise<boolean> {
+  if (isDrawReminderSubscribedLocally(competitionId)) {
+    return true;
+  }
+  return mobileDataService.getDrawAlertSubscribed(competitionId).catch(() => false);
 }
 
 export async function enableDrawReminderForCompetitionId(

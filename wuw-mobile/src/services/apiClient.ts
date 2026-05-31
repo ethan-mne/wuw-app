@@ -23,7 +23,22 @@ export async function apiClient<TResponse>(
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed with status ${response.status}.`);
+    let message = `API request failed with status ${response.status}.`;
+    try {
+      const json = (await response.json()) as { error?: unknown; message?: unknown };
+      const detail =
+        typeof json.error === 'string'
+          ? json.error
+          : typeof json.message === 'string'
+            ? json.message
+            : null;
+      if (detail) {
+        message = detail;
+      }
+    } catch {
+      // Keep generic message when body is not JSON.
+    }
+    throw new Error(message);
   }
 
   return response.json() as Promise<TResponse>;

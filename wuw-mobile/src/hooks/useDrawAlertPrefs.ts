@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 
-import { disableDrawReminder, enableDrawReminder } from '../lib/drawReminderSubscribe';
+import { disableDrawReminder, enableDrawReminder, isDrawReminderEnabled } from '../lib/drawReminderSubscribe';
 import { getMobileSessionToken } from '../lib/mobileSessionToken';
 import { withLocale } from '../routes/locales';
 import { mobileDataService } from '../services/mobileDataService';
@@ -39,7 +39,7 @@ export function useDrawAlertPrefs(
     let cancelled = false;
 
     void (async () => {
-      const sub = await mobileDataService.getDrawAlertSubscribed(id).catch(() => false);
+      const sub = await isDrawReminderEnabled(id);
       if (!cancelled) {
         setSubscribed(sub);
       }
