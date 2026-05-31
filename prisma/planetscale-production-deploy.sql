@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS `user_push_device` (
     `userId` VARCHAR(191) NOT NULL,
     `token` VARCHAR(512) NOT NULL,
     `platform` ENUM('android', 'ios') NOT NULL,
+    `apnsEnvironment` ENUM('sandbox', 'production') NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
     UNIQUE INDEX `user_push_device_token_key`(`token`),
@@ -35,3 +36,8 @@ CREATE TABLE IF NOT EXISTS `draw_alert_subscription` (
     INDEX `draw_alert_subscription_competitionId_idx`(`competitionId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- iOS APNs: sandbox vs production routing (required for TestFlight + Xcode debug tokens).
+-- PlanetScale: apply via deploy request on a branch, not direct DDL on main.
+ALTER TABLE `user_push_device`
+    ADD COLUMN `apnsEnvironment` ENUM('sandbox', 'production') NULL;
