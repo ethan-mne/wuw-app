@@ -1,6 +1,6 @@
 const STORAGE_KEY = 'wuw_draw_reminder_local_v1';
 
-type StoredDrawReminder = {
+export type StoredDrawReminder = {
   competitionName: string;
   fireAtMs: number;
 };
@@ -20,6 +20,16 @@ function readAll(): Record<string, StoredDrawReminder> {
 
 function writeAll(data: Record<string, StoredDrawReminder>): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+export function listDrawRemindersLocally(): Array<
+  { competitionId: string } & StoredDrawReminder
+> {
+  const all = readAll();
+  return Object.entries(all).map(([competitionId, value]) => ({
+    competitionId,
+    ...value,
+  }));
 }
 
 export function isDrawReminderSubscribedLocally(competitionId: string): boolean {

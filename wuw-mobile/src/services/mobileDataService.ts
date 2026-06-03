@@ -10,6 +10,7 @@ import {
 import type {
   AccountSummary,
   Competition,
+  HomeStats,
   MobileUserProfile,
   OrderSummary,
   RedeemFreeTicketResult,
@@ -114,6 +115,38 @@ function normalizeWinnersResponse(payload: unknown): ListWinnersResponse {
   }
 
   return { data: [], hasMore: false };
+}
+
+function normalizeHomeStats(payload: unknown): HomeStats {
+  const fallback: HomeStats = {
+    instagramFollowers: '',
+    amountWon: 0,
+  };
+
+  if (typeof payload !== 'object' || payload === null) {
+    return fallback;
+  }
+
+  const root = payload as { data?: unknown; instagramFollowers?: unknown; amountWon?: unknown };
+  const source =
+    typeof root.data === 'object' && root.data !== null
+      ? (root.data as Record<string, unknown>)
+      : (root as Record<string, unknown>);
+
+  const instagramFollowers =
+    typeof source.instagramFollowers === 'string' ? source.instagramFollowers : '';
+  const amountWonRaw = source.amountWon;
+  const amountWon =
+    typeof amountWonRaw === 'number'
+      ? amountWonRaw
+      : typeof amountWonRaw === 'string'
+        ? Number.parseInt(amountWonRaw, 10) || 0
+        : 0;
+
+  return {
+    instagramFollowers,
+    amountWon,
+  };
 }
 
 export type LoadAccountSummaryResult =
@@ -350,6 +383,11 @@ export type DrawsTimelinePage = {
   hasMore: boolean;
 };
 
+export type DrawReminderTargetCompetition = Pick<
+  Competition,
+  'id' | 'name' | 'drawingDate' | 'endDate'
+>;
+
 function toCompetitionArray(payload: unknown): Competition[] | null {
   if (Array.isArray(payload)) {
     return payload as Competition[];
@@ -566,6 +604,82 @@ export const mobileDataService = {
     );
     return response.data;
   },
+  listReminderTargetCompetitions: async (): Promise<DrawReminderTargetCompetition[]> => {
+    if (!getMobileSessionToken()) {
+      return [];
+    }
+
+    const [competitions, orders] = await Promise.all([
+      mobileDataService.listCompetitions().catch(() => [] as Competition[]),
+      mobileDataService.listOrderHistory().catch(() => [] as OrderSummary[]),
+    ]);
+
+    const competitionById = new Map<string, DrawReminderTargetCompetition>();
+    for (const competition of competitions) {
+      const id = competition.id.trim();
+      if (!id) {
+        continue;
+      }
+      competitionById.set(id, {
+        id,
+        name: competition.name,
+        drawingDate: competition.drawingDate,
+        endDate: competition.endDate,
+      });
+    }
+
+    const ticketIds = new Set<string>();
+    for (const order of orders) {
+      const id = order.competitionId.trim();
+      if (id) {
+        ticketIds.add(id);
+      }
+    }
+
+    const subscriptionChecks = await Promise.all(
+      competitions.map(async (competition) => {
+        try {
+          const subscribed = await mobileDataService.getDrawAlertSubscribed(competition.id);
+          return subscribed ? competition.id.trim() : null;
+        } catch {
+          return null;
+        }
+      }),
+    );
+
+    const targetIds = new Set<string>(ticketIds);
+    for (const id of subscriptionChecks) {
+      if (id) {
+        targetIds.add(id);
+      }
+    }
+
+    const missingIds = [...targetIds].filter((id) => !competitionById.has(id));
+    if (missingIds.length > 0) {
+      const missingCompetitions = await Promise.all(
+        missingIds.map((id) => mobileDataService.getCompetition(id).catch(() => undefined)),
+      );
+      for (const competition of missingCompetitions) {
+        if (!competition) {
+          continue;
+        }
+        const id = competition.id.trim();
+        if (!id) {
+          continue;
+        }
+        competitionById.set(id, {
+          id,
+          name: competition.name,
+          drawingDate: competition.drawingDate,
+          endDate: competition.endDate,
+        });
+      }
+    }
+
+    return [...targetIds]
+      .map((id) => competitionById.get(id))
+      .filter((competition): competition is DrawReminderTargetCompetition => Boolean(competition));
+  },
   listWinners: async (params?: {
     skip?: number;
     take?: number;
@@ -590,6 +704,17 @@ export const mobileDataService = {
         `Failed to fetch winners from ${endpoint}.`,
         [message],
       );
+    }
+  },
+  getHomeStats: async (): Promise<HomeStats> => {
+    try {
+      const response = await apiClient<unknown>('/api/mobile/v1/home/stats');
+      return normalizeHomeStats(response);
+    } catch {
+      return {
+        instagramFollowers: '',
+        amountWon: 0,
+      };
     }
   },
   syncPushTokenIfPermitted: async () => syncPushTokenIfPermitted(),

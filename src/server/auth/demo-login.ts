@@ -1,5 +1,5 @@
-import { cookies } from 'next/headers';
 import { faker } from '@faker-js/faker';
+import { randomUUID } from 'crypto';
 import { z } from 'zod';
 
 import { env } from '@/env';
@@ -9,6 +9,39 @@ import { db } from '@/server/db';
 const emailSchema = z.string().trim().min(1).email();
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+async function ensureDemoUser(email: string): Promise<{ id: string; email: string | null }> {
+  const existing = await db.$queryRaw<{ id: string; email: string | null }[]>`
+    SELECT id, email
+    FROM \`User\`
+    WHERE email = ${email}
+    LIMIT 1
+  `;
+  if (existing[0]) {
+    return existing[0];
+  }
+
+  const id = randomUUID();
+  try {
+    await db.$executeRaw`
+      INSERT INTO \`User\` (id, email)
+      VALUES (${id}, ${email})
+    `;
+  } catch {
+    const createdByRace = await db.$queryRaw<{ id: string; email: string | null }[]>`
+      SELECT id, email
+      FROM \`User\`
+      WHERE email = ${email}
+      LIMIT 1
+    `;
+    if (createdByRace[0]) {
+      return createdByRace[0];
+    }
+    throw new Error('Failed to create demo user record.');
+  }
+
+  return { id, email };
+}
 
 export type DemoLoginResult =
   | { status: 'ok'; token: string }
@@ -27,15 +60,7 @@ export async function loginWithDemoEmail(email: string): Promise<DemoLoginResult
   const normalizedEmail = normalizeEmail(parsedEmail.data);
 
   try {
-    const user = await db.user.upsert({
-      where: { email: normalizedEmail },
-      update: {},
-      create: {
-        email: normalizedEmail,
-        utm: cookies().get('utm')?.value,
-      },
-      select: { id: true, email: true },
-    });
+    const user = await ensureDemoUser(normalizedEmail);
 
     await db.referrals.upsert({
       where: { user_id: user.id },

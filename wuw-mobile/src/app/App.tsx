@@ -1,9 +1,12 @@
 import { useEffect } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
+import type { PluginListenerHandle } from '@capacitor/core';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { MobileShell } from '../components/MobileShell';
 import { legalPages, supportPages } from '../data/content';
 import { getMobileSessionToken } from '../lib/mobileSessionToken';
+import { reconcileDrawReminders } from '../lib/drawReminderSubscribe';
 import { setupPushNotificationHandlers } from '../lib/pushNotificationSetup';
 import { mobileDataService } from '../services/mobileDataService';
 import { AccountDashboardPage } from '../pages/account/AccountDashboardPage';
@@ -43,6 +46,45 @@ export default function App() {
     syncPushWhenLoggedIn();
     window.addEventListener('wuw-mobile-session', syncPushWhenLoggedIn);
     return () => window.removeEventListener('wuw-mobile-session', syncPushWhenLoggedIn);
+  }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    let appStateListener: PluginListenerHandle | null = null;
+
+    const reconcileWhenLoggedIn = () => {
+      if (!getMobileSessionToken()) {
+        return;
+      }
+      void reconcileDrawReminders();
+    };
+
+    reconcileWhenLoggedIn();
+    window.addEventListener('wuw-mobile-session', reconcileWhenLoggedIn);
+
+    void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) {
+        reconcileWhenLoggedIn();
+      }
+    })
+      .then((listener) => {
+        if (disposed) {
+          void listener.remove();
+          return;
+        }
+        appStateListener = listener;
+      })
+      .catch(() => {
+        // Ignore web or unsupported environments.
+      });
+
+    return () => {
+      disposed = true;
+      window.removeEventListener('wuw-mobile-session', reconcileWhenLoggedIn);
+      if (appStateListener) {
+        void appStateListener.remove();
+      }
+    };
   }, []);
 
   return (

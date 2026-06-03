@@ -1,8 +1,8 @@
 import { OTPEmail } from '@/components/emails/otpEmail';
 import { db } from '@/server/db';
 import { resend } from '@/lib/resend';
-import { cookies } from 'next/headers';
 import { faker } from '@faker-js/faker';
+import { randomUUID } from 'crypto';
 import { z } from 'zod';
 
 const OTP_TTL_MS = 5 * 60 * 1000;
@@ -12,6 +12,39 @@ const PREVIOUS_ACTIVE_OTP_LIMIT = 1;
 const emailSchema = z.string().trim().min(1).email();
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+async function ensureUserForOtp(email: string): Promise<{ id: string }> {
+  const existing = await db.$queryRaw<{ id: string }[]>`
+    SELECT id
+    FROM \`User\`
+    WHERE email = ${email}
+    LIMIT 1
+  `;
+  if (existing[0]) {
+    return existing[0];
+  }
+
+  const id = randomUUID();
+  try {
+    await db.$executeRaw`
+      INSERT INTO \`User\` (id, email)
+      VALUES (${id}, ${email})
+    `;
+  } catch {
+    const createdByRace = await db.$queryRaw<{ id: string }[]>`
+      SELECT id
+      FROM \`User\`
+      WHERE email = ${email}
+      LIMIT 1
+    `;
+    if (createdByRace[0]) {
+      return createdByRace[0];
+    }
+    throw new Error('Failed to create user record for OTP login.');
+  }
+
+  return { id };
+}
 
 const generateOTPCode = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
@@ -41,15 +74,7 @@ export const sendOTPmail = async (email: string): Promise<SendOTPResult> => {
   const normalizedEmail = normalizeEmail(parsedEmail.data);
 
   try {
-    const user = await db.user.upsert({
-      where: { email: normalizedEmail },
-      update: {},
-      create: {
-        email: normalizedEmail,
-        utm: cookies().get('utm')?.value,
-      },
-      select: { id: true },
-    });
+    const user = await ensureUserForOtp(normalizedEmail);
 
     await db.referrals.upsert({
       where: { user_id: user.id },

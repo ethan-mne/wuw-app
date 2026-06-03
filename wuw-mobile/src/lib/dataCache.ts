@@ -10,6 +10,7 @@ export const cacheKeys = {
   competitions: 'competitions',
   winnersHome: 'winners:0:8',
   winnersAll: 'winners:all',
+  homeStats: 'home-stats',
   drawsSeed: (takePast: number, takeFuture: number) => `draws-seed:${takePast}:${takeFuture}`,
   competition: (id: string) => `competition:${id}`,
   accountSummary: 'auth:account-summary',

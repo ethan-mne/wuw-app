@@ -3,12 +3,16 @@ import { getServerSession, type NextAuthOptions } from 'next-auth';
 import EmailProvider from 'next-auth/providers/email';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { Prisma } from '@prisma/client';
 import { env } from '@/env';
 import { db } from '@/server/db';
 import { sendVerificationRequest } from '@/lib/sendVerificationRequest';
 import { faker } from '@faker-js/faker';
 import { cookies } from 'next/headers';
 import { authorizeOtpCredentials } from '@/server/otp-auth';
+
+const isMissingColumnError = (error: unknown) =>
+  error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2022';
 
 declare module 'next-auth' {
   interface User {
@@ -118,14 +122,24 @@ export const authOptions: NextAuthOptions = {
   },
   events: {
     createUser: async (message) => {
+      const utm = cookies().get('utm')?.value;
+      const utmWrite =
+        utm == null
+          ? Promise.resolve()
+          : db.user
+              .update({
+                where: { id: message.user.id },
+                data: { utm },
+              })
+              .catch((error) => {
+                if (!isMissingColumnError(error)) {
+                  throw error;
+                }
+              });
+
       await Promise.all([
-        db.user.update({
-          where: { id: message.user.id },
-          data: {
-            utm: cookies().get('utm')?.value,
-          },
-        }),
-        await db.referrals.create({
+        utmWrite,
+        db.referrals.create({
           data: {
             code: faker.string.alphanumeric(8),
             discount_rate: 0.1,

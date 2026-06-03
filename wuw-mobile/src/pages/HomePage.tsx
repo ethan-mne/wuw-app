@@ -22,6 +22,21 @@ import { mobileDataService } from '../services/mobileDataService';
 
 const WINNERS_PAGE_SIZE = 8;
 
+function formatCommunityCount(rawValue?: string): string {
+  const value = rawValue?.trim();
+  if (!value) {
+    return '+44k';
+  }
+  return value.startsWith('+') ? value : `+${value}`;
+}
+
+function formatAmountWon(amountWon?: number): string {
+  if (typeof amountWon !== 'number' || !Number.isFinite(amountWon) || amountWon <= 0) {
+    return '9,444,788';
+  }
+  return new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 }).format(amountWon);
+}
+
 
 
 export function HomePage() {
@@ -44,9 +59,15 @@ export function HomePage() {
 
   );
 
+  const { data: homeStats } = useCachedQuery(cacheKeys.homeStats, () =>
+    mobileDataService.getHomeStats(),
+  );
+
 
 
   const winners = winnersResponse?.data ?? [];
+  const communityCount = formatCommunityCount(homeStats?.instagramFollowers);
+  const amountWonText = formatAmountWon(homeStats?.amountWon);
 
   const loading = loadingCompetitions;
   const joinTo = useMemo(() => {
@@ -61,7 +82,7 @@ export function HomePage() {
     <section className="home-page" aria-labelledby="home-title">
 
       <p className="home-community-strip">
-        Join our +44k community on{' '}
+        Join our {communityCount} community on{' '}
         <a
           className="home-community-strip-link"
           href={CONTACT_INFO.instagramUrl}
@@ -109,7 +130,7 @@ export function HomePage() {
 
         <p className="home-hero-proof">
 
-          WE&apos;VE GIVEN AWAY 9,444,788 WORTH OF WATCHES. Top-Ranked Globally for
+          WE&apos;VE GIVEN AWAY {amountWonText} WORTH OF WATCHES. Top-Ranked Globally for
 
           Unbeatable Winning Chances.
 

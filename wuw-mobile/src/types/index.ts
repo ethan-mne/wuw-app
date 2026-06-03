@@ -72,6 +72,11 @@ export interface AccountSummary {
   referralCode: string;
 }
 
+export interface HomeStats {
+  instagramFollowers: string;
+  amountWon: number;
+}
+
 /** `GET /api/mobile/v1/referrals/usage` — coupon uses by others. */
 export interface ReferralUsageItem {
   customerName: string;
