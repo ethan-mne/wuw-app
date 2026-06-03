@@ -636,16 +636,9 @@ export const mobileDataService = {
       }
     }
 
-    const subscriptionChecks = await Promise.all(
-      competitions.map(async (competition) => {
-        try {
-          const subscribed = await mobileDataService.getDrawAlertSubscribed(competition.id);
-          return subscribed ? competition.id.trim() : null;
-        } catch {
-          return null;
-        }
-      }),
-    );
+    const subscriptionChecks = await mobileDataService
+      .listDrawAlertSubscribedCompetitionIds(competitions.map((competition) => competition.id))
+      .catch(() => [] as string[]);
 
     const targetIds = new Set<string>(ticketIds);
     for (const id of subscriptionChecks) {
@@ -748,6 +741,31 @@ export const mobileDataService = {
       return Boolean(json?.data?.subscribed);
     } catch {
       return false;
+    }
+  },
+  listDrawAlertSubscribedCompetitionIds: async (competitionIds: string[]): Promise<string[]> => {
+    if (!competitionIds.length) {
+      return [];
+    }
+
+    try {
+      const response = await apiClient<ApiDataResponse<{ competitionIds: string[] }>>(
+        '/api/mobile/v1/competitions/draw-alerts',
+        {
+          method: 'POST',
+          body: JSON.stringify({ competitionIds }),
+        },
+      );
+
+      if (!Array.isArray(response?.data?.competitionIds)) {
+        return [];
+      }
+
+      return response.data.competitionIds
+        .map((id) => id.trim())
+        .filter((id): id is string => id.length > 0);
+    } catch {
+      return [];
     }
   },
   subscribeDrawAlert: async (

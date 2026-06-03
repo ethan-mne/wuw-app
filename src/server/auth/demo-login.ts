@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { randomUUID } from 'crypto';
+import { cookies } from 'next/headers';
 import { z } from 'zod';
 
 import { env } from '@/env';
@@ -11,6 +12,8 @@ const emailSchema = z.string().trim().min(1).email();
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 async function ensureDemoUser(email: string): Promise<{ id: string; email: string | null }> {
+  const rawUtm = cookies().get('utm')?.value?.trim();
+  const utm = rawUtm && rawUtm.length > 0 ? rawUtm : null;
   const existing = await db.$queryRaw<{ id: string; email: string | null }[]>`
     SELECT id, email
     FROM \`User\`
@@ -23,10 +26,17 @@ async function ensureDemoUser(email: string): Promise<{ id: string; email: strin
 
   const id = randomUUID();
   try {
-    await db.$executeRaw`
-      INSERT INTO \`User\` (id, email)
-      VALUES (${id}, ${email})
-    `;
+    if (utm) {
+      await db.$executeRaw`
+        INSERT INTO \`User\` (id, email, utm)
+        VALUES (${id}, ${email}, ${utm})
+      `;
+    } else {
+      await db.$executeRaw`
+        INSERT INTO \`User\` (id, email)
+        VALUES (${id}, ${email})
+      `;
+    }
   } catch {
     const createdByRace = await db.$queryRaw<{ id: string; email: string | null }[]>`
       SELECT id, email

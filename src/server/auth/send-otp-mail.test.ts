@@ -2,9 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   db: {
-    user: {
-      upsert: vi.fn(),
-    },
+    $queryRaw: vi.fn(),
+    $executeRaw: vi.fn(),
     referrals: {
       upsert: vi.fn(),
     },
@@ -60,7 +59,8 @@ describe('sendOTPmail', () => {
 
     vi.clearAllMocks();
 
-    mocks.db.user.upsert.mockResolvedValue({ id: 'user-1' });
+    mocks.db.$queryRaw.mockResolvedValue([]);
+    mocks.db.$executeRaw.mockResolvedValue(1);
     mocks.db.referrals.upsert.mockResolvedValue({ id: 'ref-1' });
     mocks.db.oTP.findFirst.mockResolvedValue(null);
     mocks.db.oTP.findMany.mockResolvedValue([]);
@@ -83,7 +83,8 @@ describe('sendOTPmail', () => {
       status: 'error',
       code: 'invalid_email',
     });
-    expect(mocks.db.user.upsert).not.toHaveBeenCalled();
+    expect(mocks.db.$queryRaw).not.toHaveBeenCalled();
+    expect(mocks.db.$executeRaw).not.toHaveBeenCalled();
     expect(mocks.db.oTP.create).not.toHaveBeenCalled();
   });
 
@@ -168,15 +169,11 @@ describe('sendOTPmail', () => {
       status: 'sent',
       otpID: 'otp-1',
     });
-    expect(mocks.db.user.upsert).toHaveBeenCalledWith({
-      where: { email: 'user@example.com' },
-      update: {},
-      create: {
-        email: 'user@example.com',
-        utm: 'utm-source',
-      },
-      select: { id: true },
-    });
+    expect(mocks.db.$executeRaw).toHaveBeenCalledTimes(1);
+    const executeRawCall = mocks.db.$executeRaw.mock.calls[0] ?? [];
+    expect(executeRawCall[1]).toBeDefined();
+    expect(executeRawCall[2]).toBe('user@example.com');
+    expect(executeRawCall[3]).toBe('utm-source');
     expect(mocks.resendSend).toHaveBeenCalledWith(
       expect.objectContaining({
         to: 'user@example.com',

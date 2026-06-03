@@ -72,6 +72,30 @@ export async function getDrawAlertSubscribed(competitionId: string): Promise<boo
   return row != null;
 }
 
+export async function listSubscribedDrawAlertCompetitionIds(
+  competitionIds: string[],
+): Promise<string[]> {
+  const { userId } = await requireMobileSession('userId');
+  const normalizedIds = [...new Set(competitionIds.map((id) => id.trim()).filter(Boolean))];
+  if (normalizedIds.length === 0) {
+    return [];
+  }
+
+  const rows = await db.drawAlertSubscription.findMany({
+    where: {
+      userId,
+      competitionId: {
+        in: normalizedIds,
+      },
+    },
+    select: {
+      competitionId: true,
+    },
+  });
+
+  return rows.map((row) => row.competitionId);
+}
+
 /** Subscribe to draw alert; optionally register push device token in the same transaction. */
 export async function subscribeDrawAlertWithPush(
   competitionId: string,
