@@ -24,11 +24,28 @@ export type ReconcileDrawRemindersResult = {
   cancelled: number;
   failed: number;
   permissionDenied: boolean;
+  updatedCompetitionNames: string[];
 };
+
+function drawScheduleVersionFromDates(drawingDateIso: string, endDateIso: string): string {
+  return `v1:${drawingDateIso}|${endDateIso}`;
+}
+
+function resolveDrawScheduleVersion(input: {
+  drawingDateIso: string;
+  endDateIso: string;
+  drawScheduleVersion?: string;
+}): string {
+  const provided = input.drawScheduleVersion?.trim() ?? '';
+  if (provided) {
+    return provided;
+  }
+  return drawScheduleVersionFromDates(input.drawingDateIso, input.endDateIso);
+}
 
 /** Schedule on-device reminder; persist locally; sync server subscription when available. */
 export async function enableDrawReminder(
-  input: DrawReminderScheduleInput,
+  input: DrawReminderScheduleInput & { endDateIso?: string; drawScheduleVersion?: string },
 ): Promise<EnableDrawReminderResult> {
   const scheduled = await scheduleDrawReminder(input);
   if (!scheduled.ok) {
@@ -38,6 +55,11 @@ export async function enableDrawReminder(
   saveDrawReminderLocally(input.competitionId, {
     competitionName: input.competitionName,
     fireAtMs: scheduled.fireAtMs,
+    drawScheduleVersion: resolveDrawScheduleVersion({
+      drawingDateIso: input.drawingDateIso,
+      endDateIso: input.endDateIso ?? input.drawingDateIso,
+      drawScheduleVersion: input.drawScheduleVersion,
+    }),
   });
 
   try {
@@ -77,6 +99,12 @@ export async function enableDrawReminderForCompetitionId(
     competitionId: competition.id,
     competitionName: competition.name,
     drawingDateIso: competition.drawingDate ?? competition.endDate,
+    endDateIso: competition.endDate,
+    drawScheduleVersion: resolveDrawScheduleVersion({
+      drawingDateIso: competition.drawingDate ?? competition.endDate,
+      endDateIso: competition.endDate,
+      drawScheduleVersion: competition.drawScheduleVersion,
+    }),
   });
 }
 
@@ -89,6 +117,7 @@ export async function reconcileDrawReminders(): Promise<ReconcileDrawRemindersRe
     cancelled: 0,
     failed: 0,
     permissionDenied: false,
+    updatedCompetitionNames: [],
   };
   if (!getMobileSessionToken()) {
     return empty;
@@ -125,6 +154,11 @@ export async function reconcileDrawReminders(): Promise<ReconcileDrawRemindersRe
     }
 
     const drawingDateIso = competition.drawingDate ?? competition.endDate;
+    const expectedScheduleVersion = resolveDrawScheduleVersion({
+      drawingDateIso,
+      endDateIso: competition.endDate,
+      drawScheduleVersion: competition.drawScheduleVersion,
+    });
     const expectedFireAtMs = drawReminderFireAtMs(drawingDateIso);
     if (expectedFireAtMs == null) {
       await cancelDrawReminder(competitionId);
@@ -134,7 +168,10 @@ export async function reconcileDrawReminders(): Promise<ReconcileDrawRemindersRe
     }
 
     const existing = localByCompetitionId.get(competitionId);
-    if (existing?.fireAtMs === expectedFireAtMs) {
+    if (
+      existing?.fireAtMs === expectedFireAtMs
+      && existing?.drawScheduleVersion === expectedScheduleVersion
+    ) {
       result.unchanged += 1;
       continue;
     }
@@ -152,6 +189,7 @@ export async function reconcileDrawReminders(): Promise<ReconcileDrawRemindersRe
     saveDrawReminderLocally(competitionId, {
       competitionName: competition.name,
       fireAtMs: scheduled.fireAtMs,
+      drawScheduleVersion: expectedScheduleVersion,
     });
 
     try {
@@ -162,6 +200,7 @@ export async function reconcileDrawReminders(): Promise<ReconcileDrawRemindersRe
 
     if (existing) {
       result.updated += 1;
+      result.updatedCompetitionNames.push(competition.name);
     } else {
       result.created += 1;
     }

@@ -1,29 +1,17 @@
 import { db } from '@/server/db';
 import {
-  deleteInvalidApnsTokens,
-  getDefaultApnsEnvironment,
-  isApnsConfiguredForPush,
-  sendDrawReminderApnsMulticast,
-  updateApnsEnvironmentForTokens,
-  type ApnsEnvironment,
-  type ApnsMulticastResult,
-} from '@/server/draw-reminders/apns';
-import {
-  isFirebaseConfiguredForPush,
+  isOneSignalConfigured,
   isPushConfiguredForDrawReminders,
 } from '@/server/draw-reminders/cron-secrets';
 import {
-  deleteInvalidFcmTokens,
-  sendDrawReminderFcmMulticast,
-  type FcmMulticastResult,
-} from '@/server/draw-reminders/fcm';
-import {
   findDrawReminderRecipientUsers,
-  type DrawReminderPushDevice,
 } from '@/server/draw-reminders/recipients';
-import { isApnsDeviceToken, isLikelyFcmRegistrationToken } from '@/server/mobile/push-token-validation';
 import { isDrawingDateInReminderCronWindow } from '@/server/draw-reminders/window';
 import { listCompetitionsForDrawReminders } from '@/server/lightweight/competition/service';
+import {
+  sendOneSignalPushMulticast,
+  type OneSignalMulticastResult,
+} from '@/server/notifications/onesignal';
 
 export type DrawReminderEligibilityDebug = {
   competitionId: string;
@@ -44,15 +32,13 @@ export type DrawReminderUserTargetDebug = {
   totalPushDevicesInDb: number;
   hasDrawAlert: boolean;
   pushConfigured: boolean;
-  firebaseConfigured: boolean;
-  apnsConfigured: boolean;
+  oneSignalConfigured: boolean;
   /** Human-readable reasons no push was sent (empty if ready to send). */
   blockers: string[];
 };
 
 export type PushDeliveryDebug = {
-  apns?: ApnsMulticastResult & { invalidTokensRemoved?: number };
-  fcm?: FcmMulticastResult & { invalidTokensRemoved?: number };
+  oneSignal?: OneSignalMulticastResult & { invalidTokensRemoved?: number };
 };
 
 export type SendDrawRemindersResult = {
@@ -65,41 +51,13 @@ export type SendDrawRemindersResult = {
   userTarget?: DrawReminderUserTargetDebug;
   /** Present in test mode when push transports were called. */
   pushDelivery?: PushDeliveryDebug;
-  /** @deprecated Use pushDelivery.fcm */
-  fcmDelivery?: FcmMulticastResult & { invalidTokensRemoved?: number };
 };
 
-type CompetitionReminderRow = {
+export type CompetitionReminderRow = {
   id: string;
   name: string;
   drawing_date: Date;
 };
-
-function resolveApnsEnvironment(device: DrawReminderPushDevice): ApnsEnvironment {
-  const serverDefault = getDefaultApnsEnvironment();
-  // Production backend (Render): TestFlight tokens must use production APNs.
-  // Stored "sandbox" labels from Xcode debug often block delivery otherwise.
-  if (serverDefault === 'production') {
-    return 'production';
-  }
-  return device.apnsEnvironment ?? serverDefault;
-}
-
-function groupApnsDevicesByEnvironment(
-  devices: DrawReminderPushDevice[],
-): Map<ApnsEnvironment, string[]> {
-  const groups = new Map<ApnsEnvironment, string[]>();
-  for (const device of devices) {
-    if (!isApnsDeviceToken(device.token)) {
-      continue;
-    }
-    const env = resolveApnsEnvironment(device);
-    const list = groups.get(env) ?? [];
-    list.push(device.token);
-    groups.set(env, list);
-  }
-  return groups;
-}
 
 async function loadCompetitionsForReminderRun(
   now: Date,
@@ -145,12 +103,11 @@ export async function getUserDrawReminderTargetDebug(
   competitionId: string,
 ): Promise<DrawReminderUserTargetDebug> {
   const blockers: string[] = [];
-  const firebaseConfigured = isFirebaseConfiguredForPush();
-  const apnsConfigured = isApnsConfiguredForPush();
+  const oneSignalConfigured = isOneSignalConfigured();
   const pushConfigured = isPushConfiguredForDrawReminders();
   const totalPushDevicesInDb = await db.userPushDevice.count();
   if (!pushConfigured) {
-    blockers.push('push_not_configured_on_server — set APNS_* and/or FIREBASE_SERVICE_ACCOUNT_JSON');
+    blockers.push('push_not_configured_on_server — set ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY');
   }
   if (totalPushDevicesInDb === 0) {
     blockers.push(
@@ -181,8 +138,7 @@ export async function getUserDrawReminderTargetDebug(
       totalPushDevicesInDb,
       hasDrawAlert: false,
       pushConfigured,
-      firebaseConfigured,
-      apnsConfigured,
+      oneSignalConfigured,
       blockers,
     };
   }
@@ -194,15 +150,6 @@ export async function getUserDrawReminderTargetDebug(
     blockers.push(
       'no_push_token_in_database — tap Remind me in the app with notifications allowed (registers token + draw alert)',
     );
-  } else {
-    const hasApnsToken = user.pushDevices.some((d) => isApnsDeviceToken(d.token));
-    const hasFcmToken = user.pushDevices.some((d) => isLikelyFcmRegistrationToken(d.token));
-    if (hasApnsToken && !apnsConfigured) {
-      blockers.push('apns_not_configured_on_server — set APNS_KEY_ID, APNS_TEAM_ID, APNS_KEY_P8 on Render');
-    }
-    if (hasFcmToken && !firebaseConfigured) {
-      blockers.push('firebase_not_configured_on_server — set FIREBASE_SERVICE_ACCOUNT_JSON for FCM tokens');
-    }
   }
   if (!hasDrawAlert) {
     blockers.push('no_draw_alert_subscription — tap Remind me for this competition in the app');
@@ -216,8 +163,7 @@ export async function getUserDrawReminderTargetDebug(
     totalPushDevicesInDb,
     hasDrawAlert,
     pushConfigured,
-    firebaseConfigured,
-    apnsConfigured,
+    oneSignalConfigured,
     blockers,
   };
 }
@@ -288,121 +234,79 @@ async function notifyCompetitionDrawReminder(params: {
     type: 'draw_reminder',
   };
 
-  let notificationsAttempted = 0;
-  let usersNotified = 0;
-  let mergedDelivery: PushDeliveryDebug | undefined;
-
+  const tokenToUserId = new Map<string, string>();
+  const tokens: string[] = [];
   for (const user of users) {
-    const devices = user.pushDevices;
-    if (devices.length === 0) {
-      continue;
-    }
-
-    const fcmTokens = devices
-      .map((d) => d.token)
-      .filter(isLikelyFcmRegistrationToken);
-    const apnsGroups = groupApnsDevicesByEnvironment(devices);
-
-    let userSuccessCount = 0;
-
-    if (fcmTokens.length > 0 && !isFirebaseConfiguredForPush()) {
-      console.warn('[draw-reminder] FCM tokens present but FIREBASE_SERVICE_ACCOUNT_JSON is not configured');
-    }
-
-    if (apnsGroups.size > 0 && !isApnsConfiguredForPush()) {
-      console.warn('[draw-reminder] APNs tokens present but APNS_* env is not configured');
-    }
-
-    if (fcmTokens.length > 0 && isFirebaseConfiguredForPush()) {
-      const fcm = await sendDrawReminderFcmMulticast({
-        tokens: fcmTokens,
-        title,
-        body,
-        data,
-      });
-      notificationsAttempted += fcmTokens.length;
-      userSuccessCount += fcm.successCount;
-
-      let invalidTokensRemoved = 0;
-      if (params.pruneInvalidTokens && fcm.failureCount > 0) {
-        invalidTokensRemoved = await deleteInvalidFcmTokens(fcmTokens, fcm.results);
+    for (const device of user.pushDevices) {
+      const token = device.token.trim();
+      if (!token || tokenToUserId.has(token)) {
+        continue;
       }
-
-      if (params.includeDeliveryDetails) {
-        mergedDelivery = {
-          ...mergedDelivery,
-          fcm: mergedDelivery?.fcm
-            ? {
-                successCount: mergedDelivery.fcm.successCount + fcm.successCount,
-                failureCount: mergedDelivery.fcm.failureCount + fcm.failureCount,
-                firebaseProjectId: fcm.firebaseProjectId ?? mergedDelivery.fcm.firebaseProjectId,
-                results: [...mergedDelivery.fcm.results, ...fcm.results],
-                invalidTokensRemoved:
-                  (mergedDelivery.fcm.invalidTokensRemoved ?? 0) + invalidTokensRemoved,
-              }
-            : { ...fcm, invalidTokensRemoved },
-        };
-      }
-    }
-
-    if (apnsGroups.size > 0 && isApnsConfiguredForPush()) {
-      for (const [environment, apnsTokens] of apnsGroups) {
-        const apns = await sendDrawReminderApnsMulticast({
-          tokens: apnsTokens,
-          title,
-          body,
-          data,
-          environment,
-        });
-        notificationsAttempted += apnsTokens.length;
-        userSuccessCount += apns.successCount;
-
-        if (apns.environmentCorrections.length > 0) {
-          for (const correction of apns.environmentCorrections) {
-            await updateApnsEnvironmentForTokens([correction.token], correction.environment);
-          }
-        }
-
-        let invalidTokensRemoved = 0;
-        if (params.pruneInvalidTokens && apns.failureCount > 0) {
-          invalidTokensRemoved = await deleteInvalidApnsTokens(apnsTokens, apns.results);
-        }
-
-        if (params.includeDeliveryDetails) {
-          mergedDelivery = {
-            ...mergedDelivery,
-            apns: mergedDelivery?.apns
-              ? {
-                  successCount: mergedDelivery.apns.successCount + apns.successCount,
-                  failureCount: mergedDelivery.apns.failureCount + apns.failureCount,
-                  results: [...mergedDelivery.apns.results, ...apns.results],
-                  invalidTokensRemoved:
-                    (mergedDelivery.apns.invalidTokensRemoved ?? 0) + invalidTokensRemoved,
-                }
-              : { ...apns, invalidTokensRemoved },
-          };
-        }
-      }
-    }
-
-    if (userSuccessCount > 0) {
-      if (params.recordSent !== false) {
-        await db.drawReminderSent.upsert({
-          where: {
-            userId_competitionId: {
-              userId: user.id,
-              competitionId: params.comp.id,
-            },
-          },
-          create: { userId: user.id, competitionId: params.comp.id },
-          update: {},
-        });
-      }
-      usersNotified += 1;
+      tokenToUserId.set(token, user.id);
+      tokens.push(token);
     }
   }
 
-  return { notificationsAttempted, usersNotified, pushDelivery: mergedDelivery };
+  if (tokens.length === 0) {
+    return { notificationsAttempted: 0, usersNotified: 0 };
+  }
+
+  const oneSignal = await sendOneSignalPushMulticast({
+    subscriptionIds: tokens,
+    title,
+    body,
+    data,
+  });
+  let invalidTokensRemoved = 0;
+  if (params.pruneInvalidTokens && oneSignal.invalidSubscriptionIds.length > 0) {
+    const deleted = await db.userPushDevice.deleteMany({
+      where: {
+        token: {
+          in: oneSignal.invalidSubscriptionIds,
+        },
+      },
+    });
+    invalidTokensRemoved = deleted.count;
+  }
+
+  const usersWithSuccess = new Set<string>();
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    const result = oneSignal.results[i];
+    const userId = tokenToUserId.get(token);
+    if (!result?.success || !userId) {
+      continue;
+    }
+    usersWithSuccess.add(userId);
+  }
+
+  if (params.recordSent !== false) {
+    for (const userId of usersWithSuccess) {
+      await db.drawReminderSent.upsert({
+        where: {
+          userId_competitionId: {
+            userId,
+            competitionId: params.comp.id,
+          },
+        },
+        create: { userId, competitionId: params.comp.id },
+        update: {},
+      });
+    }
+  }
+
+  return {
+    notificationsAttempted: tokens.length,
+    usersNotified: usersWithSuccess.size,
+    pushDelivery: params.includeDeliveryDetails
+      ? {
+          oneSignal: {
+            ...oneSignal,
+            invalidTokensRemoved,
+          },
+        }
+      : undefined,
+  };
 }
 
 /** Production cron: competitions in the ~10-minute-before-draw window. */
@@ -545,6 +449,6 @@ export async function runDrawReminderTest(
     competitionIds: competitions.map((c) => c.id),
     ...(debugRows.length > 0 ? { debug: debugRows } : {}),
     ...(userTarget ? { userTarget } : {}),
-    ...(pushDelivery ? { pushDelivery, fcmDelivery: pushDelivery.fcm } : {}),
+    ...(pushDelivery ? { pushDelivery } : {}),
   };
 }

@@ -23,10 +23,12 @@ export function isFirebaseConfiguredForPush(): boolean {
 }
 
 import { isApnsConfiguredForPush } from '@/server/draw-reminders/apns';
+import { isOneSignalConfigured } from '@/server/notifications/onesignal';
 
 export { isApnsConfiguredForPush };
+export { isOneSignalConfigured };
 
-/** True when at least one push transport is configured (FCM for Android, APNs for iOS). */
+/** Draw-reminder push is enabled when OneSignal credentials are present. */
 export function isPushConfiguredForDrawReminders(): boolean {
-  return isFirebaseConfiguredForPush() || isApnsConfiguredForPush();
+  return isOneSignalConfigured();
 }

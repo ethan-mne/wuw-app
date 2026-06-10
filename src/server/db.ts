@@ -4,6 +4,10 @@ import { PrismaClient } from '@prisma/client';
 import * as Sentry from '@sentry/nextjs';
 
 import { env } from '@/env';
+import {
+  runCompetitionCreateSideEffects,
+  runCompetitionUpdateSideEffects,
+} from '@/server/notifications/competition-events';
 
 const DB_LATENCY_THRESHOLD_MS = 500;
 
@@ -31,6 +35,59 @@ const createPrismaClient = () => {
 
   return base.$extends({
     query: {
+      competition: {
+        async create({ args, query }) {
+          const result = await query(args);
+          const idFromResult =
+            typeof result === 'object'
+            && result != null
+            && 'id' in result
+            && typeof result.id === 'string'
+              ? result.id
+              : undefined;
+          const idFromArgs =
+            typeof args === 'object'
+            && args != null
+            && 'data' in args
+            && typeof args.data === 'object'
+            && args.data != null
+            && 'id' in args.data
+            && typeof args.data.id === 'string'
+              ? args.data.id
+              : undefined;
+          const competitionId = idFromResult ?? idFromArgs;
+          if (competitionId) {
+            try {
+              await runCompetitionCreateSideEffects(base, competitionId);
+            } catch (error) {
+              console.error('[competition-events] create side-effects failed', error);
+            }
+          }
+          return result;
+        },
+        async update({ args, query }) {
+          const previous = await base.competition.findUnique({
+            where: args.where,
+            select: {
+              id: true,
+              drawing_date: true,
+              end_date: true,
+            },
+          });
+
+          const result = await query(args);
+
+          if (previous) {
+            try {
+              await runCompetitionUpdateSideEffects(base, previous);
+            } catch (error) {
+              console.error('[competition-events] update side-effects failed', error);
+            }
+          }
+
+          return result;
+        },
+      },
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
           const activeSpan = Sentry.getActiveSpan();

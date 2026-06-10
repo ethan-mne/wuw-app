@@ -30,6 +30,8 @@ import { PushDebugPage } from '../pages/debug/PushDebugPage';
 import { WinnersPage } from '../pages/winners/WinnersPage';
 import { defaultLocale } from '../routes/locales';
 
+const DRAW_SCHEDULE_UPDATED_EVENT = 'wuw-draw-schedule-updated';
+
 export default function App() {
   useEffect(() => {
     void setupPushNotificationHandlers();
@@ -52,19 +54,33 @@ export default function App() {
     let disposed = false;
     let appStateListener: PluginListenerHandle | null = null;
 
-    const reconcileWhenLoggedIn = () => {
+    const reconcileWhenLoggedIn = async (source: 'startup' | 'session' | 'app_active') => {
       if (!getMobileSessionToken()) {
         return;
       }
-      void reconcileDrawReminders();
+      const result = await reconcileDrawReminders().catch(() => null);
+      if (!result || source !== 'app_active' || result.updated <= 0) {
+        return;
+      }
+      window.dispatchEvent(
+        new CustomEvent(DRAW_SCHEDULE_UPDATED_EVENT, {
+          detail: {
+            updated: result.updated,
+            names: result.updatedCompetitionNames,
+          },
+        }),
+      );
     };
 
-    reconcileWhenLoggedIn();
-    window.addEventListener('wuw-mobile-session', reconcileWhenLoggedIn);
+    void reconcileWhenLoggedIn('startup');
+    const onSession = () => {
+      void reconcileWhenLoggedIn('session');
+    };
+    window.addEventListener('wuw-mobile-session', onSession);
 
     void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
       if (isActive) {
-        reconcileWhenLoggedIn();
+        void reconcileWhenLoggedIn('app_active');
       }
     })
       .then((listener) => {
@@ -80,7 +96,7 @@ export default function App() {
 
     return () => {
       disposed = true;
-      window.removeEventListener('wuw-mobile-session', reconcileWhenLoggedIn);
+      window.removeEventListener('wuw-mobile-session', onSession);
       if (appStateListener) {
         void appStateListener.remove();
       }

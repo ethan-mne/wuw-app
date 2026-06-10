@@ -99,13 +99,10 @@ section('1. Health / push transports');
 const health = await request('GET', '/api/health');
 console.log('GET /api/health →', health.status, JSON.stringify(health.json, null, 2));
 if (health.json?.push?.pushConfigured === false) {
-  console.log('⚠ Configure APNS_* (iOS) and/or FIREBASE_SERVICE_ACCOUNT_JSON (Android) on Render.');
+  console.log('⚠ Configure ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY on Render.');
 }
-if (health.json?.push?.apnsConfigured === false) {
-  console.log('⚠ APNS_* missing — iOS APNs direct sends will be skipped.');
-}
-if (health.json?.push?.firebaseConfigured === false) {
-  console.log('⚠ FIREBASE_SERVICE_ACCOUNT_JSON missing — Android FCM sends will be skipped.');
+if (health.json?.push?.oneSignalConfigured === false) {
+  console.log('⚠ OneSignal missing — draw reminder pushes will be skipped.');
 }
 
 section('2. Route push-token déployée ?');

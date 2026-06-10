@@ -47,6 +47,8 @@ export type MobileCompetitionDto = {
   endDate: string;
   /** Canonical live draw instant (ISO 8601). */
   drawingDate: string;
+  /** Explicit draw schedule version so mobile can audit and reconcile updates. */
+  drawScheduleVersion: string;
   status: 'ACTIVE' | 'OPEN' | 'CLOSED';
   competitionImageUrl: string | null;
   watch: {
@@ -65,6 +67,10 @@ export type MobileCompetitionDto = {
     images: Array<{ url: string; alt: string }>;
   };
 };
+
+function computeDrawScheduleVersion(competition: CompetitionWithWatch): string {
+  return `v1:${competition.drawing_date.toISOString()}|${competition.end_date.toISOString()}`;
+}
 
 function mapStatus(
   status: CompetitionStatusType,
@@ -99,6 +105,7 @@ export function mapCompetitionToMobileDto(
     maxWinners: competition.max_winners ?? 1,
     endDate: competition.end_date.toISOString(),
     drawingDate: competition.drawing_date.toISOString(),
+    drawScheduleVersion: computeDrawScheduleVersion(competition),
     status: mapStatus(competition.status, remainingTickets),
     competitionImageUrl: competition.comp_image_url,
     watch: {

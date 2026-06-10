@@ -9,6 +9,7 @@ import {
 } from '../lib/pushNotifications';
 import type {
   AccountSummary,
+  CalendarFeedSubscription,
   Competition,
   HomeStats,
   MobileUserProfile,
@@ -385,7 +386,7 @@ export type DrawsTimelinePage = {
 
 export type DrawReminderTargetCompetition = Pick<
   Competition,
-  'id' | 'name' | 'drawingDate' | 'endDate'
+  'id' | 'name' | 'drawingDate' | 'endDate' | 'drawScheduleVersion'
 >;
 
 function toCompetitionArray(payload: unknown): Competition[] | null {
@@ -596,6 +597,24 @@ export const mobileDataService = {
   loadAccountSummary,
   loadMobileProfile,
   updateMobileProfile,
+  getCalendarFeedSubscription: async (): Promise<CalendarFeedSubscription> => {
+    const response = await apiClient<ApiDataResponse<CalendarFeedSubscription>>(
+      '/api/mobile/v1/me/calendar-feed',
+    );
+    return response.data;
+  },
+  regenerateCalendarFeedToken: async (): Promise<CalendarFeedSubscription> => {
+    const response = await apiClient<ApiDataResponse<CalendarFeedSubscription>>(
+      '/api/mobile/v1/me/calendar-feed',
+      { method: 'POST' },
+    );
+    return response.data;
+  },
+  revokeCalendarFeedToken: async (): Promise<void> => {
+    await apiClient<{ ok: boolean }>('/api/mobile/v1/me/calendar-feed', {
+      method: 'DELETE',
+    });
+  },
   redeemFreeTicket,
   listReferralUsages,
   listOrderHistory: async (): Promise<OrderSummary[]> => {
@@ -625,6 +644,7 @@ export const mobileDataService = {
         name: competition.name,
         drawingDate: competition.drawingDate,
         endDate: competition.endDate,
+        drawScheduleVersion: competition.drawScheduleVersion,
       });
     }
 
@@ -665,6 +685,7 @@ export const mobileDataService = {
           name: competition.name,
           drawingDate: competition.drawingDate,
           endDate: competition.endDate,
+          drawScheduleVersion: competition.drawScheduleVersion,
         });
       }
     }

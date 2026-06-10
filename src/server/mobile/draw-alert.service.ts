@@ -31,8 +31,8 @@ export const subscribeDrawAlertBodySchema = z
         code: z.ZodIssueCode.custom,
         message:
           data.platform === 'ios'
-            ? 'Invalid push token (expected APNs device token or legacy FCM token)'
-            : 'Invalid FCM token',
+            ? 'Invalid push token (expected APNs, FCM, or OneSignal subscription id)'
+            : 'Invalid push token (expected FCM or OneSignal subscription id)',
         path: ['token'],
       });
     }

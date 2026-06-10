@@ -3,6 +3,7 @@ const STORAGE_KEY = 'wuw_draw_reminder_local_v1';
 export type StoredDrawReminder = {
   competitionName: string;
   fireAtMs: number;
+  drawScheduleVersion?: string;
 };
 
 function readAll(): Record<string, StoredDrawReminder> {
@@ -42,7 +43,7 @@ export function isDrawReminderSubscribedLocally(competitionId: string): boolean 
 
 export function saveDrawReminderLocally(
   competitionId: string,
-  input: { competitionName: string; fireAtMs: number },
+  input: { competitionName: string; fireAtMs: number; drawScheduleVersion: string },
 ): void {
   const trimmed = competitionId.trim();
   if (!trimmed) {
@@ -52,6 +53,7 @@ export function saveDrawReminderLocally(
   all[trimmed] = {
     competitionName: input.competitionName,
     fireAtMs: input.fireAtMs,
+    drawScheduleVersion: input.drawScheduleVersion,
   };
   writeAll(all);
 }

@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
+import { DrawScheduleUpdateBanner } from './DrawScheduleUpdateBanner';
 import { PushNotificationBanner } from './PushNotificationBanner';
 import { INFORMATIVE_ONLY_MODE } from '../config/informativeOnlyMode';
 import { defaultLocale, isLocale, withLocale } from '../routes/locales';
@@ -30,6 +31,7 @@ export function MobileHomeHeader() {
 
   return (
     <div className="site-header-sticky">
+      <DrawScheduleUpdateBanner />
       <PushNotificationBanner />
       <header className="site-header">
       {!INFORMATIVE_ONLY_MODE ? (

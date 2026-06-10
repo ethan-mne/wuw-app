@@ -2,6 +2,7 @@ import {
   isApnsConfiguredForPush,
   isDrawReminderCronSecretConfigured,
   isFirebaseConfiguredForPush,
+  isOneSignalConfigured,
   isPushConfiguredForDrawReminders,
 } from '@/server/draw-reminders/cron-secrets';
 import { db } from '@/server/db';
@@ -34,6 +35,7 @@ export async function GET() {
       cronSecretConfigured: isDrawReminderCronSecretConfigured(),
       firebaseConfigured: isFirebaseConfiguredForPush(),
       apnsConfigured: isApnsConfiguredForPush(),
+      oneSignalConfigured: isOneSignalConfigured(),
       pushConfigured: isPushConfiguredForDrawReminders(),
     },
   };

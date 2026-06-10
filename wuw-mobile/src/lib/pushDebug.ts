@@ -42,6 +42,7 @@ export type PushDebugSnapshot = {
   backendHealth: {
     firebaseConfigured: boolean;
     apnsConfigured: boolean;
+    oneSignalConfigured: boolean;
     pushConfigured: boolean;
     cronSecretConfigured: boolean;
     fetchError: string | null;
@@ -79,6 +80,7 @@ async function fetchBackendHealth(): Promise<PushDebugSnapshot['backendHealth']>
     return {
       firebaseConfigured: false,
       apnsConfigured: false,
+      oneSignalConfigured: false,
       pushConfigured: false,
       cronSecretConfigured: false,
       fetchError: 'VITE_API_BASE_URL not set',
@@ -95,6 +97,7 @@ async function fetchBackendHealth(): Promise<PushDebugSnapshot['backendHealth']>
       return {
         firebaseConfigured: false,
         apnsConfigured: false,
+        oneSignalConfigured: false,
         pushConfigured: false,
         cronSecretConfigured: false,
         fetchError: 'Health check timed out',
@@ -104,6 +107,7 @@ async function fetchBackendHealth(): Promise<PushDebugSnapshot['backendHealth']>
       return {
         firebaseConfigured: false,
         apnsConfigured: false,
+        oneSignalConfigured: false,
         pushConfigured: false,
         cronSecretConfigured: false,
         fetchError: `HTTP ${response.status}`,
@@ -113,6 +117,7 @@ async function fetchBackendHealth(): Promise<PushDebugSnapshot['backendHealth']>
       push?: {
         firebaseConfigured?: boolean;
         apnsConfigured?: boolean;
+        oneSignalConfigured?: boolean;
         pushConfigured?: boolean;
         cronSecretConfigured?: boolean;
       };
@@ -120,6 +125,7 @@ async function fetchBackendHealth(): Promise<PushDebugSnapshot['backendHealth']>
     return {
       firebaseConfigured: Boolean(json.push?.firebaseConfigured),
       apnsConfigured: Boolean(json.push?.apnsConfigured),
+      oneSignalConfigured: Boolean(json.push?.oneSignalConfigured),
       pushConfigured: Boolean(json.push?.pushConfigured),
       cronSecretConfigured: Boolean(json.push?.cronSecretConfigured),
       fetchError: null,
@@ -129,6 +135,7 @@ async function fetchBackendHealth(): Promise<PushDebugSnapshot['backendHealth']>
     return {
       firebaseConfigured: false,
       apnsConfigured: false,
+      oneSignalConfigured: false,
       pushConfigured: false,
       cronSecretConfigured: false,
       fetchError: msg,
@@ -293,23 +300,30 @@ function buildChecks(input: {
       status: 'fail',
       detail: input.backendHealth.fetchError,
     });
+  } else if (input.backendHealth.oneSignalConfigured) {
+    checks.push({
+      id: 'backend-onesignal',
+      label: 'Backend OneSignal transport',
+      status: 'ok',
+      detail: 'ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY are configured',
+    });
   } else if (input.platform === 'ios') {
     checks.push({
       id: 'backend-apns',
-      label: 'Backend APNS_* (iOS direct)',
+      label: 'Backend OneSignal transport',
       status: input.backendHealth.apnsConfigured ? 'ok' : 'fail',
       detail: input.backendHealth.apnsConfigured
-        ? 'APNs .p8 configured on server (Render)'
-        : 'Not configured — set APNS_KEY_ID, APNS_TEAM_ID, APNS_KEY_P8 on Render',
+        ? 'APNs is configured but OneSignal is still missing'
+        : 'Not configured — set ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY on Render',
     });
   } else if (input.platform === 'android') {
     checks.push({
       id: 'backend-firebase',
-      label: 'Backend FIREBASE_SERVICE_ACCOUNT_JSON',
+      label: 'Backend OneSignal transport',
       status: input.backendHealth.firebaseConfigured ? 'ok' : 'fail',
       detail: input.backendHealth.firebaseConfigured
-        ? 'Configured on server (Render)'
-        : 'Not configured — Android pushes will be skipped',
+        ? 'Firebase is configured but OneSignal is still missing'
+        : 'Not configured — set ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY on Render',
     });
   } else {
     checks.push({

@@ -15,6 +15,7 @@ export const cacheKeys = {
   competition: (id: string) => `competition:${id}`,
   accountSummary: 'auth:account-summary',
   mobileProfile: 'auth:mobile-profile',
+  calendarFeedSubscription: 'auth:calendar-feed-subscription',
   orderHistory: 'auth:order-history',
   referralUsages: 'auth:referral-usages',
 } as const;

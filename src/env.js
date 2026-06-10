@@ -70,6 +70,8 @@ export const env = createEnv({
     APNS_KEY_P8: z.string().optional(),
     APNS_BUNDLE_ID: z.string().optional(),
     APNS_PRODUCTION: z.string().optional(),
+    ONESIGNAL_APP_ID: z.string().optional(),
+    ONESIGNAL_REST_API_KEY: z.string().optional(),
   },
   /**
    * Specify your client-side environment variables schema here. This way you can ensure the app
@@ -144,6 +146,8 @@ export const env = createEnv({
     APNS_KEY_P8: process.env.APNS_KEY_P8,
     APNS_BUNDLE_ID: process.env.APNS_BUNDLE_ID,
     APNS_PRODUCTION: process.env.APNS_PRODUCTION,
+    ONESIGNAL_APP_ID: process.env.ONESIGNAL_APP_ID,
+    ONESIGNAL_REST_API_KEY: process.env.ONESIGNAL_REST_API_KEY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

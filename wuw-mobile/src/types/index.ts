@@ -36,6 +36,8 @@ export interface Competition {
   endDate: string;
   /** Canonical live draw instant (ISO); from `drawing_date` on the API. */
   drawingDate: string;
+  /** Explicit schedule version from API for local reminder reconciliation. */
+  drawScheduleVersion?: string;
   status: CompetitionStatus;
   /** Competition hero/promo image; excluded from challenge when also in watch gallery. */
   competitionImageUrl?: string | null;
@@ -106,6 +108,12 @@ export interface MobileUserProfile {
   image: string | null;
   /** ISO date string when set */
   emailVerified: string | null;
+}
+
+export interface CalendarFeedSubscription {
+  httpsUrl: string;
+  webcalUrl: string;
+  tokenPreview: string;
 }
 
 /** Router state from login after send-otp succeeds. */

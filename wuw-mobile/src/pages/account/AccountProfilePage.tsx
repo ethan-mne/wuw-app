@@ -20,6 +20,7 @@ import { mobileDataService } from '../../services/mobileDataService';
 import type { MobileUserProfile } from '../../types';
 
 type LoadPhase = 'loading' | 'ok' | 'sign_in_required' | 'error';
+const GOOGLE_CALENDAR_ADD_BY_URL = 'https://calendar.google.com/calendar/u/0/r/settings/addbyurl';
 
 type ProfileFormState = {
   firstName: string;
@@ -100,6 +101,20 @@ export function AccountProfilePage() {
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [calendarBusy, setCalendarBusy] = useState<'copy' | 'regenerate' | 'revoke' | null>(null);
+  const [calendarNotice, setCalendarNotice] = useState<string | null>(null);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
+  const [calendarRevoked, setCalendarRevoked] = useState(false);
+
+  const {
+    data: calendarSubscription,
+    isLoading: calendarLoading,
+    mutate: mutateCalendarSubscription,
+  } = useCachedQuery(
+    cacheKeys.calendarFeedSubscription,
+    () => mobileDataService.getCalendarFeedSubscription(),
+    { enabled: phase === 'ok' },
+  );
 
   const countryOptions = useMemo(
     () => [...PROFILE_COUNTRIES].sort((a, b) => a.name.localeCompare(b.name)),
@@ -197,6 +212,73 @@ export function AccountProfilePage() {
       });
   };
 
+  const copyCalendarLink = async () => {
+    if (!calendarSubscription) {
+      return;
+    }
+    const toCopy = calendarSubscription.webcalUrl || calendarSubscription.httpsUrl;
+    if (!toCopy) {
+      setCalendarError('No calendar link available yet.');
+      return;
+    }
+
+    setCalendarBusy('copy');
+    setCalendarError(null);
+    setCalendarNotice(null);
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(toCopy);
+      } else {
+        const fallback = document.createElement('textarea');
+        fallback.value = toCopy;
+        fallback.setAttribute('readonly', 'true');
+        fallback.style.position = 'absolute';
+        fallback.style.left = '-9999px';
+        document.body.appendChild(fallback);
+        fallback.select();
+        document.execCommand('copy');
+        document.body.removeChild(fallback);
+      }
+      setCalendarNotice('Calendar subscription link copied.');
+    } catch {
+      setCalendarError('Could not copy the calendar link. Try again.');
+    } finally {
+      setCalendarBusy(null);
+    }
+  };
+
+  const regenerateCalendarLink = async () => {
+    setCalendarBusy('regenerate');
+    setCalendarError(null);
+    setCalendarNotice(null);
+    try {
+      const next = await mobileDataService.regenerateCalendarFeedToken();
+      mutateCalendarSubscription(next);
+      setCalendarRevoked(false);
+      setCalendarNotice('Calendar link regenerated. Old link is now invalid.');
+    } catch {
+      setCalendarError('Could not regenerate the calendar link. Try again.');
+    } finally {
+      setCalendarBusy(null);
+    }
+  };
+
+  const revokeCalendarLink = async () => {
+    setCalendarBusy('revoke');
+    setCalendarError(null);
+    setCalendarNotice(null);
+    try {
+      await mobileDataService.revokeCalendarFeedToken();
+      setCalendarRevoked(true);
+      setCalendarNotice('Calendar link revoked. Regenerate to create a new one.');
+    } catch {
+      setCalendarError('Could not revoke the calendar link. Try again.');
+    } finally {
+      setCalendarBusy(null);
+    }
+  };
+
   if (phase === 'loading') {
     return (
       <div
@@ -285,6 +367,125 @@ export function AccountProfilePage() {
                   <dd>{showField(profile.email)}</dd>
                 </div>
               </dl>
+            </div>
+
+            <div className="account-profile-calendar">
+              <h4 className="account-profile-section-title">Subscribed calendar</h4>
+              <p className="account-profile-calendar-copy">
+                Subscribe from Apple or Google Calendar and your draw dates will update automatically.
+              </p>
+              {calendarLoading ? (
+                <p className="account-profile-calendar-meta" role="status">
+                  Preparing your calendar link…
+                </p>
+              ) : calendarSubscription ? (
+                <div className="account-profile-calendar-details">
+                  <p className="account-profile-calendar-meta">
+                    Token: <code>{calendarSubscription.tokenPreview}</code>
+                  </p>
+                  {calendarRevoked ? (
+                    <p className="account-profile-calendar-meta">Current link disabled.</p>
+                  ) : null}
+                  <div className="account-profile-calendar-help">
+                    <p className="account-profile-calendar-help-title">How to subscribe</p>
+                    <ul className="account-profile-calendar-help-list">
+                      <li>iPhone / Apple Calendar: tap “Subscribe now”.</li>
+                      <li>
+                        Google Calendar: copy the HTTPS link, then open{' '}
+                        <a href={GOOGLE_CALENDAR_ADD_BY_URL} target="_blank" rel="noreferrer">
+                          Add by URL
+                        </a>
+                        .
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <p className="account-profile-calendar-meta">Calendar link unavailable.</p>
+              )}
+
+              {calendarError ? <p className="account-profile-calendar-error">{calendarError}</p> : null}
+              {calendarNotice ? (
+                <p className="account-profile-calendar-notice" role="status">
+                  {calendarNotice}
+                </p>
+              ) : null}
+
+              <div className="account-profile-calendar-actions">
+                <button
+                  type="button"
+                  className="checkout-flow-button"
+                  disabled={!calendarSubscription || calendarRevoked || calendarBusy !== null}
+                  onClick={() => {
+                    if (!calendarSubscription || calendarRevoked) {
+                      return;
+                    }
+                    window.location.href = calendarSubscription.webcalUrl;
+                  }}
+                >
+                  Subscribe now
+                </button>
+                <button
+                  type="button"
+                  className="checkout-flow-button checkout-flow-button--ghost"
+                  disabled={!calendarSubscription || calendarRevoked || calendarBusy !== null}
+                  onClick={() => void copyCalendarLink()}
+                >
+                  {calendarBusy === 'copy' ? 'Copying…' : 'Copy link (webcal)'}
+                </button>
+                <button
+                  type="button"
+                  className="checkout-flow-button checkout-flow-button--ghost"
+                  disabled={!calendarSubscription || calendarRevoked || calendarBusy !== null}
+                  onClick={async () => {
+                    if (!calendarSubscription) {
+                      return;
+                    }
+                    setCalendarBusy('copy');
+                    setCalendarError(null);
+                    setCalendarNotice(null);
+                    try {
+                      const url = calendarSubscription.httpsUrl;
+                      if (navigator.clipboard?.writeText) {
+                        await navigator.clipboard.writeText(url);
+                      } else {
+                        const fallback = document.createElement('textarea');
+                        fallback.value = url;
+                        fallback.setAttribute('readonly', 'true');
+                        fallback.style.position = 'absolute';
+                        fallback.style.left = '-9999px';
+                        document.body.appendChild(fallback);
+                        fallback.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(fallback);
+                      }
+                      setCalendarNotice('HTTPS calendar link copied for Google Calendar.');
+                    } catch {
+                      setCalendarError('Could not copy the HTTPS link. Try again.');
+                    } finally {
+                      setCalendarBusy(null);
+                    }
+                  }}
+                >
+                  {calendarBusy === 'copy' ? 'Copying…' : 'Copy link (https)'}
+                </button>
+                <button
+                  type="button"
+                  className="checkout-flow-button checkout-flow-button--ghost"
+                  disabled={calendarBusy !== null}
+                  onClick={() => void regenerateCalendarLink()}
+                >
+                  {calendarBusy === 'regenerate' ? 'Regenerating…' : 'Regenerate link'}
+                </button>
+                <button
+                  type="button"
+                  className="checkout-flow-button checkout-flow-button--ghost"
+                  disabled={calendarBusy !== null || calendarRevoked}
+                  onClick={() => void revokeCalendarLink()}
+                >
+                  {calendarBusy === 'revoke' ? 'Disabling…' : 'Disable link'}
+                </button>
+              </div>
             </div>
 
             <button type="button" className="checkout-flow-button" onClick={startEditing}>

@@ -305,6 +305,9 @@ model User {
   createdAt         DateTime  @default(now())
   emailVerifiedBool Boolean   @default(false)
   updatedAt         DateTime  @default(now())
+  calendarFeedToken          String?   @unique @db.VarChar(128)
+  calendarFeedTokenCreatedAt DateTime?
+  calendarFeedTokenRevokedAt DateTime?
   accounts          Account[]
   sessions          Session[]
   OTP               OTP[]

@@ -9,7 +9,7 @@ import type { Competition, Locale, OrderSummary } from '../types';
 
 export type DrawAlertCompetition = Pick<
   Competition,
-  'id' | 'name' | 'drawingDate' | 'endDate'
+  'id' | 'name' | 'drawingDate' | 'endDate' | 'drawScheduleVersion'
 >;
 
 export function useDrawAlertPrefs(
@@ -84,6 +84,8 @@ export function useDrawAlertPrefs(
         competitionId: id,
         competitionName: competition.name,
         drawingDateIso,
+        endDateIso: competition.endDate,
+        drawScheduleVersion: competition.drawScheduleVersion,
       });
       if (!result.ok) {
         setError(result.message);
