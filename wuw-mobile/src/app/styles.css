@@ -363,9 +363,36 @@ button {
     0 2px 10px rgba(17, 79, 51, 0.2);
 }
 
+.segmented-nav .segment.admin-schedule-filter-tab {
+  border: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.segmented-nav .segment.admin-schedule-filter-tab.active,
+.segmented-nav .segment.admin-schedule-filter-tab[aria-selected='true'],
+.segmented-nav .segment.admin-schedule-filter-tab:focus-visible,
+.segmented-nav .segment.admin-schedule-filter-tab:focus,
+.segmented-nav .segment.admin-schedule-filter-tab:active {
+  background: #114f33;
+  color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 0.25rem 0.85rem rgba(17, 79, 51, 0.35);
+  outline: none;
+}
+
 .field-label {
   color: #334155;
   font-weight: 800;
+}
+
+.admin-schedule-date-time-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
 }
 
 .text-field {

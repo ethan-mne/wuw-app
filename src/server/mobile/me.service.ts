@@ -15,6 +15,7 @@ const mobileProfileSelect = {
   city: true,
   image: true,
   emailVerified: true,
+  is_admin: true,
 } as const;
 
 export type MobileProfileDto = {
@@ -28,6 +29,7 @@ export type MobileProfileDto = {
   city: string | null;
   image: string | null;
   emailVerified: Date | null;
+  isAdmin: boolean;
 };
 
 export const mobileProfileUpdateSchema = z.object({
@@ -50,12 +52,15 @@ export async function getMobileProfile(): Promise<MobileProfileDto> {
   if (!user) {
     throw new MobileHttpError('User not found', 404);
   }
-  return user;
+  return {
+    ...user,
+    isAdmin: user.is_admin,
+  };
 }
 
 export async function updateMobileProfile(input: MobileProfileUpdateInput): Promise<MobileProfileDto> {
   const { userId } = await requireMobileSession('userId');
-  return db.user.update({
+  const user = await db.user.update({
     where: { id: userId },
     data: {
       firstName: input.firstname,
@@ -69,6 +74,10 @@ export async function updateMobileProfile(input: MobileProfileUpdateInput): Prom
     },
     select: mobileProfileSelect,
   });
+  return {
+    ...user,
+    isAdmin: user.is_admin,
+  };
 }
 
 export async function getMobileAccountSummary(): Promise<MobileAccountSummary> {

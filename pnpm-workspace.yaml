@@ -1,5 +1,7 @@
 packages:
   - '.'
+  - 'wuw-mobile'
+  - 'packages/*'
 
 onlyBuiltDependencies:
   - '@prisma/client'

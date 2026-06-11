@@ -108,12 +108,22 @@ export interface MobileUserProfile {
   image: string | null;
   /** ISO date string when set */
   emailVerified: string | null;
+  isAdmin: boolean;
 }
 
 export interface CalendarFeedSubscription {
   httpsUrl: string;
   webcalUrl: string;
   tokenPreview: string;
+}
+
+export interface AdminCompetitionScheduleRow {
+  id: string;
+  name: string;
+  status: 'ACTIVE' | 'NOT_ACTIVE' | 'COMPLETED';
+  drawing_date: string;
+  end_date: string;
+  updatedAt: string;
 }
 
 /** Router state from login after send-otp succeeds. */

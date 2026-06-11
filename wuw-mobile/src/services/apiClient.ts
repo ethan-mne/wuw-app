@@ -9,11 +9,25 @@ export async function apiClient<TResponse>(
   path: string,
   options: RequestOptions = {},
 ): Promise<TResponse> {
-  if (!API_BASE_URL) {
-    throw new Error('VITE_API_BASE_URL is not configured.');
-  }
+  const isBrowser = typeof window !== 'undefined';
+  const isLocalhostBrowser = isBrowser && window.location.hostname === 'localhost';
+  const currentOrigin = isBrowser ? window.location.origin : '';
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  // In local dev, force same-origin `/api/*` so Vite proxy handles backend calls
+  // and browser CORS preflights never target localhost:3000 directly.
+  const shouldForceRelativeApi =
+    isLocalhostBrowser
+    && path.startsWith('/api/')
+    && API_BASE_URL
+    && API_BASE_URL !== currentOrigin;
+
+  const requestUrl = shouldForceRelativeApi
+    ? path
+    : API_BASE_URL
+      ? `${API_BASE_URL}${path}`
+      : path;
+
+  const response = await fetch(requestUrl, {
     ...options,
     headers: {
       'Content-Type': 'application/json',

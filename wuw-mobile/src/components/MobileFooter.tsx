@@ -1,7 +1,12 @@
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { CONTACT_INFO, contactTelHref, contactWhatsAppUrl } from '../data/contactInfo';
+import { useCachedQuery } from '../hooks/useCachedQuery';
+import { cacheKeys } from '../lib/dataCache';
+import { getMobileSessionToken } from '../lib/mobileSessionToken';
 import { defaultLocale, isLocale, withLocale } from '../routes/locales';
+import { mobileDataService } from '../services/mobileDataService';
 import type { Locale } from '../types';
 
 /** Policy pages on the public site (e.g. https://winuwatch.com/en/terms-and-conditions). */
@@ -29,6 +34,25 @@ const legalNav = [
 export function MobileFooter() {
   const params = useParams();
   const locale = isLocale(params.locale) ? params.locale : defaultLocale;
+  const [hasSession, setHasSession] = useState(() => Boolean(getMobileSessionToken()));
+  const { data: mobileProfileResult } = useCachedQuery(
+    cacheKeys.mobileProfile,
+    () => mobileDataService.loadMobileProfile(),
+    { enabled: hasSession },
+  );
+  const isAdmin = mobileProfileResult?.kind === 'ok' ? mobileProfileResult.data.isAdmin : false;
+
+  useEffect(() => {
+    const syncSession = () => {
+      setHasSession(Boolean(getMobileSessionToken()));
+    };
+    window.addEventListener('wuw-mobile-session', syncSession);
+    window.addEventListener('storage', syncSession);
+    return () => {
+      window.removeEventListener('wuw-mobile-session', syncSession);
+      window.removeEventListener('storage', syncSession);
+    };
+  }, []);
 
   return (
     <footer className="mobile-footer">
@@ -78,9 +102,11 @@ export function MobileFooter() {
       </section>
 
       <nav className="footer-legal-nav" aria-label="Legal navigation">
-        <Link className="footer-debug-link" to={withLocale(locale, 'debug/push')}>
-          Push debug
-        </Link>
+        {isAdmin ? (
+          <Link className="footer-debug-link" to={withLocale(locale, 'debug/push')}>
+            Push debug
+          </Link>
+        ) : null}
         {legalNav.map(([label, slug]) => (
           <a
             key={slug}

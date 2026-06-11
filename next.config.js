@@ -23,6 +23,7 @@ const cspHeader = [
 
 /** @type {import("next").NextConfig} */
 const config = {
+  transpilePackages: ['@wuw/mobile-ui'],
   experimental: {
     optimizePackageImports: [
       '@aws-sdk/client-s3',

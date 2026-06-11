@@ -311,7 +311,7 @@ function buildChecks(input: {
     checks.push({
       id: 'backend-apns',
       label: 'Backend OneSignal transport',
-      status: input.backendHealth.apnsConfigured ? 'ok' : 'fail',
+      status: input.backendHealth.apnsConfigured ? 'warn' : 'fail',
       detail: input.backendHealth.apnsConfigured
         ? 'APNs is configured but OneSignal is still missing'
         : 'Not configured — set ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY on Render',
@@ -320,7 +320,7 @@ function buildChecks(input: {
     checks.push({
       id: 'backend-firebase',
       label: 'Backend OneSignal transport',
-      status: input.backendHealth.firebaseConfigured ? 'ok' : 'fail',
+      status: input.backendHealth.firebaseConfigured ? 'warn' : 'fail',
       detail: input.backendHealth.firebaseConfigured
         ? 'Firebase is configured but OneSignal is still missing'
         : 'Not configured — set ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY on Render',

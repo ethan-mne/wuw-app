@@ -1,10 +1,9 @@
-import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 type JoinNextCompetitionLinkProps = {
   joinTo: string | null;
   className: string;
-  children: ReactNode;
+  children: unknown;
   loading?: boolean;
 };
 
@@ -20,14 +19,14 @@ export function JoinNextCompetitionLink({
         className={`${className} join-next-competition-link--disabled`}
         aria-disabled="true"
       >
-        {children}
+        {children as never}
       </span>
     );
   }
 
   return (
     <Link className={className} to={joinTo}>
-      {children}
+      {children as never}
     </Link>
   );
 }

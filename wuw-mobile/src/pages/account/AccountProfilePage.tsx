@@ -1,4 +1,5 @@
 import { type FormEvent, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
 
 import { Card, PageHeader } from '../../components/ui';
 import {
@@ -16,11 +17,13 @@ import {
 import { AccountNav } from '../../features/account/AccountNav';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { cacheKeys } from '../../lib/dataCache';
+import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { MobileUserProfile } from '../../types';
 
 type LoadPhase = 'loading' | 'ok' | 'sign_in_required' | 'error';
 const GOOGLE_CALENDAR_ADD_BY_URL = 'https://calendar.google.com/calendar/u/0/r/settings/addbyurl';
+const ADMIN_DASHBOARD_ENTRY = 'dashboard/competitions/schedule';
 
 type ProfileFormState = {
   firstName: string;
@@ -82,6 +85,8 @@ function PhoneReadonly({ phone }: { phone: string | null | undefined }) {
 }
 
 export function AccountProfilePage() {
+  const params = useParams();
+  const locale = isLocale(params.locale) ? params.locale : defaultLocale;
   const {
     data: result,
     isLoading,
@@ -491,6 +496,15 @@ export function AccountProfilePage() {
             <button type="button" className="checkout-flow-button" onClick={startEditing}>
               Edit details
             </button>
+            {profile.isAdmin ? (
+              <button
+                type="button"
+                className="checkout-flow-button checkout-flow-button--ghost"
+                onClick={() => window.location.assign(withLocale(locale, ADMIN_DASHBOARD_ENTRY))}
+              >
+                Open admin dashboard
+              </button>
+            ) : null}
           </>
         ) : (
           <form className="checkout-form account-profile-form" onSubmit={onSubmit}>

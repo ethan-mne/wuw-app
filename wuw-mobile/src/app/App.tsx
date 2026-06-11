@@ -14,6 +14,7 @@ import { AccountHistoryPage } from '../pages/account/AccountHistoryPage';
 import { AccountProfilePage } from '../pages/account/AccountProfilePage';
 import { AccountRedeemFreeTicketPage } from '../pages/account/AccountRedeemFreeTicketPage';
 import { AccountReferralsPage } from '../pages/account/AccountReferralsPage';
+import { AdminCompetitionSchedulePage } from '../pages/admin/AdminCompetitionSchedulePage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { VerificationPage } from '../pages/auth/VerificationPage';
 import { CheckoutPage } from '../pages/competitions/CheckoutPage';
@@ -106,6 +107,10 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to={`/${defaultLocale}`} replace />} />
+      <Route
+        path="/dashboard/competitions/schedule"
+        element={<Navigate to={`/${defaultLocale}/dashboard/competitions/schedule`} replace />}
+      />
       <Route path="/:locale" element={<MobileShell />}>
         <Route path="login" element={<LoginPage />} />
         <Route path="verification" element={<VerificationPage />} />
@@ -125,6 +130,7 @@ export default function App() {
         <Route path="account/profile" element={<AccountProfilePage />} />
         <Route path="account/history" element={<AccountHistoryPage />} />
         <Route path="account/referrals" element={<AccountReferralsPage />} />
+        <Route path="dashboard/competitions/schedule" element={<AdminCompetitionSchedulePage />} />
         <Route path="winners" element={<WinnersPage />} />
         <Route path="debug/push" element={<PushDebugPage />} />
         {supportPages.map((page) => (

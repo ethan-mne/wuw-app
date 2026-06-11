@@ -5,9 +5,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 const EXIT_ANIMATION_MS = 320;
 const MAX_SPLASH_MS = 5000;
 
-export function useAppSplash() {
+type UseAppSplashOptions = {
+  disabled?: boolean;
+};
+
+export function useAppSplash(options: UseAppSplashOptions = {}) {
+  const { disabled = false } = options;
   const [exiting, setExiting] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState(disabled);
   const dismissedRef = useRef(false);
 
   useEffect(() => {
@@ -27,6 +32,14 @@ export function useAppSplash() {
 
     void hideNativeSplash();
 
+    if (disabled) {
+      dismissedRef.current = true;
+      setDone(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const fallbackTimer = window.setTimeout(() => {
       if (!cancelled && !dismissedRef.current) {
         dismissedRef.current = true;
@@ -43,9 +56,12 @@ export function useAppSplash() {
       cancelled = true;
       window.clearTimeout(fallbackTimer);
     };
-  }, []);
+  }, [disabled]);
 
   const onVideoEnded = useCallback(() => {
+    if (disabled) {
+      return;
+    }
     if (dismissedRef.current) {
       return;
     }
@@ -55,7 +71,7 @@ export function useAppSplash() {
     window.setTimeout(() => {
       setDone(true);
     }, EXIT_ANIMATION_MS);
-  }, []);
+  }, [disabled]);
 
   return {
     showSplash: !done,

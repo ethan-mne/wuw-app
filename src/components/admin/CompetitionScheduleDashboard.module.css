@@ -1,0 +1,95 @@
+.container {
+  display: grid;
+  gap: 1rem;
+  max-width: 68rem;
+}
+
+.helper {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.error {
+  margin: 0;
+  color: #b42318;
+}
+
+.cardList {
+  display: grid;
+  gap: 1rem;
+}
+
+.filterTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.filterTabButton {
+  min-width: 7rem;
+}
+
+.cardTitle {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.fieldGrid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field span {
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.input {
+  min-height: 2.8rem;
+}
+
+.actionRow {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: start;
+}
+
+.saveButton {
+  min-width: 10rem;
+}
+
+.rowMessage {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+}
+
+.rowMessageSuccess {
+  color: #137333;
+}
+
+.rowMessageError {
+  color: #b42318;
+}
+
+@media (min-width: 760px) {
+  .fieldGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

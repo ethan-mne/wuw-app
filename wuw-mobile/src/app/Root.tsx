@@ -6,7 +6,9 @@ import { useAppSplash } from '../hooks/useAppSplash';
 import App from './App';
 
 export function Root() {
-  const { showSplash, exiting, onVideoEnded } = useAppSplash();
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  const skipSplash = /\/dashboard\/competitions\/schedule\/?$/.test(pathname);
+  const { showSplash, exiting, onVideoEnded } = useAppSplash({ disabled: skipSplash });
 
   return (
     <>

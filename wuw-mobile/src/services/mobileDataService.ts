@@ -8,6 +8,7 @@ import {
   syncPushTokenIfPermitted,
 } from '../lib/pushNotifications';
 import type {
+  AdminCompetitionScheduleRow,
   AccountSummary,
   CalendarFeedSubscription,
   Competition,
@@ -235,6 +236,12 @@ function normalizeMobileProfile(raw: unknown): MobileUserProfile | null {
   if (typeof o.email !== 'string') {
     return null;
   }
+  const isAdmin =
+    typeof o.isAdmin === 'boolean'
+      ? o.isAdmin
+      : typeof o.is_admin === 'boolean'
+        ? o.is_admin
+        : false;
   return {
     firstName: optStr(o.firstName),
     lastName: optStr(o.lastName),
@@ -246,6 +253,7 @@ function normalizeMobileProfile(raw: unknown): MobileUserProfile | null {
     city: optStr(o.city),
     image: optStr(o.image),
     emailVerified: normalizeEmailVerified(o.emailVerified),
+    isAdmin,
   };
 }
 
@@ -382,6 +390,11 @@ export type DrawsTimelineSeed = {
 export type DrawsTimelinePage = {
   items: Competition[];
   hasMore: boolean;
+};
+
+type UpdateAdminCompetitionSchedulePayload = {
+  drawingDate: string;
+  endDate: string;
 };
 
 export type DrawReminderTargetCompetition = Pick<
@@ -614,6 +627,25 @@ export const mobileDataService = {
     await apiClient<{ ok: boolean }>('/api/mobile/v1/me/calendar-feed', {
       method: 'DELETE',
     });
+  },
+  listAdminCompetitionSchedules: async (): Promise<AdminCompetitionScheduleRow[]> => {
+    const response = await apiClient<ApiDataResponse<AdminCompetitionScheduleRow[]>>(
+      '/api/admin/v1/competitions',
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  },
+  updateAdminCompetitionSchedule: async (
+    competitionId: string,
+    payload: UpdateAdminCompetitionSchedulePayload,
+  ): Promise<AdminCompetitionScheduleRow> => {
+    const response = await apiClient<ApiDataResponse<AdminCompetitionScheduleRow>>(
+      `/api/admin/v1/competitions/${encodeURIComponent(competitionId)}/schedule`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      },
+    );
+    return response.data;
   },
   redeemFreeTicket,
   listReferralUsages,

@@ -1,5 +1,9 @@
-import type { PropsWithChildren, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Card as SharedCard,
+  PageHeader as SharedPageHeader,
+  StatPill as SharedStatPill,
+} from '@wuw/mobile-ui';
 
 interface PageHeaderProps {
   eyebrow?: string;
@@ -8,29 +12,28 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ eyebrow, title, description }: PageHeaderProps) {
-  return (
-    <header className="page-header">
-      {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
-      <h2>{title}</h2>
-      {description ? <p>{description}</p> : null}
-    </header>
-  );
+  return <SharedPageHeader eyebrow={eyebrow} title={title} description={description} />;
 }
 
-export function Card({ children }: PropsWithChildren) {
-  return <section className="card">{children}</section>;
+interface CardProps {
+  children: unknown;
+  className?: string;
+}
+
+export function Card({ children, className }: CardProps) {
+  return <SharedCard className={className}>{children}</SharedCard>;
 }
 
 interface ActionLinkProps {
   to: string;
-  children: ReactNode;
+  children: unknown;
   variant?: 'primary' | 'secondary';
 }
 
 export function ActionLink({ to, children, variant = 'primary' }: ActionLinkProps) {
   return (
     <Link className={`action-link ${variant}`} to={to}>
-      {children}
+      {children as never}
     </Link>
   );
 }
@@ -41,10 +44,5 @@ interface StatPillProps {
 }
 
 export function StatPill({ label, value }: StatPillProps) {
-  return (
-    <div className="stat-pill">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
+  return <SharedStatPill label={label} value={value} />;
 }
