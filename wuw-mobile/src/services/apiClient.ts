@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../lib/config';
 import { mobileAuthHeaders } from '../lib/mobileSessionToken';
+import { Capacitor } from '@capacitor/core';
 
 type RequestOptions = Omit<RequestInit, 'headers'> & {
   headers?: Record<string, string>;
@@ -10,13 +11,16 @@ export async function apiClient<TResponse>(
   options: RequestOptions = {},
 ): Promise<TResponse> {
   const isBrowser = typeof window !== 'undefined';
+  const isNative = Capacitor.isNativePlatform();
   const isLocalhostBrowser = isBrowser && window.location.hostname === 'localhost';
   const currentOrigin = isBrowser ? window.location.origin : '';
 
   // In local dev, force same-origin `/api/*` so Vite proxy handles backend calls
   // and browser CORS preflights never target localhost:3000 directly.
   const shouldForceRelativeApi =
-    isLocalhostBrowser
+    !isNative
+    && isBrowser
+    && isLocalhostBrowser
     && path.startsWith('/api/')
     && API_BASE_URL
     && API_BASE_URL !== currentOrigin;
