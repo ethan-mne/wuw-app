@@ -22,6 +22,68 @@ type OneSignalApiResponse = {
 
 const ONESIGNAL_API_URL = 'https://api.onesignal.com/notifications';
 const ONESIGNAL_SUBSCRIPTIONS_CHUNK = 2_000;
+const ONESIGNAL_V2_APP_KEY_PREFIX = 'os_v2_app_';
+
+export type OneSignalRestApiKeyFormat =
+  | 'missing'
+  | 'v2_app_key'
+  | 'legacy'
+  | 'invalid';
+
+export function normalizeOneSignalRestApiKey(raw: string | undefined): string {
+  let value = raw?.trim() ?? '';
+  if (
+    (value.startsWith('"') && value.endsWith('"'))
+    || (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    value = value.slice(1, -1).trim();
+  }
+  if (/^key\s+/i.test(value)) {
+    value = value.replace(/^key\s+/i, '').trim();
+  }
+  if (/^basic\s+/i.test(value)) {
+    value = value.replace(/^basic\s+/i, '').trim();
+  }
+  return value;
+}
+
+export function describeOneSignalRestApiKeyFormat(
+  raw: string | undefined,
+): OneSignalRestApiKeyFormat {
+  const normalized = normalizeOneSignalRestApiKey(raw);
+  if (!normalized) {
+    return 'missing';
+  }
+  if (normalized.startsWith(ONESIGNAL_V2_APP_KEY_PREFIX)) {
+    return 'v2_app_key';
+  }
+  // Legacy REST API keys were long opaque strings (not os_v2_app_*).
+  if (/^[A-Za-z0-9_-]{20,}$/.test(normalized)) {
+    return 'legacy';
+  }
+  return 'invalid';
+}
+
+function buildOneSignalAuthorizationHeader(restApiKey: string): string {
+  return `Key ${restApiKey}`;
+}
+
+function accessDeniedHint(keyFormat: OneSignalRestApiKeyFormat): string {
+  if (keyFormat === 'legacy') {
+    return 'ONESIGNAL_REST_API_KEY looks like a legacy REST API key. OneSignal requires a new App API Key (starts with os_v2_app_) from Settings → Keys & IDs.';
+  }
+  return 'Check ONESIGNAL_REST_API_KEY on the server: use the App API Key from OneSignal → Settings → Keys & IDs (starts with os_v2_app_). Do not use the User Auth Key or Organization API Key.';
+}
+
+function enrichOneSignalAuthErrorMessage(
+  errorMessage: string,
+  keyFormat: OneSignalRestApiKeyFormat,
+): string {
+  if (!/access denied/i.test(errorMessage)) {
+    return errorMessage;
+  }
+  return `${errorMessage} ${accessDeniedHint(keyFormat)}`;
+}
 
 function tokenPrefix(token: string): string {
   if (token.length <= 12) {
@@ -43,11 +105,15 @@ function chunk<T>(items: T[], size: number): T[][] {
 
 export function getOneSignalConfig(): { appId: string; restApiKey: string } | null {
   const appId = process.env.ONESIGNAL_APP_ID?.trim();
-  const restApiKey = process.env.ONESIGNAL_REST_API_KEY?.trim();
+  const restApiKey = normalizeOneSignalRestApiKey(process.env.ONESIGNAL_REST_API_KEY);
   if (!appId || !restApiKey) {
     return null;
   }
   return { appId, restApiKey };
+}
+
+export function getOneSignalRestApiKeyFormat(): OneSignalRestApiKeyFormat {
+  return describeOneSignalRestApiKeyFormat(process.env.ONESIGNAL_REST_API_KEY);
 }
 
 export function isOneSignalConfigured(): boolean {
@@ -142,12 +208,14 @@ async function sendOneSignalChunk(params: {
     });
   }
 
+  const keyFormat = describeOneSignalRestApiKeyFormat(process.env.ONESIGNAL_REST_API_KEY);
+
   try {
     const response = await fetch(ONESIGNAL_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Key ${config.restApiKey}`,
+        Authorization: buildOneSignalAuthorizationHeader(config.restApiKey),
       },
       body: JSON.stringify({
         app_id: config.appId,
@@ -169,7 +237,10 @@ async function sendOneSignalChunk(params: {
     const errorSummary = summarizeOneSignalErrors(json.errors);
 
     if (!response.ok) {
-      const errorMessage = errorSummary ?? `OneSignal HTTP ${response.status}`;
+      const errorMessage = enrichOneSignalAuthErrorMessage(
+        errorSummary ?? `OneSignal HTTP ${response.status}`,
+        keyFormat,
+      );
       return failureResult({
         subscriptionIds: params.subscriptionIds,
         invalidSubscriptionIds,
@@ -179,11 +250,13 @@ async function sendOneSignalChunk(params: {
     }
 
     if (!hasNotificationId(json)) {
-      const errorMessage =
+      const errorMessage = enrichOneSignalAuthErrorMessage(
         errorSummary
         ?? (invalidSubscriptionIds.length > 0
           ? 'OneSignal rejected all subscription ids'
-          : 'OneSignal did not create the notification (no valid subscriptions)');
+          : 'OneSignal did not create the notification (no valid subscriptions)'),
+        keyFormat,
+      );
       return failureResult({
         subscriptionIds: params.subscriptionIds,
         invalidSubscriptionIds,

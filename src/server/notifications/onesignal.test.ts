@@ -1,8 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
-import { sendOneSignalPushMulticast } from '@/server/notifications/onesignal';
+import {
+  describeOneSignalRestApiKeyFormat,
+  normalizeOneSignalRestApiKey,
+  sendOneSignalPushMulticast,
+} from '@/server/notifications/onesignal';
 
 const SAMPLE_ONESIGNAL = '67bb7c7b-9721-4b67-a2a2-2ca2e8fd7f75';
+
+describe('OneSignal REST API key normalization', () => {
+  it('strips Key prefix and quotes from env values', () => {
+    expect(normalizeOneSignalRestApiKey('Key os_v2_app_abc123')).toBe('os_v2_app_abc123');
+    expect(normalizeOneSignalRestApiKey('"os_v2_app_abc123"')).toBe('os_v2_app_abc123');
+  });
+
+  it('detects v2 app keys vs legacy keys', () => {
+    expect(describeOneSignalRestApiKeyFormat('os_v2_app_abc123')).toBe('v2_app_key');
+    expect(describeOneSignalRestApiKeyFormat('a-very-long-legacy-rest-api-key-value')).toBe('legacy');
+  });
+});
 
 describe('sendOneSignalPushMulticast response parsing', () => {
   it('treats HTTP 200 with empty id and dispatch errors as failure', async () => {

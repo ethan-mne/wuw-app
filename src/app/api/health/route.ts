@@ -6,6 +6,7 @@ import {
   isPushConfiguredForDrawReminders,
 } from '@/server/draw-reminders/cron-secrets';
 import { db } from '@/server/db';
+import { getOneSignalRestApiKeyFormat } from '@/server/notifications/onesignal';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -36,6 +37,7 @@ export async function GET() {
       firebaseConfigured: isFirebaseConfiguredForPush(),
       apnsConfigured: isApnsConfiguredForPush(),
       oneSignalConfigured: isOneSignalConfigured(),
+      oneSignalRestApiKeyFormat: getOneSignalRestApiKeyFormat(),
       pushConfigured: isPushConfiguredForDrawReminders(),
     },
   };
