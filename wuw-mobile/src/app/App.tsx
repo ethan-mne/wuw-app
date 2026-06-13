@@ -4,6 +4,7 @@ import type { PluginListenerHandle } from '@capacitor/core';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { MobileShell } from '../components/MobileShell';
+import { AdminRoute } from '../components/AdminRoute';
 import { legalPages, supportPages } from '../data/content';
 import { getMobileSessionToken } from '../lib/mobileSessionToken';
 import { reconcileDrawReminders } from '../lib/drawReminderSubscribe';
@@ -132,9 +133,23 @@ export default function App() {
         <Route path="account/profile" element={<AccountProfilePage />} />
         <Route path="account/history" element={<AccountHistoryPage />} />
         <Route path="account/referrals" element={<AccountReferralsPage />} />
-        <Route path="dashboard/competitions/schedule" element={<AdminCompetitionSchedulePage />} />
+        <Route
+          path="dashboard/competitions/schedule"
+          element={
+            <AdminRoute>
+              <AdminCompetitionSchedulePage />
+            </AdminRoute>
+          }
+        />
         <Route path="winners" element={<WinnersPage />} />
-        <Route path="debug/push" element={<PushDebugPage />} />
+        <Route
+          path="debug/push"
+          element={
+            <AdminRoute>
+              <PushDebugPage />
+            </AdminRoute>
+          }
+        />
         {supportPages.map((page) => (
           <Route
             key={page.path}

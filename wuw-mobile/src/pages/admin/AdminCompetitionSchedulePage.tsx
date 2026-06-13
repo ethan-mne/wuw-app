@@ -1,20 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { Card, PageHeader, StatPill } from '../../components/ui';
-import {
-  AccountDataError,
-  AccountSignInRequired,
-} from '../../features/account/AccountFetchFallback';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { cacheKeys } from '../../lib/dataCache';
+import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { AdminCompetitionScheduleRow } from '../../types';
 
 type EditState = {
   drawingDate: string;
-  drawingTime: string;
   endDate: string;
-  endTime: string;
 };
 
 type SaveState = {
@@ -39,28 +34,10 @@ function toIsoString(localDateTime: string): string {
   return new Date(localDateTime).toISOString();
 }
 
-function splitLocalDateTime(value: string): { date: string; time: string } {
-  const [date = '', time = ''] = value.split('T');
-  return { date, time };
-}
-
-function isValidLocalDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split('-').map(Number);
-  const parsed = new Date(year, month - 1, day);
-  return (
-    parsed.getFullYear() === year
-    && parsed.getMonth() === month - 1
-    && parsed.getDate() === day
-  );
-}
-
-function joinLocalDateTime(date: string, time: string): string {
-  return `${date}T${time}`;
-}
-
-function isValid24hTime(value: string): boolean {
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+function isValidDateTimeLocal(value: string): boolean {
+  if (!value.includes('T')) return false;
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime());
 }
 
 function formatStatusLabel(status: AdminCompetitionScheduleRow['status']): string {
@@ -88,6 +65,33 @@ function formatDateTime24h(value: string): string {
   }).format(new Date(value));
 }
 
+function ScheduleCompetitionThumb({
+  imageUrl,
+  name,
+}: {
+  imageUrl: string | null;
+  name: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const src = resolveMediaUrl(imageUrl ?? '');
+
+  if (!src || failed) {
+    return <div className="draws-thumb draws-thumb--fallback" aria-hidden />;
+  }
+
+  return (
+    <div className="draws-thumb">
+      <img
+        src={src}
+        alt={name}
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
+
 export function AdminCompetitionSchedulePage() {
   const { data: profileResult, isLoading: profileLoading } = useCachedQuery(
     cacheKeys.mobileProfile,
@@ -99,14 +103,10 @@ export function AdminCompetitionSchedulePage() {
   const [loadError, setLoadError] = useState('');
   const [edits, setEdits] = useState<Record<string, EditState>>({});
   const [saveState, setSaveState] = useState<Record<string, SaveState>>({});
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-
-  const isSignedIn = profileResult?.kind === 'ok';
-  const isAdmin = isSignedIn ? profileResult.data.isAdmin : false;
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ACTIVE');
 
   useEffect(() => {
-    if (!isAdmin) {
-      setLoading(false);
+    if (profileLoading || profileResult?.kind !== 'ok' || !profileResult.data.isAdmin) {
       return;
     }
 
@@ -122,13 +122,9 @@ export function AdminCompetitionSchedulePage() {
         setRows(filteredList);
         const nextEdits: Record<string, EditState> = {};
         filteredList.forEach((row) => {
-          const drawing = splitLocalDateTime(toDateTimeLocalValue(row.drawing_date));
-          const end = splitLocalDateTime(toDateTimeLocalValue(row.end_date));
           nextEdits[row.id] = {
-            drawingDate: drawing.date,
-            drawingTime: drawing.time,
-            endDate: end.date,
-            endTime: end.time,
+            drawingDate: toDateTimeLocalValue(row.drawing_date),
+            endDate: toDateTimeLocalValue(row.end_date),
           };
         });
         setEdits(nextEdits);
@@ -147,7 +143,7 @@ export function AdminCompetitionSchedulePage() {
     return () => {
       cancelled = true;
     };
-  }, [isAdmin]);
+  }, [profileLoading, profileResult]);
 
   const sortedRows = useMemo(
     () =>
@@ -174,7 +170,7 @@ export function AdminCompetitionSchedulePage() {
 
   const saveRow = async (rowId: string) => {
     const currentEdit = edits[rowId];
-    if (!currentEdit?.drawingDate || !currentEdit?.drawingTime || !currentEdit.endDate || !currentEdit?.endTime) {
+    if (!currentEdit?.drawingDate || !currentEdit.endDate) {
       setSaveState((prev) => ({
         ...prev,
         [rowId]: {
@@ -187,29 +183,14 @@ export function AdminCompetitionSchedulePage() {
       }));
       return;
     }
-    if (!isValid24hTime(currentEdit.drawingTime) || !isValid24hTime(currentEdit.endTime)) {
+    if (!isValidDateTimeLocal(currentEdit.drawingDate) || !isValidDateTimeLocal(currentEdit.endDate)) {
       setSaveState((prev) => ({
         ...prev,
         [rowId]: {
           saving: false,
           notifyingCompetition: prev[rowId]?.notifyingCompetition ?? false,
           notifyingSchedule: prev[rowId]?.notifyingSchedule ?? false,
-          message: 'Time must use 24h format (HH:mm)',
-          isError: true,
-        },
-      }));
-      return;
-    }
-    const drawingLocalDate = currentEdit.drawingDate;
-    const endLocalDate = currentEdit.endDate;
-    if (!isValidLocalDate(drawingLocalDate) || !isValidLocalDate(endLocalDate)) {
-      setSaveState((prev) => ({
-        ...prev,
-        [rowId]: {
-          saving: false,
-          notifyingCompetition: prev[rowId]?.notifyingCompetition ?? false,
-          notifyingSchedule: prev[rowId]?.notifyingSchedule ?? false,
-          message: 'Enter a valid date',
+          message: 'Enter a valid date and time',
           isError: true,
         },
       }));
@@ -229,8 +210,8 @@ export function AdminCompetitionSchedulePage() {
 
     try {
       const updated = await mobileDataService.updateAdminCompetitionSchedule(rowId, {
-        drawingDate: toIsoString(joinLocalDateTime(drawingLocalDate, currentEdit.drawingTime)),
-        endDate: toIsoString(joinLocalDateTime(endLocalDate, currentEdit.endTime)),
+        drawingDate: toIsoString(currentEdit.drawingDate),
+        endDate: toIsoString(currentEdit.endDate),
       });
 
       setRows((prev) =>
@@ -489,35 +470,7 @@ export function AdminCompetitionSchedulePage() {
     }
   };
 
-  if (profileLoading) {
-    return (
-      <div className="home-competitions-loading page-content-pad" role="status" aria-live="polite">
-        <span className="home-competitions-loading-spinner" aria-hidden />
-        <span className="sr-only">Loading admin dashboard...</span>
-      </div>
-    );
-  }
-
-  if (profileResult?.kind === 'sign_in_required') {
-    return <AccountSignInRequired pageTitle="Admin dashboard" />;
-  }
-
-  if (profileResult?.kind === 'error') {
-    return <AccountDataError pageTitle="Admin dashboard" onRetry={() => window.location.reload()} />;
-  }
-
-  if (!isSignedIn || !isAdmin) {
-    return (
-      <section className="page-stack page-content-pad">
-        <PageHeader eyebrow="Admin" title="Dashboard" description="Admin access required." />
-        <Card>
-          <p>You do not have access to this page.</p>
-        </Card>
-      </section>
-    );
-  }
-
-  if (loading) {
+  if (profileLoading || loading) {
     return (
       <section className="page-stack page-content-pad">
         <PageHeader eyebrow="Admin" title="Competition Schedule" />
@@ -588,15 +541,13 @@ export function AdminCompetitionSchedulePage() {
       {visibleRows.map((row) => {
         const state = saveState[row.id];
         const rowEdit = edits[row.id];
-        const originalEnd = splitLocalDateTime(toDateTimeLocalValue(row.end_date));
-        const originalDrawing = splitLocalDateTime(toDateTimeLocalValue(row.drawing_date));
+        const originalEndDate = toDateTimeLocalValue(row.end_date);
+        const originalDrawingDate = toDateTimeLocalValue(row.drawing_date);
         const hasScheduleChanges = Boolean(
           rowEdit
           && (
-            rowEdit.endDate !== originalEnd.date
-            || rowEdit.endTime !== originalEnd.time
-            || rowEdit.drawingDate !== originalDrawing.date
-            || rowEdit.drawingTime !== originalDrawing.time
+            rowEdit.endDate !== originalEndDate
+            || rowEdit.drawingDate !== originalDrawingDate
           ),
         );
         const canNotifyCompetition = row.status === 'ACTIVE' && !row.announcementSentAt;
@@ -604,82 +555,57 @@ export function AdminCompetitionSchedulePage() {
 
         return (
           <Card key={row.id}>
-            <h3>{row.name}</h3>
-            <div className="stats-grid">
-              <StatPill label="Status" value={formatStatusLabel(row.status)} />
-              <StatPill label="Updated" value={formatDateTime24h(row.updatedAt)} />
+            <div className="admin-schedule-card-header">
+              <ScheduleCompetitionThumb imageUrl={row.imageUrl} name={row.name} />
+              <div className="admin-schedule-card-copy">
+                <h3>{row.name}</h3>
+                <div className="stats-grid">
+                  <StatPill label="Status" value={formatStatusLabel(row.status)} />
+                  <StatPill label="Updated" value={formatDateTime24h(row.updatedAt)} />
+                </div>
+              </div>
             </div>
 
-            <label className="field-label" htmlFor={`${row.id}-end-date`}>
-              End date
-            </label>
-            <div className="admin-schedule-date-time-grid">
+            <div className="admin-schedule-field">
+              <label className="field-label" htmlFor={`${row.id}-end-datetime`}>
+                End date & time
+              </label>
               <input
-                id={`${row.id}-end-date`}
+                id={`${row.id}-end-datetime`}
                 className="text-field text-field--picker"
-                type="date"
+                type="datetime-local"
+                step="60"
+                lang="en-GB"
                 value={rowEdit?.endDate ?? ''}
                 onChange={(event) =>
                   setEdits((prev) => ({
                     ...prev,
                     [row.id]: {
-                      ...(prev[row.id] ?? { drawingDate: '', drawingTime: '', endDate: '', endTime: '' }),
+                      ...(prev[row.id] ?? { drawingDate: '', endDate: '' }),
                       endDate: event.target.value,
-                    },
-                  }))
-                }
-              />
-              <input
-                id={`${row.id}-end-time`}
-                className="text-field text-field--picker"
-                type="time"
-                step="60"
-                lang="en-GB"
-                value={rowEdit?.endTime ?? ''}
-                onChange={(event) =>
-                  setEdits((prev) => ({
-                    ...prev,
-                    [row.id]: {
-                      ...(prev[row.id] ?? { drawingDate: '', drawingTime: '', endDate: '', endTime: '' }),
-                      endTime: event.target.value,
                     },
                   }))
                 }
               />
             </div>
 
-            <label className="field-label" htmlFor={`${row.id}-draw-date`}>
-              Draw date
-            </label>
-            <div className="admin-schedule-date-time-grid">
+            <div className="admin-schedule-field">
+              <label className="field-label" htmlFor={`${row.id}-draw-datetime`}>
+                Draw date & time
+              </label>
               <input
-                id={`${row.id}-draw-date`}
+                id={`${row.id}-draw-datetime`}
                 className="text-field text-field--picker"
-                type="date"
+                type="datetime-local"
+                step="60"
+                lang="en-GB"
                 value={rowEdit?.drawingDate ?? ''}
                 onChange={(event) =>
                   setEdits((prev) => ({
                     ...prev,
                     [row.id]: {
-                      ...(prev[row.id] ?? { drawingDate: '', drawingTime: '', endDate: '', endTime: '' }),
+                      ...(prev[row.id] ?? { drawingDate: '', endDate: '' }),
                       drawingDate: event.target.value,
-                    },
-                  }))
-                }
-              />
-              <input
-                id={`${row.id}-draw-time`}
-                className="text-field text-field--picker"
-                type="time"
-                step="60"
-                lang="en-GB"
-                value={rowEdit?.drawingTime ?? ''}
-                onChange={(event) =>
-                  setEdits((prev) => ({
-                    ...prev,
-                    [row.id]: {
-                      ...(prev[row.id] ?? { drawingDate: '', drawingTime: '', endDate: '', endTime: '' }),
-                      drawingTime: event.target.value,
                     },
                   }))
                 }

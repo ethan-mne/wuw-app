@@ -11,6 +11,16 @@ const adminCompetitionScheduleBaseSelect = {
   end_date: true,
   drawing_date: true,
   updatedAt: true,
+  comp_image_url: true,
+  Watches: {
+    select: {
+      images_url: {
+        select: { url: true },
+        orderBy: { createdAt: 'asc' as const },
+        take: 1,
+      },
+    },
+  },
   announcementSent: {
     select: {
       sentAt: true,
@@ -42,6 +52,7 @@ export type AdminCompetitionScheduleRow = {
   end_date: Date;
   drawing_date: Date;
   updatedAt: Date;
+  imageUrl: string | null;
   announcementSentAt: Date | null;
   scheduleAnnouncementSentAt: Date | null;
 };
@@ -66,6 +77,16 @@ export type UpdateCompetitionScheduleInput = z.infer<
   typeof updateCompetitionScheduleInputSchema
 >;
 
+function resolveScheduleImageUrl(row: {
+  comp_image_url: string | null;
+  Watches: { images_url: Array<{ url: string }> } | null;
+}): string | null {
+  const fromWatch = row.Watches?.images_url[0]?.url?.trim() ?? '';
+  if (fromWatch) return fromWatch;
+  const fromCompetition = row.comp_image_url?.trim() ?? '';
+  return fromCompetition || null;
+}
+
 function mapAdminCompetitionScheduleRow(
   row: {
     id: string;
@@ -74,6 +95,8 @@ function mapAdminCompetitionScheduleRow(
     end_date: Date;
     drawing_date: Date;
     updatedAt: Date;
+    comp_image_url: string | null;
+    Watches: { images_url: Array<{ url: string }> } | null;
     announcementSent: { sentAt: Date } | null;
     scheduleAnnouncementSent?: { sentAt: Date } | null;
   },
@@ -85,6 +108,7 @@ function mapAdminCompetitionScheduleRow(
     end_date: row.end_date,
     drawing_date: row.drawing_date,
     updatedAt: row.updatedAt,
+    imageUrl: resolveScheduleImageUrl(row),
     announcementSentAt: row.announcementSent?.sentAt ?? null,
     scheduleAnnouncementSentAt: row.scheduleAnnouncementSent?.sentAt ?? null,
   };

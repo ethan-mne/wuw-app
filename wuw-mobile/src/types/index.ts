@@ -124,6 +124,7 @@ export interface AdminCompetitionScheduleRow {
   drawing_date: string;
   end_date: string;
   updatedAt: string;
+  imageUrl: string | null;
   announcementSentAt: string | null;
   scheduleAnnouncementSentAt: string | null;
 }

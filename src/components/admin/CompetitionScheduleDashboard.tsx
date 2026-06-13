@@ -12,6 +12,7 @@ type CompetitionScheduleRow = {
   drawing_date: string;
   end_date: string;
   updatedAt: string;
+  imageUrl: string | null;
   announcementSentAt: string | null;
   scheduleAnnouncementSentAt: string | null;
 };
@@ -94,13 +95,40 @@ function formatDateTime24h(value: string): string {
   }).format(new Date(value));
 }
 
+function ScheduleCompetitionThumb({
+  imageUrl,
+  name,
+}: {
+  imageUrl: string | null;
+  name: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const src = imageUrl?.trim() ?? '';
+
+  if (!src || failed) {
+    return <div className={`${css.thumb} ${css.thumbFallback}`} aria-hidden />;
+  }
+
+  return (
+    <div className={css.thumb}>
+      <img
+        src={src}
+        alt={name}
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
+
 export function CompetitionScheduleDashboard() {
   const [rows, setRows] = useState<CompetitionScheduleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [edits, setEdits] = useState<Record<string, EditState>>({});
   const [saveState, setSaveState] = useState<Record<string, SaveState>>({});
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ACTIVE');
 
   async function loadCompetitions() {
     setLoading(true);
@@ -559,13 +587,18 @@ export function CompetitionScheduleDashboard() {
           const canNotifySchedule = !row.scheduleAnnouncementSentAt;
           return (
             <Card key={row.id}>
-              <h3 className={css.cardTitle}>{row.name}</h3>
-              <div className={css.metaGrid}>
-                <StatPill label="Status" value={formatStatusLabel(row.status)} />
-                <StatPill
-                  label="Updated"
-                  value={formatDateTime24h(row.updatedAt)}
-                />
+              <div className={css.cardHeader}>
+                <ScheduleCompetitionThumb imageUrl={row.imageUrl} name={row.name} />
+                <div className={css.cardHeaderCopy}>
+                  <h3 className={css.cardTitle}>{row.name}</h3>
+                  <div className={css.metaGrid}>
+                    <StatPill label="Status" value={formatStatusLabel(row.status)} />
+                    <StatPill
+                      label="Updated"
+                      value={formatDateTime24h(row.updatedAt)}
+                    />
+                  </div>
+                </div>
               </div>
               <div className={css.fieldGrid}>
                 <label className={css.field}>

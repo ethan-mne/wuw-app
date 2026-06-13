@@ -31,6 +31,10 @@ describe('competition-schedule.service', () => {
         end_date: new Date('2026-06-20T10:00:00.000Z'),
         drawing_date: new Date('2026-06-20T12:00:00.000Z'),
         updatedAt: new Date('2026-06-10T19:00:00.000Z'),
+        comp_image_url: 'https://cdn.example/comp.jpg',
+        Watches: {
+          images_url: [{ url: 'https://cdn.example/watch.jpg' }],
+        },
         announcementSent: null,
         scheduleAnnouncementSent: null,
       },
@@ -38,6 +42,7 @@ describe('competition-schedule.service', () => {
 
     const rows = await listCompetitionsForAdminSchedule();
     expect(rows).toHaveLength(1);
+    expect(rows[0]?.imageUrl).toBe('https://cdn.example/watch.jpg');
     expect(rows[0]?.scheduleAnnouncementSentAt).toBeNull();
     expect(db.competition.findMany).toHaveBeenCalledOnce();
     expect(db.competition.findMany).toHaveBeenCalledWith(
@@ -67,6 +72,10 @@ describe('competition-schedule.service', () => {
       end_date: new Date('2026-06-20T10:00:00.000Z'),
       drawing_date: new Date('2026-06-20T12:00:00.000Z'),
       updatedAt: new Date('2026-06-10T19:00:00.000Z'),
+      comp_image_url: null,
+      Watches: {
+        images_url: [],
+      },
       announcementSent: null,
       scheduleAnnouncementSent: {
         sentAt: new Date('2026-06-11T08:00:00.000Z'),

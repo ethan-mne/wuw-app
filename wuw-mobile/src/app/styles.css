@@ -391,14 +391,6 @@ button {
   font-weight: 800;
 }
 
-.admin-schedule-date-time-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.85fr);
-  gap: 0.45rem;
-  min-width: 0;
-  width: 100%;
-}
-
 .text-field {
   width: 100%;
   min-height: 3.25rem;
@@ -411,10 +403,44 @@ button {
   background-color: #ffffff;
 }
 
-.admin-schedule-date-time-grid .text-field--picker {
+.admin-schedule-field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.admin-schedule-card-header {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.admin-schedule-card-copy {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-schedule-card-copy h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.08rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.admin-schedule-field .text-field--picker {
+  display: block;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
-  padding-inline: 0.55rem;
+  min-height: 2.9rem;
+  padding-inline: 0.65rem;
+  overflow: hidden;
 }
 
 .text-field--picker {
@@ -427,15 +453,15 @@ button {
   text-align: left;
 }
 
+.text-field--picker::-webkit-datetime-edit {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .text-field--picker::-webkit-calendar-picker-indicator {
   margin: 0;
   padding: 0;
-}
-
-@media (max-width: 380px) {
-  .admin-schedule-date-time-grid {
-    grid-template-columns: 1fr;
-  }
+  flex-shrink: 0;
 }
 
 .otp-row,
