@@ -287,27 +287,37 @@ export function PushDebugPage() {
             <TokenField
               id="push-debug-token"
               label={
-                snapshot.platform === 'ios'
-                  ? 'APNs push token (registered on server)'
-                  : 'FCM registration token (registered on server)'
+                snapshot.oneSignalMobileConfigured
+                  ? 'OneSignal subscription id (registered on server)'
+                  : snapshot.platform === 'ios'
+                    ? 'APNs push token (registered on server)'
+                    : 'FCM registration token (registered on server)'
               }
               value={snapshot.pushToken}
               emptyHint={
                 snapshot.pushError ??
-                'Allow notifications on a physical device, then Refresh'
+                (snapshot.oneSignalMobileConfigured
+                  ? 'Rebuild app after VITE_ONESIGNAL_APP_ID, allow notifications, then Refresh'
+                  : 'Allow notifications on a physical device, then Refresh')
               }
             />
             {snapshot.platform === 'ios' ? (
               <>
-                <TokenField
-                  id="push-debug-apns-env"
-                  label="APNs environment (client)"
-                  value={snapshot.apnsEnvironment}
-                  emptyHint="—"
-                />
+                {!snapshot.oneSignalMobileConfigured ? (
+                  <TokenField
+                    id="push-debug-apns-env"
+                    label="APNs environment (client)"
+                    value={snapshot.apnsEnvironment}
+                    emptyHint="—"
+                  />
+                ) : null}
                 <TokenField
                   id="push-debug-apns"
-                  label="APNs device token (same as push token on iOS)"
+                  label={
+                    snapshot.oneSignalMobileConfigured
+                      ? 'APNs device token (Apple — used internally by OneSignal, not sent to server)'
+                      : 'APNs device token (same as push token on iOS)'
+                  }
                   value={snapshot.apnsToken}
                   emptyHint="May appear after Refresh on iOS"
                 />

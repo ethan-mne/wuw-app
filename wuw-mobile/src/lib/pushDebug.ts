@@ -33,6 +33,7 @@ export type PushDebugSnapshot = {
   platform: string;
   apiBaseUrl: string;
   native: boolean;
+  oneSignalMobileConfigured: boolean;
   permission: string | null;
   sessionToken: string | null;
   storedPushToken: string | null;
@@ -419,6 +420,7 @@ export async function collectPushDebugSnapshot(): Promise<PushDebugSnapshot> {
     platform,
     apiBaseUrl: API_BASE_URL,
     native,
+    oneSignalMobileConfigured: hasOneSignalMobileConfig(),
     permission,
     sessionToken,
     storedPushToken,

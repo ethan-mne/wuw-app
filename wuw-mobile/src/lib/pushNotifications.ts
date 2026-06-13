@@ -523,6 +523,31 @@ export async function readLocalPushTokensForDebug(): Promise<{
     return { pushToken: null, apnsToken: null, pushError: 'Not a native app (web preview)' };
   }
 
+  const platform = getNativePushPlatform();
+  const cachedApns = getCachedApnsDeviceToken();
+
+  if (platform && hasOneSignalMobileConfig()) {
+    const oneSignal = await tryObtainOneSignalSubscriptionToken({ platform, prompt: false });
+    if (oneSignal?.ok) {
+      return {
+        pushToken: oneSignal.token,
+        apnsToken: platform === 'ios' ? cachedApns : null,
+        pushError: null,
+      };
+    }
+    if (oneSignal && !oneSignal.ok) {
+      const receive = await getPushReceivePermission();
+      return {
+        pushToken: null,
+        apnsToken: platform === 'ios' ? cachedApns : null,
+        pushError:
+          receive !== 'granted'
+            ? `Notifications not granted (${receive ?? 'unknown'}) — tap Allow notifications`
+            : (oneSignal.detail ?? pushRegisterFailureMessage(oneSignal)),
+      };
+    }
+  }
+
   const receive = await getPushReceivePermission();
   if (receive !== 'granted') {
     return {
@@ -532,10 +557,12 @@ export async function readLocalPushTokensForDebug(): Promise<{
     };
   }
 
-  const platform = getNativePushPlatform();
-  const cachedApns = getCachedApnsDeviceToken();
+  if (!platform) {
+    return { pushToken: null, apnsToken: null, pushError: 'Unknown native platform' };
+  }
+
   const stored = getStoredPushDeviceToken();
-  if (stored && platform && isValidNativePushToken(stored, platform)) {
+  if (stored && isValidNativePushToken(stored, platform)) {
     return {
       pushToken: stored,
       apnsToken: platform === 'ios' ? (cachedApns ?? stored) : null,
