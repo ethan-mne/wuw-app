@@ -4,6 +4,7 @@ import {
   getIosApnsEnvironment,
   isApnsDeviceToken,
   isLikelyFcmRegistrationToken,
+  isLikelyOneSignalSubscriptionId,
   isValidNativePushToken,
 } from './pushToken';
 import { API_BASE_URL } from './config';
@@ -14,6 +15,7 @@ import {
   isNativePushPlatform,
   readLocalPushTokensForDebug,
 } from './pushNotifications';
+import { hasOneSignalMobileConfig } from './oneSignal';
 import { getLastPushRegistrationError } from './pushNotificationSetup';
 import { getStoredPushDeviceToken } from './pushStorage';
 import { getPushDeviceStatusFromServer } from '../services/pushDeviceApi';
@@ -65,6 +67,9 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 function isPushTokenValid(token: string | null, platform: string): boolean {
   if (!token) {
     return false;
+  }
+  if (isLikelyOneSignalSubscriptionId(token)) {
+    return true;
   }
   if (platform === 'ios') {
     return isApnsDeviceToken(token);
@@ -166,6 +171,15 @@ function buildChecks(input: {
       : 'Web preview — push tokens require a real device build',
   });
 
+  checks.push({
+    id: 'onesignal-mobile',
+    label: 'OneSignal SDK (mobile build)',
+    status: !input.native ? 'na' : hasOneSignalMobileConfig() ? 'ok' : 'fail',
+    detail: hasOneSignalMobileConfig()
+      ? 'VITE_ONESIGNAL_APP_ID is set — rebuild after changing env'
+      : 'Missing VITE_ONESIGNAL_APP_ID — app never registers with OneSignal',
+  });
+
   if (input.permission === null) {
     checks.push({
       id: 'permission',
@@ -211,16 +225,21 @@ function buildChecks(input: {
     });
   }
 
-  const tokenLabel =
-    input.platform === 'ios' ? 'Push token (APNs, registered on server)' : 'FCM registration token';
+  const tokenLabel = isLikelyOneSignalSubscriptionId(input.pushToken ?? '')
+    ? 'OneSignal subscription id (registered on server)'
+    : input.platform === 'ios'
+      ? 'Push token (APNs, registered on server)'
+      : 'FCM registration token';
   checks.push({
     id: 'push-token',
     label: tokenLabel,
     status: !input.native ? 'na' : pushValid ? 'ok' : 'fail',
     detail: pushValid
-      ? input.platform === 'ios'
-        ? '64-char APNs token — valid for direct APNs send'
-        : 'Valid shape for firebase-admin'
+      ? isLikelyOneSignalSubscriptionId(input.pushToken ?? '')
+        ? 'Valid OneSignal subscription id'
+        : input.platform === 'ios'
+          ? '64-char APNs token — valid for direct APNs send'
+          : 'Valid shape for firebase-admin'
       : input.pushError ?? 'Missing or invalid push token',
   });
 
