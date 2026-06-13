@@ -7,6 +7,7 @@ import { MobileShell } from '../components/MobileShell';
 import { legalPages, supportPages } from '../data/content';
 import { getMobileSessionToken } from '../lib/mobileSessionToken';
 import { reconcileDrawReminders } from '../lib/drawReminderSubscribe';
+import { initOneSignal } from '../lib/oneSignal';
 import { setupPushNotificationHandlers } from '../lib/pushNotificationSetup';
 import { mobileDataService } from '../services/mobileDataService';
 import { AccountDashboardPage } from '../pages/account/AccountDashboardPage';
@@ -35,6 +36,7 @@ const DRAW_SCHEDULE_UPDATED_EVENT = 'wuw-draw-schedule-updated';
 
 export default function App() {
   useEffect(() => {
+    initOneSignal();
     void setupPushNotificationHandlers();
   }, []);
 

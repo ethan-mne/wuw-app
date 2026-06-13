@@ -19,6 +19,15 @@ function normalizeApiBaseUrl(value: string): string {
       parsed.hostname = '10.0.2.2';
     }
 
+    // iOS simulator cannot use Android emulator loopback alias.
+    if (
+      Capacitor.isNativePlatform()
+      && Capacitor.getPlatform() === 'ios'
+      && parsed.hostname === '10.0.2.2'
+    ) {
+      parsed.hostname = 'localhost';
+    }
+
     return parsed.origin;
   } catch {
     return value.replace(/\/$/, '');

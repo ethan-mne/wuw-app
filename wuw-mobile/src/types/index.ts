@@ -124,6 +124,8 @@ export interface AdminCompetitionScheduleRow {
   drawing_date: string;
   end_date: string;
   updatedAt: string;
+  announcementSentAt: string | null;
+  scheduleAnnouncementSentAt: string | null;
 }
 
 /** Router state from login after send-otp succeeds. */

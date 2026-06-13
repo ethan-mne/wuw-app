@@ -93,6 +93,8 @@ model Competition {
   Affiliation              Affiliation[]
   DrawReminderSent         DrawReminderSent[]
   DrawAlertSubscription    DrawAlertSubscription[]
+  announcementSent         CompetitionAnnouncementSent?
+  scheduleAnnouncementSent CompetitionScheduleAnnouncementSent?
 
   @@index([id])
   @@map("competition")
@@ -314,6 +316,8 @@ model User {
   pushDevices            UserPushDevice[]
   drawRemindersSent      DrawReminderSent[]
   drawAlertSubscriptions DrawAlertSubscription[]
+  competitionAnnouncementsSent CompetitionAnnouncementSent[]
+  competitionScheduleAnnouncementsSent CompetitionScheduleAnnouncementSent[]
 }
 
 model UserPushDevice {
@@ -354,6 +358,30 @@ model DrawAlertSubscription {
   @@unique([userId, competitionId])
   @@index([competitionId])
   @@map("draw_alert_subscription")
+}
+
+model CompetitionAnnouncementSent {
+  id           String      @id @default(cuid())
+  competitionId String     @unique
+  sentByUserId String
+  sentAt       DateTime    @default(now())
+  competition  Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  sentByUser   User        @relation(fields: [sentByUserId], references: [id], onDelete: Cascade)
+
+  @@index([sentByUserId])
+  @@map("competition_announcement_sent")
+}
+
+model CompetitionScheduleAnnouncementSent {
+  id           String      @id @default(cuid())
+  competitionId String     @unique
+  sentByUserId String
+  sentAt       DateTime    @default(now())
+  competition  Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  sentByUser   User        @relation(fields: [sentByUserId], references: [id], onDelete: Cascade)
+
+  @@index([sentByUserId])
+  @@map("competition_schedule_announcement_sent")
 }
 
 model gift {

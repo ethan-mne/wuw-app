@@ -71,8 +71,22 @@
   justify-items: start;
 }
 
+.actionButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .saveButton {
   min-width: 10rem;
+}
+
+.notifyButton {
+  min-width: 13rem;
+}
+
+.scheduleNotifyButton {
+  min-width: 14.5rem;
 }
 
 .rowMessage {

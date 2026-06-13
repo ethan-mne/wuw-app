@@ -14,6 +14,12 @@ import {
   getCachedApnsDeviceToken,
   getLastPushRegistrationError,
 } from './pushNotificationSetup';
+import {
+  getOneSignalSubscriptionId,
+  hasOneSignalMobileConfig,
+  initOneSignal,
+  requestOneSignalPermission,
+} from './oneSignal';
 import { registerPushTokenWithServer, unregisterPushTokenWithServer } from '../services/pushDeviceApi';
 
 export type PushReceivePermission =
@@ -286,6 +292,60 @@ async function ensurePushPermission(prompt: boolean): Promise<PushReceivePermiss
   return receive;
 }
 
+async function tryObtainOneSignalSubscriptionToken(input: {
+  platform: 'ios' | 'android';
+  prompt: boolean;
+}): Promise<ObtainPushTokenResult | null> {
+  if (!hasOneSignalMobileConfig()) {
+    return null;
+  }
+
+  if (!initOneSignal()) {
+    return {
+      ok: false,
+      reason: 'no_fcm_token',
+      detail: 'OneSignal SDK unavailable on this device build.',
+    };
+  }
+
+  if (input.prompt) {
+    const permission = await requestOneSignalPermission();
+    if (!permission.ok) {
+      return {
+        ok: false,
+        reason: 'permission_denied',
+        detail: permission.detail ?? 'Failed to request notifications through OneSignal.',
+      };
+    }
+    if (!permission.granted) {
+      return { ok: false, reason: 'permission_denied' };
+    }
+  }
+
+  const subscription = await getOneSignalSubscriptionId();
+  if (!subscription.ok) {
+    return {
+      ok: false,
+      reason: 'no_fcm_token',
+      detail: 'No OneSignal subscription id available yet. Retry in a moment.',
+    };
+  }
+
+  if (!isValidNativePushToken(subscription.subscriptionId, input.platform)) {
+    return {
+      ok: false,
+      reason: 'invalid_token_shape',
+      detail: 'Invalid OneSignal subscription id shape.',
+    };
+  }
+
+  return {
+    ok: true,
+    token: subscription.subscriptionId,
+    platform: input.platform,
+  };
+}
+
 /**
  * Obtain a valid push token on device (no server POST).
  * Use with atomic draw-alert subscribe when persisting token via that endpoint.
@@ -294,6 +354,17 @@ export async function obtainPushToken(options?: { prompt?: boolean }): Promise<O
   const platform = getNativePushPlatform();
   if (!platform) {
     return { ok: false, reason: 'not_native' };
+  }
+
+  const oneSignalToken = await tryObtainOneSignalSubscriptionToken({
+    platform,
+    prompt: options?.prompt ?? false,
+  });
+  if (oneSignalToken) {
+    if (oneSignalToken.ok) {
+      setStoredPushDeviceToken(oneSignalToken.token);
+    }
+    return oneSignalToken;
   }
 
   const receive = await ensurePushPermission(options?.prompt ?? false);
@@ -370,6 +441,18 @@ export async function requestPushPermissionAndRegister(): Promise<PushRegisterRe
 export async function enablePushNotifications(): Promise<boolean> {
   if (!isNativePushPlatform()) {
     return false;
+  }
+
+  if (hasOneSignalMobileConfig()) {
+    const permission = await requestOneSignalPermission();
+    // OneSignal requestPermission(true) may already deep-link to app settings when OS prompts are exhausted.
+    // Avoid a second immediate redirect loop when user returns without granting permission.
+    if (!permission.ok || !permission.granted) {
+      return false;
+    }
+    notifyPushPermissionChanged();
+    void syncPushTokenIfPermitted();
+    return true;
   }
 
   const receive = await getPushReceivePermission();

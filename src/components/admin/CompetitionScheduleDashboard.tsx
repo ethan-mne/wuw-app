@@ -12,6 +12,8 @@ type CompetitionScheduleRow = {
   drawing_date: string;
   end_date: string;
   updatedAt: string;
+  announcementSentAt: string | null;
+  scheduleAnnouncementSentAt: string | null;
 };
 
 type StatusFilter = 'ALL' | CompetitionScheduleRow['status'];
@@ -23,8 +25,22 @@ type EditState = {
 
 type SaveState = {
   saving: boolean;
+  notifyingCompetition: boolean;
+  notifyingSchedule: boolean;
   message: string;
   isError: boolean;
+};
+
+type NotificationResponseData = {
+  kind:
+    | 'sent'
+    | 'already_sent'
+    | 'not_active'
+    | 'no_recipients'
+    | 'delivery_failed';
+  sentAt?: string;
+  attempted?: number;
+  successCount?: number;
 };
 
 function toDateTimeLocalValue(value: string): string {
@@ -140,6 +156,8 @@ export function CompetitionScheduleDashboard() {
         ...prev,
         [rowId]: {
           saving: false,
+          notifyingCompetition: prev[rowId]?.notifyingCompetition ?? false,
+          notifyingSchedule: prev[rowId]?.notifyingSchedule ?? false,
           message: 'Both dates are required',
           isError: true,
         },
@@ -149,7 +167,13 @@ export function CompetitionScheduleDashboard() {
 
     setSaveState((prev) => ({
       ...prev,
-      [rowId]: { saving: true, message: '', isError: false },
+      [rowId]: {
+        saving: true,
+        notifyingCompetition: prev[rowId]?.notifyingCompetition ?? false,
+        notifyingSchedule: prev[rowId]?.notifyingSchedule ?? false,
+        message: '',
+        isError: false,
+      },
     }));
 
     try {
@@ -185,14 +209,242 @@ export function CompetitionScheduleDashboard() {
       );
       setSaveState((prev) => ({
         ...prev,
-        [rowId]: { saving: false, message: 'Saved', isError: false },
+        [rowId]: {
+          saving: false,
+          notifyingCompetition: prev[rowId]?.notifyingCompetition ?? false,
+          notifyingSchedule: prev[rowId]?.notifyingSchedule ?? false,
+          message: 'Saved',
+          isError: false,
+        },
       }));
     } catch (error) {
       setSaveState((prev) => ({
         ...prev,
         [rowId]: {
           saving: false,
+          notifyingCompetition: prev[rowId]?.notifyingCompetition ?? false,
+          notifyingSchedule: prev[rowId]?.notifyingSchedule ?? false,
           message: error instanceof Error ? error.message : 'Update failed',
+          isError: true,
+        },
+      }));
+    }
+  }
+
+  async function notifyCompetitionRow(row: CompetitionScheduleRow) {
+    setSaveState((prev) => ({
+      ...prev,
+      [row.id]: {
+        saving: prev[row.id]?.saving ?? false,
+        notifyingCompetition: true,
+        notifyingSchedule: prev[row.id]?.notifyingSchedule ?? false,
+        message: '',
+        isError: false,
+      },
+    }));
+
+    try {
+      const response = await fetch(`/api/admin/v1/competitions/${row.id}/notify`, {
+        method: 'POST',
+      });
+
+      const payload = (await response.json()) as {
+        data?: NotificationResponseData;
+        error?: string;
+      };
+
+      if (payload.data) {
+        const result = payload.data;
+
+        if (result.kind === 'sent') {
+          setRows((prev) =>
+            prev.map((item) =>
+              item.id === row.id
+                ? {
+                    ...item,
+                    announcementSentAt: result.sentAt ?? new Date().toISOString(),
+                  }
+                : item,
+            ),
+          );
+          setSaveState((prev) => ({
+            ...prev,
+            [row.id]: {
+              saving: prev[row.id]?.saving ?? false,
+              notifyingCompetition: false,
+              notifyingSchedule: prev[row.id]?.notifyingSchedule ?? false,
+              message: `Push sent (${result.successCount ?? 0}/${result.attempted ?? 0})`,
+              isError: false,
+            },
+          }));
+          return;
+        }
+
+        if (result.kind === 'already_sent') {
+          setRows((prev) =>
+            prev.map((item) =>
+              item.id === row.id
+                ? {
+                    ...item,
+                    announcementSentAt: result.sentAt ?? item.announcementSentAt,
+                  }
+                : item,
+            ),
+          );
+          setSaveState((prev) => ({
+            ...prev,
+            [row.id]: {
+              saving: prev[row.id]?.saving ?? false,
+              notifyingCompetition: false,
+              notifyingSchedule: prev[row.id]?.notifyingSchedule ?? false,
+              message: 'Push already sent for this competition',
+              isError: false,
+            },
+          }));
+          return;
+        }
+
+        if (result.kind === 'no_recipients') {
+          setSaveState((prev) => ({
+            ...prev,
+            [row.id]: {
+              saving: prev[row.id]?.saving ?? false,
+              notifyingCompetition: false,
+              notifyingSchedule: prev[row.id]?.notifyingSchedule ?? false,
+              message: 'No users with push notifications enabled',
+              isError: true,
+            },
+          }));
+          return;
+        }
+
+        if (result.kind === 'not_active') {
+          setSaveState((prev) => ({
+            ...prev,
+            [row.id]: {
+              saving: prev[row.id]?.saving ?? false,
+              notifyingCompetition: false,
+              notifyingSchedule: prev[row.id]?.notifyingSchedule ?? false,
+              message: 'Competition must be active before sending push',
+              isError: true,
+            },
+          }));
+          return;
+        }
+      }
+
+      throw new Error(payload.error ?? 'Failed to send push notification');
+    } catch (error) {
+      setSaveState((prev) => ({
+        ...prev,
+        [row.id]: {
+          saving: prev[row.id]?.saving ?? false,
+          notifyingCompetition: false,
+          notifyingSchedule: prev[row.id]?.notifyingSchedule ?? false,
+          message: error instanceof Error ? error.message : 'Failed to send push notification',
+          isError: true,
+        },
+      }));
+    }
+  }
+
+  async function notifyScheduleRow(row: CompetitionScheduleRow) {
+    setSaveState((prev) => ({
+      ...prev,
+      [row.id]: {
+        saving: prev[row.id]?.saving ?? false,
+        notifyingCompetition: prev[row.id]?.notifyingCompetition ?? false,
+        notifyingSchedule: true,
+        message: '',
+        isError: false,
+      },
+    }));
+
+    try {
+      const response = await fetch(`/api/admin/v1/competitions/${row.id}/notify-schedule`, {
+        method: 'POST',
+      });
+
+      const payload = (await response.json()) as {
+        data?: NotificationResponseData;
+        error?: string;
+      };
+
+      if (payload.data) {
+        const result = payload.data;
+
+        if (result.kind === 'sent') {
+          setRows((prev) =>
+            prev.map((item) =>
+              item.id === row.id
+                ? {
+                    ...item,
+                    scheduleAnnouncementSentAt: result.sentAt ?? new Date().toISOString(),
+                  }
+                : item,
+            ),
+          );
+          setSaveState((prev) => ({
+            ...prev,
+            [row.id]: {
+              saving: prev[row.id]?.saving ?? false,
+              notifyingCompetition: prev[row.id]?.notifyingCompetition ?? false,
+              notifyingSchedule: false,
+              message: `Schedule push sent (${result.successCount ?? 0}/${result.attempted ?? 0})`,
+              isError: false,
+            },
+          }));
+          return;
+        }
+
+        if (result.kind === 'already_sent') {
+          setRows((prev) =>
+            prev.map((item) =>
+              item.id === row.id
+                ? {
+                    ...item,
+                    scheduleAnnouncementSentAt: result.sentAt ?? item.scheduleAnnouncementSentAt,
+                  }
+                : item,
+            ),
+          );
+          setSaveState((prev) => ({
+            ...prev,
+            [row.id]: {
+              saving: prev[row.id]?.saving ?? false,
+              notifyingCompetition: prev[row.id]?.notifyingCompetition ?? false,
+              notifyingSchedule: false,
+              message: 'Schedule push already sent for this competition',
+              isError: false,
+            },
+          }));
+          return;
+        }
+
+        if (result.kind === 'no_recipients') {
+          setSaveState((prev) => ({
+            ...prev,
+            [row.id]: {
+              saving: prev[row.id]?.saving ?? false,
+              notifyingCompetition: prev[row.id]?.notifyingCompetition ?? false,
+              notifyingSchedule: false,
+              message: 'No draw-alert subscribers with push notifications',
+              isError: true,
+            },
+          }));
+          return;
+        }
+      }
+
+      throw new Error(payload.error ?? 'Failed to send schedule push notification');
+    } catch (error) {
+      setSaveState((prev) => ({
+        ...prev,
+        [row.id]: {
+          saving: prev[row.id]?.saving ?? false,
+          notifyingCompetition: prev[row.id]?.notifyingCompetition ?? false,
+          notifyingSchedule: false,
+          message: error instanceof Error ? error.message : 'Failed to send schedule push notification',
           isError: true,
         },
       }));
@@ -263,6 +515,8 @@ export function CompetitionScheduleDashboard() {
               || rowEdit.drawingDate !== originalDrawingDate
             ),
           );
+          const canNotifyCompetition = row.status === 'ACTIVE' && !row.announcementSentAt;
+          const canNotifySchedule = !row.scheduleAnnouncementSentAt;
           return (
             <Card key={row.id}>
               <h3 className={css.cardTitle}>{row.name}</h3>
@@ -312,15 +566,58 @@ export function CompetitionScheduleDashboard() {
                 </label>
               </div>
               <div className={css.actionRow}>
-                <Button
-                  type="button"
-                  className={css.saveButton}
-                  variant="primary"
-                  onClick={() => void saveRow(row.id)}
-                  disabled={state?.saving || !hasScheduleChanges}
-                >
-                  {state?.saving ? 'Saving...' : 'Save schedule'}
-                </Button>
+                <div className={css.actionButtons}>
+                  <Button
+                    type="button"
+                    className={css.notifyButton}
+                    variant="secondary"
+                    onClick={() => void notifyCompetitionRow(row)}
+                    disabled={
+                      (state?.notifyingCompetition ?? false)
+                      || (state?.notifyingSchedule ?? false)
+                      || (state?.saving ?? false)
+                      || !canNotifyCompetition
+                    }
+                  >
+                    {state?.notifyingCompetition
+                      ? 'Sending push...'
+                      : row.announcementSentAt
+                        ? 'Push already sent'
+                        : 'Send push notification'}
+                  </Button>
+                  <Button
+                    type="button"
+                    className={css.scheduleNotifyButton}
+                    variant="secondary"
+                    onClick={() => void notifyScheduleRow(row)}
+                    disabled={
+                      (state?.notifyingCompetition ?? false)
+                      || (state?.notifyingSchedule ?? false)
+                      || (state?.saving ?? false)
+                      || !canNotifySchedule
+                    }
+                  >
+                    {state?.notifyingSchedule
+                      ? 'Sending schedule push...'
+                      : row.scheduleAnnouncementSentAt
+                        ? 'Schedule push already sent'
+                        : 'Send schedule update push'}
+                  </Button>
+                  <Button
+                    type="button"
+                    className={css.saveButton}
+                    variant="primary"
+                    onClick={() => void saveRow(row.id)}
+                    disabled={
+                      (state?.saving ?? false)
+                      || (state?.notifyingCompetition ?? false)
+                      || (state?.notifyingSchedule ?? false)
+                      || !hasScheduleChanges
+                    }
+                  >
+                    {state?.saving ? 'Saving...' : 'Save schedule'}
+                  </Button>
+                </div>
                 {state?.message ? (
                   <p
                     className={`${css.rowMessage} ${state.isError ? css.rowMessageError : css.rowMessageSuccess}`}

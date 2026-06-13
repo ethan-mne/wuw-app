@@ -28,6 +28,7 @@
     "@capacitor/push-notifications": "^8.0.3",
     "@capacitor/splash-screen": "^8.0.1",
     "@wuw/mobile-ui": "workspace:*",
+    "onesignal-cordova-plugin": "^5.3.11",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2"

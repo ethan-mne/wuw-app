@@ -1,6 +1,7 @@
 import { apiClient } from './apiClient';
 import { API_BASE_URL } from '../lib/config';
 import { clearMobileSession, getMobileSessionToken, mobileAuthHeaders } from '../lib/mobileSessionToken';
+import { Capacitor } from '@capacitor/core';
 import {
   ensurePushRegisteredForAlerts,
   obtainPushToken,
@@ -23,6 +24,25 @@ import type {
 type ApiDataResponse<T> = {
   data: T;
 };
+
+function buildMobileApiRequestUrl(path: string): string {
+  const isBrowser = typeof window !== 'undefined';
+  const isNative = Capacitor.isNativePlatform();
+  const isLocalhostBrowser = isBrowser && window.location.hostname === 'localhost';
+  const currentOrigin = isBrowser ? window.location.origin : '';
+  const shouldForceRelativeApi =
+    !isNative
+    && isBrowser
+    && isLocalhostBrowser
+    && path.startsWith('/api/')
+    && API_BASE_URL
+    && API_BASE_URL !== currentOrigin;
+
+  if (shouldForceRelativeApi) {
+    return path;
+  }
+  return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+}
 
 export type ListWinnersResponse = {
   data: Winner[];
@@ -162,7 +182,7 @@ async function loadAccountSummary(): Promise<LoadAccountSummaryResult> {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/mobile/v1/me/summary`, {
+    const response = await fetch(buildMobileApiRequestUrl('/api/mobile/v1/me/summary'), {
       headers: {
         'Content-Type': 'application/json',
         ...mobileAuthHeaders(),
@@ -263,7 +283,7 @@ async function loadMobileProfile(): Promise<LoadMobileProfileResult> {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/mobile/v1/me`, {
+    const response = await fetch(buildMobileApiRequestUrl('/api/mobile/v1/me'), {
       headers: {
         'Content-Type': 'application/json',
         ...mobileAuthHeaders(),
@@ -299,7 +319,7 @@ async function updateMobileProfile(
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/mobile/v1/me`, {
+    const response = await fetch(buildMobileApiRequestUrl('/api/mobile/v1/me'), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -353,7 +373,7 @@ async function listReferralUsages(): Promise<ListReferralUsagesResult> {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/mobile/v1/referrals/usage`, {
+    const response = await fetch(buildMobileApiRequestUrl('/api/mobile/v1/referrals/usage'), {
       headers: {
         'Content-Type': 'application/json',
         ...mobileAuthHeaders(),
@@ -395,6 +415,26 @@ export type DrawsTimelinePage = {
 type UpdateAdminCompetitionSchedulePayload = {
   drawingDate: string;
   endDate: string;
+};
+
+export type SendAdminCompetitionNotificationResult = {
+  kind: 'sent' | 'already_sent' | 'not_active' | 'no_recipients' | 'delivery_failed';
+  competitionId: string;
+  competitionName: string;
+  sentAt?: string;
+  attempted?: number;
+  successCount?: number;
+  failureCount?: number;
+};
+
+export type SendAdminCompetitionScheduleNotificationResult = {
+  kind: 'sent' | 'already_sent' | 'no_recipients' | 'delivery_failed';
+  competitionId: string;
+  competitionName: string;
+  sentAt?: string;
+  attempted?: number;
+  successCount?: number;
+  failureCount?: number;
 };
 
 export type DrawReminderTargetCompetition = Pick<
@@ -473,7 +513,9 @@ async function redeemFreeTicket(competitionId: string): Promise<RedeemFreeTicket
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/mobile/v1/competitions/${encodeURIComponent(competitionId)}/redeem-free-ticket`,
+      buildMobileApiRequestUrl(
+        `/api/mobile/v1/competitions/${encodeURIComponent(competitionId)}/redeem-free-ticket`,
+      ),
       {
         method: 'POST',
         headers: {
@@ -647,6 +689,68 @@ export const mobileDataService = {
     );
     return response.data;
   },
+  sendAdminCompetitionNotification: async (
+    competitionId: string,
+  ): Promise<SendAdminCompetitionNotificationResult> => {
+    const response = await fetch(
+      buildMobileApiRequestUrl(
+        `/api/admin/v1/competitions/${encodeURIComponent(competitionId)}/notify`,
+      ),
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...mobileAuthHeaders(),
+        },
+      },
+    );
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      data?: SendAdminCompetitionNotificationResult;
+      error?: unknown;
+    };
+
+    if (payload.data) {
+      return payload.data;
+    }
+
+    if (typeof payload.error === 'string' && payload.error.trim()) {
+      throw new Error(payload.error);
+    }
+
+    throw new Error(`Notification request failed (${response.status})`);
+  },
+  sendAdminCompetitionScheduleNotification: async (
+    competitionId: string,
+  ): Promise<SendAdminCompetitionScheduleNotificationResult> => {
+    const response = await fetch(
+      buildMobileApiRequestUrl(
+        `/api/admin/v1/competitions/${encodeURIComponent(competitionId)}/notify-schedule`,
+      ),
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...mobileAuthHeaders(),
+        },
+      },
+    );
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      data?: SendAdminCompetitionScheduleNotificationResult;
+      error?: unknown;
+    };
+
+    if (payload.data) {
+      return payload.data;
+    }
+
+    if (typeof payload.error === 'string' && payload.error.trim()) {
+      throw new Error(payload.error);
+    }
+
+    throw new Error(`Schedule notification request failed (${response.status})`);
+  },
   redeemFreeTicket,
   listReferralUsages,
   listOrderHistory: async (): Promise<OrderSummary[]> => {
@@ -776,7 +880,9 @@ export const mobileDataService = {
     }
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/mobile/v1/competitions/${encodeURIComponent(competitionId)}/draw-alert`,
+        buildMobileApiRequestUrl(
+          `/api/mobile/v1/competitions/${encodeURIComponent(competitionId)}/draw-alert`,
+        ),
         {
           headers: {
             'Content-Type': 'application/json',
