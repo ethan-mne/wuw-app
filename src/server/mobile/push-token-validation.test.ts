@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  filterOneSignalSubscriptionIds,
   isApnsDeviceToken,
   isLikelyFcmRegistrationToken,
   isLikelyOneSignalSubscriptionId,
@@ -51,5 +52,25 @@ describe('token shape helpers', () => {
     expect(isLikelyOneSignalSubscriptionId(SAMPLE_ONESIGNAL)).toBe(true);
     expect(isLikelyOneSignalSubscriptionId(SAMPLE_FCM)).toBe(false);
     expect(isLikelyOneSignalSubscriptionId(SAMPLE_APNS)).toBe(false);
+  });
+});
+
+describe('filterOneSignalSubscriptionIds', () => {
+  it('keeps only OneSignal subscription ids', () => {
+    expect(
+      filterOneSignalSubscriptionIds([SAMPLE_ONESIGNAL, SAMPLE_FCM, SAMPLE_APNS]),
+    ).toEqual({
+      subscriptionIds: [SAMPLE_ONESIGNAL],
+      legacyTokenCount: 2,
+    });
+  });
+
+  it('deduplicates tokens', () => {
+    expect(
+      filterOneSignalSubscriptionIds([SAMPLE_ONESIGNAL, SAMPLE_ONESIGNAL, SAMPLE_FCM]),
+    ).toEqual({
+      subscriptionIds: [SAMPLE_ONESIGNAL],
+      legacyTokenCount: 1,
+    });
   });
 });

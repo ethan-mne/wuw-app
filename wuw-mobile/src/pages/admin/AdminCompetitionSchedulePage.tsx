@@ -44,31 +44,15 @@ function splitLocalDateTime(value: string): { date: string; time: string } {
   return { date, time };
 }
 
-function toEuropeanDate(localDate: string): string {
-  const [year, month, day] = localDate.split('-');
-  if (!year || !month || !day) return '';
-  return `${day}.${month}.${year}`;
-}
-
-function europeanDateToLocal(value: string): string | null {
-  const match = value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-  if (!match) return null;
-  const [, day, month, year] = match;
-  const dayNum = Number(day);
-  const monthNum = Number(month);
-  const yearNum = Number(year);
-  if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31 || yearNum < 1900) {
-    return null;
-  }
-  const parsed = new Date(yearNum, monthNum - 1, dayNum);
-  if (
-    parsed.getFullYear() !== yearNum
-    || parsed.getMonth() !== monthNum - 1
-    || parsed.getDate() !== dayNum
-  ) {
-    return null;
-  }
-  return `${year}-${month}-${day}`;
+function isValidLocalDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(year, month - 1, day);
+  return (
+    parsed.getFullYear() === year
+    && parsed.getMonth() === month - 1
+    && parsed.getDate() === day
+  );
 }
 
 function joinLocalDateTime(date: string, time: string): string {
@@ -141,9 +125,9 @@ export function AdminCompetitionSchedulePage() {
           const drawing = splitLocalDateTime(toDateTimeLocalValue(row.drawing_date));
           const end = splitLocalDateTime(toDateTimeLocalValue(row.end_date));
           nextEdits[row.id] = {
-            drawingDate: toEuropeanDate(drawing.date),
+            drawingDate: drawing.date,
             drawingTime: drawing.time,
-            endDate: toEuropeanDate(end.date),
+            endDate: end.date,
             endTime: end.time,
           };
         });
@@ -216,16 +200,16 @@ export function AdminCompetitionSchedulePage() {
       }));
       return;
     }
-    const drawingLocalDate = europeanDateToLocal(currentEdit.drawingDate);
-    const endLocalDate = europeanDateToLocal(currentEdit.endDate);
-    if (!drawingLocalDate || !endLocalDate) {
+    const drawingLocalDate = currentEdit.drawingDate;
+    const endLocalDate = currentEdit.endDate;
+    if (!isValidLocalDate(drawingLocalDate) || !isValidLocalDate(endLocalDate)) {
       setSaveState((prev) => ({
         ...prev,
         [rowId]: {
           saving: false,
           notifyingCompetition: prev[rowId]?.notifyingCompetition ?? false,
           notifyingSchedule: prev[rowId]?.notifyingSchedule ?? false,
-          message: 'Date must use European format (DD.MM.YYYY)',
+          message: 'Enter a valid date',
           isError: true,
         },
       }));
@@ -470,7 +454,7 @@ export function AdminCompetitionSchedulePage() {
             saving: prev[row.id]?.saving ?? false,
             notifyingCompetition: prev[row.id]?.notifyingCompetition ?? false,
             notifyingSchedule: false,
-            message: 'No draw-alert subscribers with push notifications',
+            message: result.errorMessage ?? 'No draw-alert subscribers with push notifications',
             isError: true,
           },
         }));
@@ -483,7 +467,11 @@ export function AdminCompetitionSchedulePage() {
           saving: prev[row.id]?.saving ?? false,
           notifyingCompetition: prev[row.id]?.notifyingCompetition ?? false,
           notifyingSchedule: false,
-          message: 'Schedule push delivery failed, try again',
+          message: result.errorMessage
+            ? `Schedule push failed: ${result.errorMessage}`
+            : result.legacyTokenCount && result.legacyTokenCount > 0
+              ? `${result.legacyTokenCount} subscriber(s) still have legacy push tokens. They must reopen the mobile app and re-subscribe to draw alerts.`
+              : 'Schedule push delivery failed, try again',
           isError: true,
         },
       }));
@@ -602,14 +590,12 @@ export function AdminCompetitionSchedulePage() {
         const rowEdit = edits[row.id];
         const originalEnd = splitLocalDateTime(toDateTimeLocalValue(row.end_date));
         const originalDrawing = splitLocalDateTime(toDateTimeLocalValue(row.drawing_date));
-        const originalEndDateEu = toEuropeanDate(originalEnd.date);
-        const originalDrawingDateEu = toEuropeanDate(originalDrawing.date);
         const hasScheduleChanges = Boolean(
           rowEdit
           && (
-            rowEdit.endDate !== originalEndDateEu
+            rowEdit.endDate !== originalEnd.date
             || rowEdit.endTime !== originalEnd.time
-            || rowEdit.drawingDate !== originalDrawingDateEu
+            || rowEdit.drawingDate !== originalDrawing.date
             || rowEdit.drawingTime !== originalDrawing.time
           ),
         );
@@ -630,12 +616,8 @@ export function AdminCompetitionSchedulePage() {
             <div className="admin-schedule-date-time-grid">
               <input
                 id={`${row.id}-end-date`}
-                className="text-field"
-                type="text"
-                inputMode="numeric"
-                placeholder="DD.MM.YYYY"
-                pattern="\d{2}\.\d{2}\.\d{4}"
-                maxLength={10}
+                className="text-field text-field--picker"
+                type="date"
                 value={rowEdit?.endDate ?? ''}
                 onChange={(event) =>
                   setEdits((prev) => ({
@@ -649,12 +631,10 @@ export function AdminCompetitionSchedulePage() {
               />
               <input
                 id={`${row.id}-end-time`}
-                className="text-field"
-                type="text"
-                inputMode="numeric"
-                placeholder="HH:mm"
-                pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
-                maxLength={5}
+                className="text-field text-field--picker"
+                type="time"
+                step="60"
+                lang="en-GB"
                 value={rowEdit?.endTime ?? ''}
                 onChange={(event) =>
                   setEdits((prev) => ({
@@ -674,12 +654,8 @@ export function AdminCompetitionSchedulePage() {
             <div className="admin-schedule-date-time-grid">
               <input
                 id={`${row.id}-draw-date`}
-                className="text-field"
-                type="text"
-                inputMode="numeric"
-                placeholder="DD.MM.YYYY"
-                pattern="\d{2}\.\d{2}\.\d{4}"
-                maxLength={10}
+                className="text-field text-field--picker"
+                type="date"
                 value={rowEdit?.drawingDate ?? ''}
                 onChange={(event) =>
                   setEdits((prev) => ({
@@ -693,12 +669,10 @@ export function AdminCompetitionSchedulePage() {
               />
               <input
                 id={`${row.id}-draw-time`}
-                className="text-field"
-                type="text"
-                inputMode="numeric"
-                placeholder="HH:mm"
-                pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
-                maxLength={5}
+                className="text-field text-field--picker"
+                type="time"
+                step="60"
+                lang="en-GB"
                 value={rowEdit?.drawingTime ?? ''}
                 onChange={(event) =>
                   setEdits((prev) => ({

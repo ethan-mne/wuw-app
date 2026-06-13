@@ -41,7 +41,19 @@ type NotificationResponseData = {
   sentAt?: string;
   attempted?: number;
   successCount?: number;
+  errorMessage?: string;
+  legacyTokenCount?: number;
 };
+
+function formatSchedulePushDeliveryFailureMessage(result: NotificationResponseData): string {
+  if (result.errorMessage) {
+    return `Schedule push failed: ${result.errorMessage}`;
+  }
+  if (result.legacyTokenCount && result.legacyTokenCount > 0) {
+    return `${result.legacyTokenCount} subscriber(s) still have legacy push tokens. They must reopen the mobile app and re-subscribe to draw alerts.`;
+  }
+  return 'Schedule push delivery failed, try again';
+}
 
 function toDateTimeLocalValue(value: string): string {
   const date = new Date(value);
@@ -96,6 +108,7 @@ export function CompetitionScheduleDashboard() {
     try {
       const response = await fetch('/api/admin/v1/competitions', {
         cache: 'no-store',
+        credentials: 'include',
       });
       const payload = (await response.json()) as {
         data?: CompetitionScheduleRow[];
@@ -179,6 +192,7 @@ export function CompetitionScheduleDashboard() {
     try {
       const response = await fetch(`/api/admin/v1/competitions/${rowId}/schedule`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           drawingDate: toIsoString(currentEdit.drawingDate),
@@ -246,6 +260,7 @@ export function CompetitionScheduleDashboard() {
     try {
       const response = await fetch(`/api/admin/v1/competitions/${row.id}/notify`, {
         method: 'POST',
+        credentials: 'include',
       });
 
       const payload = (await response.json()) as {
@@ -375,6 +390,7 @@ export function CompetitionScheduleDashboard() {
     try {
       const response = await fetch(`/api/admin/v1/competitions/${row.id}/notify-schedule`, {
         method: 'POST',
+        credentials: 'include',
       });
 
       const payload = (await response.json()) as {
@@ -440,7 +456,7 @@ export function CompetitionScheduleDashboard() {
               saving: prev[row.id]?.saving ?? false,
               notifyingCompetition: prev[row.id]?.notifyingCompetition ?? false,
               notifyingSchedule: false,
-              message: 'No draw-alert subscribers with push notifications',
+              message: result.errorMessage ?? 'No draw-alert subscribers with push notifications',
               isError: true,
             },
           }));
@@ -453,7 +469,7 @@ export function CompetitionScheduleDashboard() {
             saving: prev[row.id]?.saving ?? false,
             notifyingCompetition: prev[row.id]?.notifyingCompetition ?? false,
             notifyingSchedule: false,
-            message: 'Schedule push delivery failed, try again',
+            message: formatSchedulePushDeliveryFailureMessage(result),
             isError: true,
           },
         }));

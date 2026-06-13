@@ -15,6 +15,7 @@ export async function GET() {
     if (error instanceof MobileHttpError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    throw error;
+    console.error('[admin/competitions] GET failed', error);
+    return NextResponse.json({ error: 'Failed to load competitions' }, { status: 500 });
   }
 }

@@ -408,6 +408,15 @@ button {
   background-color: #ffffff;
 }
 
+.text-field--picker {
+  color: #0f172a;
+  color-scheme: light;
+}
+
+.text-field--picker::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 .otp-row,
 .quantity-row {
   display: grid;

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '@/server/db';
 import { MobileHttpError } from '@/server/mobile/http';
 
-const adminCompetitionScheduleSelect = {
+const adminCompetitionScheduleBaseSelect = {
   id: true,
   name: true,
   status: true,
@@ -17,6 +17,23 @@ const adminCompetitionScheduleSelect = {
     },
   },
 } as const;
+
+const adminCompetitionScheduleSelect = {
+  ...adminCompetitionScheduleBaseSelect,
+  scheduleAnnouncementSent: {
+    select: {
+      sentAt: true,
+    },
+  },
+} as const;
+
+function isMissingScheduleAnnouncementStorage(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError
+    && (error.code === 'P2021' || error.code === 'P2022')
+    && String(error.message).includes('competition_schedule_announcement_sent')
+  );
+}
 
 export type AdminCompetitionScheduleRow = {
   id: string;
@@ -49,46 +66,19 @@ export type UpdateCompetitionScheduleInput = z.infer<
   typeof updateCompetitionScheduleInputSchema
 >;
 
-async function getScheduleAnnouncementSentMap(
-  competitionIds: string[],
-): Promise<Map<string, Date>> {
-  if (competitionIds.length === 0) {
-    return new Map();
-  }
-  const rows = await db.$queryRaw<Array<{ competitionId: string; sentAt: Date }>>`
-    SELECT competitionId, sentAt
-    FROM competition_schedule_announcement_sent
-    WHERE competitionId IN (${Prisma.join(competitionIds)})
-  `;
-  const map = new Map<string, Date>();
-  for (const row of rows) {
-    map.set(row.competitionId, row.sentAt);
-  }
-  return map;
-}
-
-async function getScheduleAnnouncementSentAt(competitionId: string): Promise<Date | null> {
-  const rows = await db.$queryRaw<Array<{ sentAt: Date }>>`
-    SELECT sentAt
-    FROM competition_schedule_announcement_sent
-    WHERE competitionId = ${competitionId}
-    LIMIT 1
-  `;
-  return rows[0]?.sentAt ?? null;
-}
-
-export async function listCompetitionsForAdminSchedule(): Promise<
-  AdminCompetitionScheduleRow[]
-> {
-  const rows = await db.competition.findMany({
-    where: {
-      status: { not: 'COMPLETED' },
-    },
-    select: adminCompetitionScheduleSelect,
-    orderBy: [{ drawing_date: 'asc' }, { name: 'asc' }],
-  });
-  const scheduleAnnouncementMap = await getScheduleAnnouncementSentMap(rows.map((row) => row.id));
-  return rows.map((row) => ({
+function mapAdminCompetitionScheduleRow(
+  row: {
+    id: string;
+    name: string;
+    status: 'ACTIVE' | 'NOT_ACTIVE' | 'COMPLETED';
+    end_date: Date;
+    drawing_date: Date;
+    updatedAt: Date;
+    announcementSent: { sentAt: Date } | null;
+    scheduleAnnouncementSent?: { sentAt: Date } | null;
+  },
+): AdminCompetitionScheduleRow {
+  return {
     id: row.id,
     name: row.name,
     status: row.status,
@@ -96,8 +86,39 @@ export async function listCompetitionsForAdminSchedule(): Promise<
     drawing_date: row.drawing_date,
     updatedAt: row.updatedAt,
     announcementSentAt: row.announcementSent?.sentAt ?? null,
-    scheduleAnnouncementSentAt: scheduleAnnouncementMap.get(row.id) ?? null,
-  }));
+    scheduleAnnouncementSentAt: row.scheduleAnnouncementSent?.sentAt ?? null,
+  };
+}
+
+export async function listCompetitionsForAdminSchedule(): Promise<
+  AdminCompetitionScheduleRow[]
+> {
+  const query = {
+    where: {
+      status: { not: 'COMPLETED' as const },
+    },
+    orderBy: [{ drawing_date: 'asc' as const }, { name: 'asc' as const }],
+  };
+
+  try {
+    const rows = await db.competition.findMany({
+      ...query,
+      select: adminCompetitionScheduleSelect,
+    });
+    return rows.map(mapAdminCompetitionScheduleRow);
+  } catch (error) {
+    if (!isMissingScheduleAnnouncementStorage(error)) {
+      throw error;
+    }
+
+    const rows = await db.competition.findMany({
+      ...query,
+      select: adminCompetitionScheduleBaseSelect,
+    });
+    return rows.map((row) =>
+      mapAdminCompetitionScheduleRow({ ...row, scheduleAnnouncementSent: null }),
+    );
+  }
 }
 
 export async function updateCompetitionSchedule(
@@ -114,18 +135,22 @@ export async function updateCompetitionSchedule(
       },
       select: adminCompetitionScheduleSelect,
     });
-    const scheduleAnnouncementSentAt = await getScheduleAnnouncementSentAt(updated.id);
-    return {
-      id: updated.id,
-      name: updated.name,
-      status: updated.status,
-      end_date: updated.end_date,
-      drawing_date: updated.drawing_date,
-      updatedAt: updated.updatedAt,
-      announcementSentAt: updated.announcementSent?.sentAt ?? null,
-      scheduleAnnouncementSentAt,
-    };
+    return mapAdminCompetitionScheduleRow(updated);
   } catch (error) {
+    if (isMissingScheduleAnnouncementStorage(error)) {
+      const updated = await db.competition.update({
+        where: { id: parsed.id },
+        data: {
+          end_date: parsed.endDate,
+          drawing_date: parsed.drawingDate,
+        },
+        select: adminCompetitionScheduleBaseSelect,
+      });
+      return mapAdminCompetitionScheduleRow({
+        ...updated,
+        scheduleAnnouncementSent: null,
+      });
+    }
     if (
       typeof error === 'object'
       && error != null

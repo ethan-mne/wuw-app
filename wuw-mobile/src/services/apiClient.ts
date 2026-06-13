@@ -31,14 +31,31 @@ export async function apiClient<TResponse>(
       ? `${API_BASE_URL}${path}`
       : path;
 
-  const response = await fetch(requestUrl, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...mobileAuthHeaders(),
-      ...options.headers,
-    },
-  });
+  if (isNative && !API_BASE_URL && path.startsWith('/api/')) {
+    throw new Error(
+      'VITE_API_BASE_URL is not configured. Rebuild the app with a valid API URL.',
+    );
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(requestUrl, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...mobileAuthHeaders(),
+        ...options.headers,
+      },
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Network request failed';
+    if (detail === 'Load failed' || detail === 'Failed to fetch') {
+      throw new Error(
+        `Cannot reach API at ${requestUrl}. Check VITE_API_BASE_URL and your network connection.`,
+      );
+    }
+    throw error instanceof Error ? error : new Error(detail);
+  }
 
   if (!response.ok) {
     let message = `API request failed with status ${response.status}.`;

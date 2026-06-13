@@ -31,11 +31,14 @@ describe('competition-schedule.service', () => {
         end_date: new Date('2026-06-20T10:00:00.000Z'),
         drawing_date: new Date('2026-06-20T12:00:00.000Z'),
         updatedAt: new Date('2026-06-10T19:00:00.000Z'),
+        announcementSent: null,
+        scheduleAnnouncementSent: null,
       },
     ]);
 
     const rows = await listCompetitionsForAdminSchedule();
     expect(rows).toHaveLength(1);
+    expect(rows[0]?.scheduleAnnouncementSentAt).toBeNull();
     expect(db.competition.findMany).toHaveBeenCalledOnce();
     expect(db.competition.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -64,6 +67,10 @@ describe('competition-schedule.service', () => {
       end_date: new Date('2026-06-20T10:00:00.000Z'),
       drawing_date: new Date('2026-06-20T12:00:00.000Z'),
       updatedAt: new Date('2026-06-10T19:00:00.000Z'),
+      announcementSent: null,
+      scheduleAnnouncementSent: {
+        sentAt: new Date('2026-06-11T08:00:00.000Z'),
+      },
     });
 
     const result = await updateCompetitionSchedule({

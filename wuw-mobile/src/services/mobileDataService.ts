@@ -425,6 +425,8 @@ export type SendAdminCompetitionNotificationResult = {
   attempted?: number;
   successCount?: number;
   failureCount?: number;
+  errorMessage?: string;
+  legacyTokenCount?: number;
 };
 
 export type SendAdminCompetitionScheduleNotificationResult = {
@@ -435,6 +437,8 @@ export type SendAdminCompetitionScheduleNotificationResult = {
   attempted?: number;
   successCount?: number;
   failureCount?: number;
+  errorMessage?: string;
+  legacyTokenCount?: number;
 };
 
 export type DrawReminderTargetCompetition = Pick<
@@ -674,7 +678,10 @@ export const mobileDataService = {
     const response = await apiClient<ApiDataResponse<AdminCompetitionScheduleRow[]>>(
       '/api/admin/v1/competitions',
     );
-    return Array.isArray(response.data) ? response.data : [];
+    if (!Array.isArray(response.data)) {
+      throw new Error('Invalid competitions response from server');
+    }
+    return response.data;
   },
   updateAdminCompetitionSchedule: async (
     competitionId: string,

@@ -9,12 +9,13 @@ export type OneSignalMulticastResult = {
   successCount: number;
   failureCount: number;
   notificationId?: string;
+  errorSummary?: string;
   results: OneSignalTokenResult[];
   invalidSubscriptionIds: string[];
 };
 
 type OneSignalApiResponse = {
-  id?: string;
+  id?: string | string[];
   recipients?: number;
   errors?: unknown;
 };
@@ -53,19 +54,77 @@ export function isOneSignalConfigured(): boolean {
   return getOneSignalConfig() != null;
 }
 
+function hasNotificationId(json: OneSignalApiResponse): boolean {
+  if (typeof json.id === 'string' && json.id.trim().length > 0) {
+    return true;
+  }
+  if (Array.isArray(json.id)) {
+    return json.id.some((item) => typeof item === 'string' && item.trim().length > 0);
+  }
+  return false;
+}
+
+function extractDispatchErrors(errors: unknown): string[] {
+  if (!Array.isArray(errors)) {
+    return [];
+  }
+  return errors
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function extractInvalidSubscriptionIds(errors: unknown): string[] {
   if (typeof errors !== 'object' || errors == null) {
     return [];
   }
   const root = errors as Record<string, unknown>;
-  const value = root.invalid_player_ids;
-  if (!Array.isArray(value)) {
-    return [];
+  for (const key of ['invalid_subscription_ids', 'invalid_player_ids'] as const) {
+    const value = root[key];
+    if (!Array.isArray(value)) {
+      continue;
+    }
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean);
   }
-  return value
-    .filter((item): item is string => typeof item === 'string')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return [];
+}
+
+function summarizeOneSignalErrors(errors: unknown): string | undefined {
+  const dispatchErrors = extractDispatchErrors(errors);
+  if (dispatchErrors.length > 0) {
+    return dispatchErrors.join('; ');
+  }
+  if (typeof errors === 'string' && errors.trim()) {
+    return errors.trim();
+  }
+  return undefined;
+}
+
+function failureResult(params: {
+  subscriptionIds: string[];
+  invalidSubscriptionIds?: string[];
+  errorCode: string;
+  errorMessage: string;
+}): OneSignalMulticastResult {
+  const invalidSubscriptionIds = params.invalidSubscriptionIds ?? [];
+  const invalidSet = new Set(invalidSubscriptionIds);
+  return {
+    successCount: 0,
+    failureCount: params.subscriptionIds.length,
+    errorSummary: params.errorMessage,
+    invalidSubscriptionIds,
+    results: params.subscriptionIds.map((token) => ({
+      tokenPrefix: tokenPrefix(token),
+      success: false,
+      errorCode: invalidSet.has(token) ? 'invalid_subscription_id' : params.errorCode,
+      errorMessage: invalidSet.has(token)
+        ? 'OneSignal rejected this subscription id'
+        : params.errorMessage,
+    })),
+  };
 }
 
 async function sendOneSignalChunk(params: {
@@ -76,17 +135,11 @@ async function sendOneSignalChunk(params: {
 }): Promise<OneSignalMulticastResult> {
   const config = getOneSignalConfig();
   if (!config) {
-    return {
-      successCount: 0,
-      failureCount: params.subscriptionIds.length,
-      invalidSubscriptionIds: [],
-      results: params.subscriptionIds.map((token) => ({
-        tokenPrefix: tokenPrefix(token),
-        success: false,
-        errorCode: 'onesignal_not_configured',
-        errorMessage: 'ONESIGNAL_APP_ID / ONESIGNAL_REST_API_KEY missing',
-      })),
-    };
+    return failureResult({
+      subscriptionIds: params.subscriptionIds,
+      errorCode: 'onesignal_not_configured',
+      errorMessage: 'ONESIGNAL_APP_ID / ONESIGNAL_REST_API_KEY missing',
+    });
   }
 
   try {
@@ -111,39 +164,49 @@ async function sendOneSignalChunk(params: {
     });
 
     const json = (await response.json().catch(() => ({}))) as OneSignalApiResponse;
+    const invalidSubscriptionIds = extractInvalidSubscriptionIds(json.errors);
+    const dispatchErrors = extractDispatchErrors(json.errors);
+    const errorSummary = summarizeOneSignalErrors(json.errors);
+
     if (!response.ok) {
-      const errorMessage =
-        typeof json.errors === 'string'
-          ? json.errors
-          : `OneSignal HTTP ${response.status}`;
-      return {
-        successCount: 0,
-        failureCount: params.subscriptionIds.length,
-        invalidSubscriptionIds: [],
-        results: params.subscriptionIds.map((token) => ({
-          tokenPrefix: tokenPrefix(token),
-          success: false,
-          errorCode: 'onesignal_http_error',
-          errorMessage,
-        })),
-      };
+      const errorMessage = errorSummary ?? `OneSignal HTTP ${response.status}`;
+      return failureResult({
+        subscriptionIds: params.subscriptionIds,
+        invalidSubscriptionIds,
+        errorCode: 'onesignal_http_error',
+        errorMessage,
+      });
     }
 
-    const invalidSubscriptionIds = new Set(extractInvalidSubscriptionIds(json.errors));
+    if (!hasNotificationId(json)) {
+      const errorMessage =
+        errorSummary
+        ?? (invalidSubscriptionIds.length > 0
+          ? 'OneSignal rejected all subscription ids'
+          : 'OneSignal did not create the notification (no valid subscriptions)');
+      return failureResult({
+        subscriptionIds: params.subscriptionIds,
+        invalidSubscriptionIds,
+        errorCode: 'onesignal_not_dispatched',
+        errorMessage,
+      });
+    }
+
+    const invalidSet = new Set(invalidSubscriptionIds);
     const recipients =
       typeof json.recipients === 'number' && json.recipients >= 0
         ? json.recipients
-        : params.subscriptionIds.length - invalidSubscriptionIds.size;
+        : params.subscriptionIds.length - invalidSet.size;
 
     const successCount = Math.max(
       0,
-      Math.min(params.subscriptionIds.length - invalidSubscriptionIds.size, recipients),
+      Math.min(params.subscriptionIds.length - invalidSet.size, recipients),
     );
     const failureCount = params.subscriptionIds.length - successCount;
     const results = params.subscriptionIds.map((token) => ({
       tokenPrefix: tokenPrefix(token),
-      success: !invalidSubscriptionIds.has(token),
-      ...(invalidSubscriptionIds.has(token)
+      success: !invalidSet.has(token),
+      ...(invalidSet.has(token)
         ? {
             errorCode: 'invalid_subscription_id',
             errorMessage: 'OneSignal rejected this subscription id',
@@ -154,23 +217,22 @@ async function sendOneSignalChunk(params: {
     return {
       successCount,
       failureCount,
-      notificationId: typeof json.id === 'string' ? json.id : undefined,
-      invalidSubscriptionIds: [...invalidSubscriptionIds],
+      notificationId: typeof json.id === 'string'
+        ? json.id
+        : Array.isArray(json.id)
+          ? json.id.find((item) => typeof item === 'string' && item.trim().length > 0)
+          : undefined,
+      errorSummary: dispatchErrors.length > 0 ? dispatchErrors.join('; ') : undefined,
+      invalidSubscriptionIds,
       results,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return {
-      successCount: 0,
-      failureCount: params.subscriptionIds.length,
-      invalidSubscriptionIds: [],
-      results: params.subscriptionIds.map((token) => ({
-        tokenPrefix: tokenPrefix(token),
-        success: false,
-        errorCode: 'onesignal_request_failed',
-        errorMessage: message,
-      })),
-    };
+    return failureResult({
+      subscriptionIds: params.subscriptionIds,
+      errorCode: 'onesignal_request_failed',
+      errorMessage: message,
+    });
   }
 }
 
@@ -200,6 +262,7 @@ export async function sendOneSignalPushMulticast(params: {
     successCount: 0,
     failureCount: 0,
     notificationId: undefined,
+    errorSummary: undefined,
     invalidSubscriptionIds: [],
     results: [],
   };
@@ -217,6 +280,9 @@ export async function sendOneSignalPushMulticast(params: {
     merged.invalidSubscriptionIds.push(...one.invalidSubscriptionIds);
     if (!merged.notificationId && one.notificationId) {
       merged.notificationId = one.notificationId;
+    }
+    if (!merged.errorSummary && one.errorSummary) {
+      merged.errorSummary = one.errorSummary;
     }
   }
 

@@ -31,6 +31,18 @@ export function isLikelyFcmRegistrationToken(token: string): boolean {
   return false;
 }
 
+export function filterOneSignalSubscriptionIds(tokens: string[]): {
+  subscriptionIds: string[];
+  legacyTokenCount: number;
+} {
+  const unique = [...new Set(tokens.map((token) => token.trim()).filter(Boolean))];
+  const subscriptionIds = unique.filter(isLikelyOneSignalSubscriptionId);
+  return {
+    subscriptionIds,
+    legacyTokenCount: unique.length - subscriptionIds.length,
+  };
+}
+
 export function isValidPushTokenForPlatform(
   token: string,
   platform: 'ios' | 'android',

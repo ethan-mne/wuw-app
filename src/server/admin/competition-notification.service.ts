@@ -3,6 +3,7 @@ import type { CompetitionStatus } from '@prisma/client';
 
 import { db } from '@/server/db';
 import { MobileHttpError } from '@/server/mobile/http';
+import { filterOneSignalSubscriptionIds } from '@/server/mobile/push-token-validation';
 import {
   isOneSignalConfigured,
   sendOneSignalPushMulticast,
@@ -58,12 +59,15 @@ export type SendCompetitionAnnouncementResult =
     kind: 'no_recipients';
     competitionId: string;
     competitionName: string;
+    errorMessage?: string;
   }
   | {
     kind: 'delivery_failed';
     competitionId: string;
     competitionName: string;
     attempted: number;
+    legacyTokenCount?: number;
+    errorMessage?: string;
   };
 
 export type SendCompetitionScheduleAnnouncementResult =
@@ -88,12 +92,15 @@ export type SendCompetitionScheduleAnnouncementResult =
     kind: 'no_recipients';
     competitionId: string;
     competitionName: string;
+    errorMessage?: string;
   }
   | {
     kind: 'delivery_failed';
     competitionId: string;
     competitionName: string;
     attempted: number;
+    legacyTokenCount?: number;
+    errorMessage?: string;
   };
 
 async function loadCompetitionOrThrow(competitionId: string): Promise<CompetitionNotificationRow> {
@@ -150,12 +157,20 @@ export async function sendCompetitionAnnouncement(params: {
   const tokens = await db.userPushDevice.findMany({
     select: { token: true },
   });
-  const subscriptionIds = [...new Set(tokens.map((item) => item.token.trim()).filter(Boolean))];
+  const { subscriptionIds, legacyTokenCount } = filterOneSignalSubscriptionIds(
+    tokens.map((item) => item.token),
+  );
   if (subscriptionIds.length === 0) {
     return {
       kind: 'no_recipients',
       competitionId: competition.id,
       competitionName: competition.name,
+      ...(legacyTokenCount > 0
+        ? {
+            errorMessage:
+              `${legacyTokenCount} stored push token(s) are legacy FCM/APNs ids. Users must reopen the mobile app and re-enable notifications.`,
+          }
+        : {}),
     };
   }
 
@@ -220,6 +235,8 @@ export async function sendCompetitionAnnouncement(params: {
       competitionId: competition.id,
       competitionName: competition.name,
       attempted: subscriptionIds.length,
+      legacyTokenCount: legacyTokenCount > 0 ? legacyTokenCount : undefined,
+      errorMessage: pushResult.errorSummary,
     };
   }
 
@@ -275,15 +292,20 @@ export async function sendCompetitionScheduleAnnouncement(params: {
       },
     },
   });
-  const subscriptionIds = [...new Set(
-    rows.flatMap((row) => row.user.pushDevices.map((device) => device.token.trim())).filter(Boolean),
-  )];
+  const allTokens = rows.flatMap((row) => row.user.pushDevices.map((device) => device.token));
+  const { subscriptionIds, legacyTokenCount } = filterOneSignalSubscriptionIds(allTokens);
 
   if (subscriptionIds.length === 0) {
     return {
       kind: 'no_recipients',
       competitionId: competition.id,
       competitionName: competition.name,
+      ...(legacyTokenCount > 0
+        ? {
+            errorMessage:
+              `${legacyTokenCount} draw-alert subscriber(s) have legacy FCM/APNs push tokens. They must reopen the mobile app and re-subscribe to draw alerts.`,
+          }
+        : {}),
     };
   }
 
@@ -336,6 +358,8 @@ export async function sendCompetitionScheduleAnnouncement(params: {
       competitionId: competition.id,
       competitionName: competition.name,
       attempted: subscriptionIds.length,
+      legacyTokenCount: legacyTokenCount > 0 ? legacyTokenCount : undefined,
+      errorMessage: pushResult.errorSummary,
     };
   }
 
