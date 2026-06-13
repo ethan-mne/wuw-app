@@ -272,6 +272,9 @@ async function notifyCompetitionDrawReminder(params: {
   const usersWithSuccess = new Set<string>();
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i];
+    if (!token) {
+      continue;
+    }
     const result = oneSignal.results[i];
     const userId = tokenToUserId.get(token);
     if (!result?.success || !userId) {
