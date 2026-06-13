@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 
+import { hasOneSignalMobileConfig } from './oneSignal';
 import { isApnsDeviceToken } from './pushToken';
 
 /** Must match FCM `android.notification.channelId` on the server. */
@@ -110,7 +111,7 @@ export async function setupPushNotificationHandlers(): Promise<void> {
     console.info('[wuw-push] notification tapped', action.notification.title);
   });
 
-  if (Capacitor.getPlatform() === 'ios') {
+  if (Capacitor.getPlatform() === 'ios' && !hasOneSignalMobileConfig()) {
     try {
       const perm = await PushNotifications.checkPermissions();
       if (perm.receive === 'granted') {
