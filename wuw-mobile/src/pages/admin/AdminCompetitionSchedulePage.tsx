@@ -9,7 +9,9 @@ import type { AdminCompetitionScheduleRow } from '../../types';
 
 type EditState = {
   drawingDate: string;
+  drawingTime: string;
   endDate: string;
+  endTime: string;
 };
 
 type SaveState = {
@@ -34,10 +36,28 @@ function toIsoString(localDateTime: string): string {
   return new Date(localDateTime).toISOString();
 }
 
-function isValidDateTimeLocal(value: string): boolean {
-  if (!value.includes('T')) return false;
-  const parsed = new Date(value);
-  return !Number.isNaN(parsed.getTime());
+function splitLocalDateTime(value: string): { date: string; time: string } {
+  const [date = '', time = ''] = value.split('T');
+  return { date, time };
+}
+
+function joinLocalDateTime(date: string, time: string): string {
+  return `${date}T${time}`;
+}
+
+function isValidLocalDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(year, month - 1, day);
+  return (
+    parsed.getFullYear() === year
+    && parsed.getMonth() === month - 1
+    && parsed.getDate() === day
+  );
+}
+
+function isValid24hTime(value: string): boolean {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
 function formatStatusLabel(status: AdminCompetitionScheduleRow['status']): string {
@@ -65,25 +85,40 @@ function formatDateTime24h(value: string): string {
   }).format(new Date(value));
 }
 
-function ScheduleCompetitionThumb({
-  imageUrl,
-  name,
+function scheduleImageSrc(row: Pick<
+  AdminCompetitionScheduleRow,
+  'imageUrl' | 'watchImageUrl' | 'competitionImageUrl'
+>): string {
+  for (const candidate of [row.watchImageUrl, row.competitionImageUrl, row.imageUrl]) {
+    const resolved = resolveMediaUrl(candidate);
+    if (resolved) {
+      return resolved;
+    }
+  }
+  return '';
+}
+
+function ScheduleCompetitionPhoto({
+  row,
 }: {
-  imageUrl: string | null;
-  name: string;
+  row: Pick<AdminCompetitionScheduleRow, 'name' | 'imageUrl' | 'watchImageUrl' | 'competitionImageUrl'>;
 }) {
   const [failed, setFailed] = useState(false);
-  const src = resolveMediaUrl(imageUrl ?? '');
+  const src = scheduleImageSrc(row);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
 
   if (!src || failed) {
-    return <div className="draws-thumb draws-thumb--fallback" aria-hidden />;
+    return <div className="admin-schedule-card-photo admin-schedule-card-photo--fallback" aria-hidden />;
   }
 
   return (
-    <div className="draws-thumb">
+    <div className="admin-schedule-card-photo">
       <img
         src={src}
-        alt={name}
+        alt={row.name}
         loading="lazy"
         decoding="async"
         onError={() => setFailed(true)}
@@ -122,9 +157,13 @@ export function AdminCompetitionSchedulePage() {
         setRows(filteredList);
         const nextEdits: Record<string, EditState> = {};
         filteredList.forEach((row) => {
+          const drawing = splitLocalDateTime(toDateTimeLocalValue(row.drawing_date));
+          const end = splitLocalDateTime(toDateTimeLocalValue(row.end_date));
           nextEdits[row.id] = {
-            drawingDate: toDateTimeLocalValue(row.drawing_date),
-            endDate: toDateTimeLocalValue(row.end_date),
+            drawingDate: drawing.date,
+            drawingTime: drawing.time,
+            endDate: end.date,
+            endTime: end.time,
           };
         });
         setEdits(nextEdits);
@@ -170,7 +209,12 @@ export function AdminCompetitionSchedulePage() {
 
   const saveRow = async (rowId: string) => {
     const currentEdit = edits[rowId];
-    if (!currentEdit?.drawingDate || !currentEdit.endDate) {
+    if (
+      !currentEdit?.drawingDate
+      || !currentEdit.drawingTime
+      || !currentEdit.endDate
+      || !currentEdit.endTime
+    ) {
       setSaveState((prev) => ({
         ...prev,
         [rowId]: {
@@ -183,14 +227,27 @@ export function AdminCompetitionSchedulePage() {
       }));
       return;
     }
-    if (!isValidDateTimeLocal(currentEdit.drawingDate) || !isValidDateTimeLocal(currentEdit.endDate)) {
+    if (!isValid24hTime(currentEdit.drawingTime) || !isValid24hTime(currentEdit.endTime)) {
       setSaveState((prev) => ({
         ...prev,
         [rowId]: {
           saving: false,
           notifyingCompetition: prev[rowId]?.notifyingCompetition ?? false,
           notifyingSchedule: prev[rowId]?.notifyingSchedule ?? false,
-          message: 'Enter a valid date and time',
+          message: 'Time must use 24h format (HH:mm)',
+          isError: true,
+        },
+      }));
+      return;
+    }
+    if (!isValidLocalDate(currentEdit.drawingDate) || !isValidLocalDate(currentEdit.endDate)) {
+      setSaveState((prev) => ({
+        ...prev,
+        [rowId]: {
+          saving: false,
+          notifyingCompetition: prev[rowId]?.notifyingCompetition ?? false,
+          notifyingSchedule: prev[rowId]?.notifyingSchedule ?? false,
+          message: 'Enter a valid date',
           isError: true,
         },
       }));
@@ -210,8 +267,8 @@ export function AdminCompetitionSchedulePage() {
 
     try {
       const updated = await mobileDataService.updateAdminCompetitionSchedule(rowId, {
-        drawingDate: toIsoString(currentEdit.drawingDate),
-        endDate: toIsoString(currentEdit.endDate),
+        drawingDate: toIsoString(joinLocalDateTime(currentEdit.drawingDate, currentEdit.drawingTime)),
+        endDate: toIsoString(joinLocalDateTime(currentEdit.endDate, currentEdit.endTime)),
       });
 
       setRows((prev) =>
@@ -541,13 +598,15 @@ export function AdminCompetitionSchedulePage() {
       {visibleRows.map((row) => {
         const state = saveState[row.id];
         const rowEdit = edits[row.id];
-        const originalEndDate = toDateTimeLocalValue(row.end_date);
-        const originalDrawingDate = toDateTimeLocalValue(row.drawing_date);
+        const originalEnd = splitLocalDateTime(toDateTimeLocalValue(row.end_date));
+        const originalDrawing = splitLocalDateTime(toDateTimeLocalValue(row.drawing_date));
         const hasScheduleChanges = Boolean(
           rowEdit
           && (
-            rowEdit.endDate !== originalEndDate
-            || rowEdit.drawingDate !== originalDrawingDate
+            rowEdit.endDate !== originalEnd.date
+            || rowEdit.endTime !== originalEnd.time
+            || rowEdit.drawingDate !== originalDrawing.date
+            || rowEdit.drawingTime !== originalDrawing.time
           ),
         );
         const canNotifyCompetition = row.status === 'ACTIVE' && !row.announcementSentAt;
@@ -555,61 +614,115 @@ export function AdminCompetitionSchedulePage() {
 
         return (
           <Card key={row.id}>
-            <div className="admin-schedule-card-header">
-              <ScheduleCompetitionThumb imageUrl={row.imageUrl} name={row.name} />
-              <div className="admin-schedule-card-copy">
-                <h3>{row.name}</h3>
-                <div className="stats-grid">
-                  <StatPill label="Status" value={formatStatusLabel(row.status)} />
-                  <StatPill label="Updated" value={formatDateTime24h(row.updatedAt)} />
-                </div>
+            <div className="admin-schedule-card-intro">
+              <ScheduleCompetitionPhoto row={row} />
+              <h3>{row.name}</h3>
+              <div className="stats-grid">
+                <StatPill label="Status" value={formatStatusLabel(row.status)} />
+                <StatPill label="Updated" value={formatDateTime24h(row.updatedAt)} />
               </div>
             </div>
 
-            <div className="admin-schedule-field">
-              <label className="field-label" htmlFor={`${row.id}-end-datetime`}>
-                End date & time
-              </label>
-              <input
-                id={`${row.id}-end-datetime`}
-                className="text-field text-field--picker"
-                type="datetime-local"
-                step="60"
-                lang="en-GB"
-                value={rowEdit?.endDate ?? ''}
-                onChange={(event) =>
-                  setEdits((prev) => ({
-                    ...prev,
-                    [row.id]: {
-                      ...(prev[row.id] ?? { drawingDate: '', endDate: '' }),
-                      endDate: event.target.value,
-                    },
-                  }))
-                }
-              />
+            <div className="admin-schedule-field-group">
+              <span className="field-label">End date</span>
+              <div className="admin-schedule-date-time-stack">
+                <input
+                  id={`${row.id}-end-date`}
+                  className="text-field text-field--picker"
+                  type="date"
+                  value={rowEdit?.endDate ?? ''}
+                  onChange={(event) =>
+                    setEdits((prev) => ({
+                      ...prev,
+                      [row.id]: {
+                        ...(prev[row.id] ?? {
+                          drawingDate: '',
+                          drawingTime: '',
+                          endDate: '',
+                          endTime: '',
+                        }),
+                        endDate: event.target.value,
+                      },
+                    }))
+                  }
+                />
+                <label className="field-label" htmlFor={`${row.id}-end-time`}>
+                  End time
+                </label>
+                <input
+                  id={`${row.id}-end-time`}
+                  className="text-field text-field--picker"
+                  type="time"
+                  step="60"
+                  lang="en-GB"
+                  value={rowEdit?.endTime ?? ''}
+                  onChange={(event) =>
+                    setEdits((prev) => ({
+                      ...prev,
+                      [row.id]: {
+                        ...(prev[row.id] ?? {
+                          drawingDate: '',
+                          drawingTime: '',
+                          endDate: '',
+                          endTime: '',
+                        }),
+                        endTime: event.target.value,
+                      },
+                    }))
+                  }
+                />
+              </div>
             </div>
 
-            <div className="admin-schedule-field">
-              <label className="field-label" htmlFor={`${row.id}-draw-datetime`}>
-                Draw date & time
-              </label>
-              <input
-                id={`${row.id}-draw-datetime`}
-                className="text-field text-field--picker"
-                type="datetime-local"
-                step="60"
-                lang="en-GB"
-                value={rowEdit?.drawingDate ?? ''}
-                onChange={(event) =>
-                  setEdits((prev) => ({
-                    ...prev,
-                    [row.id]: {
-                      ...(prev[row.id] ?? { drawingDate: '', endDate: '' }),
-                      drawingDate: event.target.value,
-                    },
-                  }))
-                }
-              />
+            <div className="admin-schedule-field-group">
+              <span className="field-label">Draw date</span>
+              <div className="admin-schedule-date-time-stack">
+                <input
+                  id={`${row.id}-draw-date`}
+                  className="text-field text-field--picker"
+                  type="date"
+                  value={rowEdit?.drawingDate ?? ''}
+                  onChange={(event) =>
+                    setEdits((prev) => ({
+                      ...prev,
+                      [row.id]: {
+                        ...(prev[row.id] ?? {
+                          drawingDate: '',
+                          drawingTime: '',
+                          endDate: '',
+                          endTime: '',
+                        }),
+                        drawingDate: event.target.value,
+                      },
+                    }))
+                  }
+                />
+                <label className="field-label" htmlFor={`${row.id}-draw-time`}>
+                  Draw time
+                </label>
+                <input
+                  id={`${row.id}-draw-time`}
+                  className="text-field text-field--picker"
+                  type="time"
+                  step="60"
+                  lang="en-GB"
+                  value={rowEdit?.drawingTime ?? ''}
+                  onChange={(event) =>
+                    setEdits((prev) => ({
+                      ...prev,
+                      [row.id]: {
+                        ...(prev[row.id] ?? {
+                          drawingDate: '',
+                          drawingTime: '',
+                          endDate: '',
+                          endTime: '',
+                        }),
+                        drawingTime: event.target.value,
+                      },
+                    }))
+                  }
+                />
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>

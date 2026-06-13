@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import css from './CompetitionScheduleDashboard.module.css';
+import { resolveMediaUrl } from '@/lib/resolveMediaUrl';
 import { Button, Card, PageHeader, StatPill } from '@wuw/mobile-ui';
 
 type CompetitionScheduleRow = {
@@ -13,6 +14,8 @@ type CompetitionScheduleRow = {
   end_date: string;
   updatedAt: string;
   imageUrl: string | null;
+  watchImageUrl?: string | null;
+  competitionImageUrl?: string | null;
   announcementSentAt: string | null;
   scheduleAnnouncementSentAt: string | null;
 };
@@ -95,25 +98,40 @@ function formatDateTime24h(value: string): string {
   }).format(new Date(value));
 }
 
-function ScheduleCompetitionThumb({
-  imageUrl,
-  name,
+function scheduleImageSrc(row: Pick<
+  CompetitionScheduleRow,
+  'imageUrl' | 'watchImageUrl' | 'competitionImageUrl'
+>): string {
+  for (const candidate of [row.watchImageUrl, row.competitionImageUrl, row.imageUrl]) {
+    const resolved = resolveMediaUrl(candidate);
+    if (resolved) {
+      return resolved;
+    }
+  }
+  return '';
+}
+
+function ScheduleCompetitionPhoto({
+  row,
 }: {
-  imageUrl: string | null;
-  name: string;
+  row: Pick<CompetitionScheduleRow, 'name' | 'imageUrl' | 'watchImageUrl' | 'competitionImageUrl'>;
 }) {
   const [failed, setFailed] = useState(false);
-  const src = imageUrl?.trim() ?? '';
+  const src = scheduleImageSrc(row);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
 
   if (!src || failed) {
-    return <div className={`${css.thumb} ${css.thumbFallback}`} aria-hidden />;
+    return <div className={`${css.photo} ${css.photoFallback}`} aria-hidden />;
   }
 
   return (
-    <div className={css.thumb}>
+    <div className={css.photo}>
       <img
         src={src}
-        alt={name}
+        alt={row.name}
         loading="lazy"
         decoding="async"
         onError={() => setFailed(true)}
@@ -587,17 +605,15 @@ export function CompetitionScheduleDashboard() {
           const canNotifySchedule = !row.scheduleAnnouncementSentAt;
           return (
             <Card key={row.id}>
-              <div className={css.cardHeader}>
-                <ScheduleCompetitionThumb imageUrl={row.imageUrl} name={row.name} />
-                <div className={css.cardHeaderCopy}>
-                  <h3 className={css.cardTitle}>{row.name}</h3>
-                  <div className={css.metaGrid}>
-                    <StatPill label="Status" value={formatStatusLabel(row.status)} />
-                    <StatPill
-                      label="Updated"
-                      value={formatDateTime24h(row.updatedAt)}
-                    />
-                  </div>
+              <div className={css.cardIntro}>
+                <ScheduleCompetitionPhoto row={row} />
+                <h3 className={css.cardTitle}>{row.name}</h3>
+                <div className={css.metaGrid}>
+                  <StatPill label="Status" value={formatStatusLabel(row.status)} />
+                  <StatPill
+                    label="Updated"
+                    value={formatDateTime24h(row.updatedAt)}
+                  />
                 </div>
               </div>
               <div className={css.fieldGrid}>

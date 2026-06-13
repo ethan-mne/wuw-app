@@ -1,8 +1,5 @@
-import { API_BASE_URL } from './config';
-
 /**
- * Turns API-relative image paths into absolute URLs using the API origin.
- * Full URLs and protocol-relative URLs are left usable as-is.
+ * Turns API-relative or bare CDN paths into absolute URLs.
  */
 export function resolveMediaUrl(url: string | undefined | null): string {
   if (url == null) {
@@ -16,18 +13,16 @@ export function resolveMediaUrl(url: string | undefined | null): string {
     return trimmed;
   }
   if (trimmed.startsWith('//')) {
-    if (typeof window !== 'undefined' && window.location?.protocol) {
-      return `${window.location.protocol}${trimmed}`;
-    }
     return `https:${trimmed}`;
   }
   if (/^[\w.-]+\.amazonaws\.com(\/|$)/i.test(trimmed) || /\.s3[.-][\w.-]+\.amazonaws\.com(\/|$)/i.test(trimmed)) {
     return `https://${trimmed.replace(/^\/+/, '')}`;
   }
-  if (!API_BASE_URL) {
-    return trimmed;
-  }
-  const base = API_BASE_URL.replace(/\/$/, '');
+  const base = (
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_APP_URL ?? ''
+  ).replace(/\/$/, '');
   const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  return `${base}${path}`;
+  return base ? `${base}${path}` : trimmed;
 }

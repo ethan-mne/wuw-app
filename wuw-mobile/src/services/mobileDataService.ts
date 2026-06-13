@@ -417,6 +417,69 @@ type UpdateAdminCompetitionSchedulePayload = {
   endDate: string;
 };
 
+function readNullableString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function normalizeAdminCompetitionScheduleRow(raw: unknown): AdminCompetitionScheduleRow | null {
+  if (typeof raw !== 'object' || raw === null) {
+    return null;
+  }
+
+  const row = raw as Record<string, unknown>;
+  const id = typeof row.id === 'string' ? row.id : null;
+  const name = typeof row.name === 'string' ? row.name : null;
+  const status = row.status;
+  const drawingDate = typeof row.drawing_date === 'string' ? row.drawing_date : null;
+  const endDate = typeof row.end_date === 'string' ? row.end_date : null;
+  const updatedAt = typeof row.updatedAt === 'string' ? row.updatedAt : null;
+
+  if (
+    !id
+    || !name
+    || (status !== 'ACTIVE' && status !== 'NOT_ACTIVE' && status !== 'COMPLETED')
+    || !drawingDate
+    || !endDate
+    || !updatedAt
+  ) {
+    return null;
+  }
+
+  const watchImageUrl =
+    readNullableString(row.watchImageUrl) ?? readNullableString(row.watch_image_url);
+  const competitionImageUrl =
+    readNullableString(row.competitionImageUrl)
+    ?? readNullableString(row.competition_image_url)
+    ?? readNullableString(row.comp_image_url);
+  const imageUrl =
+    readNullableString(row.imageUrl)
+    ?? readNullableString(row.image_url)
+    ?? watchImageUrl
+    ?? competitionImageUrl;
+
+  return {
+    id,
+    name,
+    status,
+    drawing_date: drawingDate,
+    end_date: endDate,
+    updatedAt,
+    imageUrl,
+    watchImageUrl,
+    competitionImageUrl,
+    announcementSentAt:
+      typeof row.announcementSentAt === 'string' ? row.announcementSentAt : null,
+    scheduleAnnouncementSentAt:
+      typeof row.scheduleAnnouncementSentAt === 'string'
+        ? row.scheduleAnnouncementSentAt
+        : null,
+  };
+}
+
 export type SendAdminCompetitionNotificationResult = {
   kind: 'sent' | 'already_sent' | 'not_active' | 'no_recipients' | 'delivery_failed';
   competitionId: string;
@@ -675,26 +738,32 @@ export const mobileDataService = {
     });
   },
   listAdminCompetitionSchedules: async (): Promise<AdminCompetitionScheduleRow[]> => {
-    const response = await apiClient<ApiDataResponse<AdminCompetitionScheduleRow[]>>(
+    const response = await apiClient<ApiDataResponse<unknown[]>>(
       '/api/admin/v1/competitions',
     );
     if (!Array.isArray(response.data)) {
       throw new Error('Invalid competitions response from server');
     }
-    return response.data;
+    return response.data
+      .map((row) => normalizeAdminCompetitionScheduleRow(row))
+      .filter((row): row is AdminCompetitionScheduleRow => row !== null);
   },
   updateAdminCompetitionSchedule: async (
     competitionId: string,
     payload: UpdateAdminCompetitionSchedulePayload,
   ): Promise<AdminCompetitionScheduleRow> => {
-    const response = await apiClient<ApiDataResponse<AdminCompetitionScheduleRow>>(
+    const response = await apiClient<ApiDataResponse<unknown>>(
       `/api/admin/v1/competitions/${encodeURIComponent(competitionId)}/schedule`,
       {
         method: 'PATCH',
         body: JSON.stringify(payload),
       },
     );
-    return response.data;
+    const normalized = normalizeAdminCompetitionScheduleRow(response.data);
+    if (!normalized) {
+      throw new Error('Invalid competition schedule response from server');
+    }
+    return normalized;
   },
   sendAdminCompetitionNotification: async (
     competitionId: string,

@@ -53,6 +53,8 @@ export type AdminCompetitionScheduleRow = {
   drawing_date: Date;
   updatedAt: Date;
   imageUrl: string | null;
+  watchImageUrl: string | null;
+  competitionImageUrl: string | null;
   announcementSentAt: Date | null;
   scheduleAnnouncementSentAt: Date | null;
 };
@@ -101,6 +103,9 @@ function mapAdminCompetitionScheduleRow(
     scheduleAnnouncementSent?: { sentAt: Date } | null;
   },
 ): AdminCompetitionScheduleRow {
+  const watchImageUrl = row.Watches?.images_url[0]?.url?.trim() || null;
+  const competitionImageUrl = row.comp_image_url?.trim() || null;
+
   return {
     id: row.id,
     name: row.name,
@@ -109,6 +114,8 @@ function mapAdminCompetitionScheduleRow(
     drawing_date: row.drawing_date,
     updatedAt: row.updatedAt,
     imageUrl: resolveScheduleImageUrl(row),
+    watchImageUrl,
+    competitionImageUrl,
     announcementSentAt: row.announcementSent?.sentAt ?? null,
     scheduleAnnouncementSentAt: row.scheduleAnnouncementSent?.sentAt ?? null,
   };
