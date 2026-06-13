@@ -13,3 +13,6 @@ project(':capacitor-push-notifications').projectDir = new File('../../node_modul
 
 include ':capacitor-splash-screen'
 project(':capacitor-splash-screen').projectDir = new File('../../node_modules/.pnpm/@capacitor+splash-screen@8.0.1_@capacitor+core@8.4.0/node_modules/@capacitor/splash-screen/android')
+
+include ':onesignal-capacitor-plugin'
+project(':onesignal-capacitor-plugin').projectDir = new File('../node_modules/@onesignal/capacitor-plugin/android')

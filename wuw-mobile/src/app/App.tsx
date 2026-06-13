@@ -36,7 +36,7 @@ const DRAW_SCHEDULE_UPDATED_EVENT = 'wuw-draw-schedule-updated';
 
 export default function App() {
   useEffect(() => {
-    initOneSignal();
+    void initOneSignal();
     void setupPushNotificationHandlers();
   }, []);
 

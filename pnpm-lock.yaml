@@ -168,12 +168,12 @@ importers:
       '@capacitor/splash-screen':
         specifier: ^8.0.1
         version: 8.0.1(@capacitor/core@8.4.0)
+      '@onesignal/capacitor-plugin':
+        specifier: ^1.1.0
+        version: 1.1.0(@capacitor/core@8.4.0)
       '@wuw/mobile-ui':
         specifier: workspace:*
         version: link:../packages/mobile-ui
-      onesignal-cordova-plugin:
-        specifier: ^5.3.11
-        version: 5.3.11
       react:
         specifier: ^19.2.5
         version: 19.2.7
@@ -1162,6 +1162,11 @@ packages:
 
   '@one-ini/wasm@0.1.1':
     resolution: {integrity: sha512-XuySG1E38YScSJoMlqovLru4KTUNSjgVTIjyh7qMX6aNN5HY5Ct5LhRJdxO79JtTzKfzV/bnWpz+zquYrISsvw==}
+
+  '@onesignal/capacitor-plugin@1.1.0':
+    resolution: {integrity: sha512-asqWcn04qO+/eCcrqxaHoL/VO8cBSUTbuRRUDsG175nOypR/hHucf5ZAzCgniIXeAbS1HTCNtRnQuPPF1exKhw==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
 
   '@opentelemetry/api-logs@0.207.0':
     resolution: {integrity: sha512-lAb0jQRVyleQQGiuuvCOTDVspc14nx6XJjP4FspJ1sNARo3Regq4ZZbrc3rN4b1TYSuUCvgH+UXUPug4SLOqEQ==}
@@ -5013,10 +5018,6 @@ packages:
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
 
-  onesignal-cordova-plugin@5.3.11:
-    resolution: {integrity: sha512-mRBVN3+h4CWFrHp8glQ4Jh8lIHjvWIegYlFttkVFRamQUSF4EQYrH8ryldv8gmmNGrW62/R38/tfvuCSoE7ieQ==}
-    engines: {'0': {name: cordova-android, version: '>=4.0.0'}, '1': {name: apple-xcode, version: '>=8.0.0'}, '2': {name: apple-ios, version: '>=7.0.0'}, '3': {name: cordova, version: '>=6.4.0'}, '4': {name: cordova-ios, version: '>=4.3.0'}}
-
   onetime@6.0.0:
     resolution: {integrity: sha512-1FlR+gjXK7X+AsAHso35MnyN5KqGwJRi/31ft6x0M194ht7S+rWAvd7PHss9xSKMzE0asv1pyIHaJYq+BbacAQ==}
     engines: {node: '>=12'}
@@ -7893,6 +7894,10 @@ snapshots:
   '@nolyfill/is-core-module@1.0.39': {}
 
   '@one-ini/wasm@0.1.1': {}
+
+  '@onesignal/capacitor-plugin@1.1.0(@capacitor/core@8.4.0)':
+    dependencies:
+      '@capacitor/core': 8.4.0
 
   '@opentelemetry/api-logs@0.207.0':
     dependencies:
@@ -12331,8 +12336,6 @@ snapshots:
   once@1.4.0:
     dependencies:
       wrappy: 1.0.2
-
-  onesignal-cordova-plugin@5.3.11: {}
 
   onetime@6.0.0:
     dependencies:

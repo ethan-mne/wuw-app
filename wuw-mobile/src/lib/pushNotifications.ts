@@ -300,7 +300,7 @@ async function tryObtainOneSignalSubscriptionToken(input: {
     return null;
   }
 
-  if (!initOneSignal()) {
+  if (!(await initOneSignal())) {
     return {
       ok: false,
       reason: 'no_fcm_token',

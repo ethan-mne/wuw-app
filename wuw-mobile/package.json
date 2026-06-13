@@ -10,13 +10,13 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "capacitor:assets": "npx capacitor-assets generate --ios --android --iconBackgroundColor \"#114f33\" --iconBackgroundColorDark \"#114f33\" --splashBackgroundColor \"#1d1b1c\" --splashBackgroundColorDark \"#1d1b1c\"",
-    "android:sync": "npm run build:prod && npx cap sync android && node scripts/patch-fcm-android.mjs",
-    "android:sync:dev": "tsc -b && vite build --mode development && npx cap sync android && node scripts/patch-fcm-android.mjs",
+    "android:sync": "npm run build:prod && ONESIGNAL_DISABLE_LOCATION=true npx cap sync android && node scripts/patch-fcm-android.mjs",
+    "android:sync:dev": "tsc -b && vite build --mode development && ONESIGNAL_DISABLE_LOCATION=true npx cap sync android && node scripts/patch-fcm-android.mjs",
     "android:open": "npx cap open android",
     "android:bundle": "node scripts/android-bundle.mjs",
     "android:release": "npm run android:sync && npm run android:bundle",
-    "ios:sync": "npm run build:prod && npx cap sync ios && node scripts/normalize-ios-spm-paths.mjs",
-    "ios:sync:dev": "tsc -b && vite build --mode development && npx cap sync ios && node scripts/normalize-ios-spm-paths.mjs",
+    "ios:sync": "npm run build:prod && ONESIGNAL_DISABLE_LOCATION=true npx cap sync ios && node scripts/normalize-ios-spm-paths.mjs",
+    "ios:sync:dev": "tsc -b && vite build --mode development && ONESIGNAL_DISABLE_LOCATION=true npx cap sync ios && node scripts/normalize-ios-spm-paths.mjs",
     "postinstall": "node scripts/patch-fcm-android.mjs"
   },
   "dependencies": {
@@ -28,7 +28,7 @@
     "@capacitor/push-notifications": "^8.0.3",
     "@capacitor/splash-screen": "^8.0.1",
     "@wuw/mobile-ui": "workspace:*",
-    "onesignal-cordova-plugin": "^5.3.11",
+    "@onesignal/capacitor-plugin": "^1.1.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2"
