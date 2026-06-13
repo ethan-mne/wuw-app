@@ -238,6 +238,7 @@ button {
 .card {
   display: grid;
   gap: 1rem;
+  min-width: 0;
 }
 
 .stats-grid {
@@ -392,8 +393,10 @@ button {
 
 .admin-schedule-date-time-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.85fr);
+  gap: 0.45rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .text-field {
@@ -408,13 +411,31 @@ button {
   background-color: #ffffff;
 }
 
+.admin-schedule-date-time-grid .text-field--picker {
+  min-width: 0;
+  max-width: 100%;
+  padding-inline: 0.55rem;
+}
+
 .text-field--picker {
   color: #0f172a;
   color-scheme: light;
 }
 
 .text-field--picker::-webkit-date-and-time-value {
+  min-width: 0;
   text-align: left;
+}
+
+.text-field--picker::-webkit-calendar-picker-indicator {
+  margin: 0;
+  padding: 0;
+}
+
+@media (max-width: 380px) {
+  .admin-schedule-date-time-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .otp-row,
