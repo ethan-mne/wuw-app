@@ -28,7 +28,11 @@ function withMobileCors(request: NextRequest): NextResponse | null {
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith('/api/mobile') || pathname === '/api/health') {
+  if (
+    pathname.startsWith('/api/mobile')
+    || pathname.startsWith('/api/admin')
+    || pathname === '/api/health'
+  ) {
     return withMobileCors(request);
   }
 
