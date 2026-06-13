@@ -1,5 +1,5 @@
 import { type FormEvent, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { Card, PageHeader } from '../../components/ui';
 import {
@@ -24,6 +24,7 @@ import type { MobileUserProfile } from '../../types';
 type LoadPhase = 'loading' | 'ok' | 'sign_in_required' | 'error';
 const GOOGLE_CALENDAR_ADD_BY_URL = 'https://calendar.google.com/calendar/u/0/r/settings/addbyurl';
 const ADMIN_DASHBOARD_ENTRY = 'dashboard/competitions/schedule';
+const ADMIN_PUSH_DEBUG_ENTRY = 'debug/push';
 
 type ProfileFormState = {
   firstName: string;
@@ -85,6 +86,7 @@ function PhoneReadonly({ phone }: { phone: string | null | undefined }) {
 }
 
 export function AccountProfilePage() {
+  const navigate = useNavigate();
   const params = useParams();
   const locale = isLocale(params.locale) ? params.locale : defaultLocale;
   const {
@@ -497,13 +499,22 @@ export function AccountProfilePage() {
               Edit details
             </button>
             {profile.isAdmin ? (
-              <button
-                type="button"
-                className="checkout-flow-button checkout-flow-button--ghost"
-                onClick={() => window.location.assign(withLocale(locale, ADMIN_DASHBOARD_ENTRY))}
-              >
-                Open admin dashboard
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="checkout-flow-button checkout-flow-button--ghost"
+                  onClick={() => navigate(withLocale(locale, ADMIN_DASHBOARD_ENTRY))}
+                >
+                  Open admin dashboard
+                </button>
+                <button
+                  type="button"
+                  className="checkout-flow-button checkout-flow-button--ghost"
+                  onClick={() => navigate(withLocale(locale, ADMIN_PUSH_DEBUG_ENTRY))}
+                >
+                  Open push debug
+                </button>
+              </>
             ) : null}
           </>
         ) : (
