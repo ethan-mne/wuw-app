@@ -331,6 +331,18 @@ export function CompetitionScheduleDashboard() {
           }));
           return;
         }
+
+        setSaveState((prev) => ({
+          ...prev,
+          [row.id]: {
+            saving: prev[row.id]?.saving ?? false,
+            notifyingCompetition: false,
+            notifyingSchedule: prev[row.id]?.notifyingSchedule ?? false,
+            message: 'Push delivery failed, try again',
+            isError: true,
+          },
+        }));
+        return;
       }
 
       throw new Error(payload.error ?? 'Failed to send push notification');
@@ -434,6 +446,18 @@ export function CompetitionScheduleDashboard() {
           }));
           return;
         }
+
+        setSaveState((prev) => ({
+          ...prev,
+          [row.id]: {
+            saving: prev[row.id]?.saving ?? false,
+            notifyingCompetition: prev[row.id]?.notifyingCompetition ?? false,
+            notifyingSchedule: false,
+            message: 'Schedule push delivery failed, try again',
+            isError: true,
+          },
+        }));
+        return;
       }
 
       throw new Error(payload.error ?? 'Failed to send schedule push notification');
