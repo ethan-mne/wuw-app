@@ -3,8 +3,17 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import css from './CompetitionScheduleDashboard.module.css';
-import { resolveMediaUrl } from '@/lib/resolveMediaUrl';
+import { competitionThumbUrl } from '@/lib/competitionThumbUrl';
 import { Button, Card, PageHeader, StatPill } from '@wuw/mobile-ui';
+
+type MobileCompetitionImageSource = {
+  id: string;
+  name: string;
+  competitionImageUrl?: string | null;
+  watch?: {
+    images?: Array<{ url?: string | null; alt?: string }>;
+  };
+};
 
 type CompetitionScheduleRow = {
   id: string;
@@ -13,9 +22,10 @@ type CompetitionScheduleRow = {
   drawing_date: string;
   end_date: string;
   updatedAt: string;
-  imageUrl: string | null;
-  watchImageUrl?: string | null;
   competitionImageUrl?: string | null;
+  watch?: {
+    images?: Array<{ url?: string | null; alt?: string }>;
+  };
   announcementSentAt: string | null;
   scheduleAnnouncementSentAt: string | null;
 };
@@ -98,26 +108,22 @@ function formatDateTime24h(value: string): string {
   }).format(new Date(value));
 }
 
-function scheduleImageSrc(row: Pick<
-  CompetitionScheduleRow,
-  'imageUrl' | 'watchImageUrl' | 'competitionImageUrl'
->): string {
-  for (const candidate of [row.watchImageUrl, row.competitionImageUrl, row.imageUrl]) {
-    const resolved = resolveMediaUrl(candidate);
-    if (resolved) {
-      return resolved;
-    }
-  }
-  return '';
+function scheduleImageSrc(
+  row: CompetitionScheduleRow,
+  competition?: MobileCompetitionImageSource,
+): string {
+  return competitionThumbUrl(competition ?? row);
 }
 
 function ScheduleCompetitionPhoto({
   row,
+  competition,
 }: {
-  row: Pick<CompetitionScheduleRow, 'name' | 'imageUrl' | 'watchImageUrl' | 'competitionImageUrl'>;
+  row: CompetitionScheduleRow;
+  competition?: MobileCompetitionImageSource;
 }) {
   const [failed, setFailed] = useState(false);
-  const src = scheduleImageSrc(row);
+  const src = scheduleImageSrc(row, competition);
 
   useEffect(() => {
     setFailed(false);
@@ -140,8 +146,25 @@ function ScheduleCompetitionPhoto({
   );
 }
 
+async function loadMobileCompetitionImageSource(
+  id: string,
+): Promise<MobileCompetitionImageSource | undefined> {
+  const response = await fetch(`/api/mobile/v1/competitions/${encodeURIComponent(id)}`, {
+    cache: 'no-store',
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    return undefined;
+  }
+  const payload = (await response.json()) as { data?: MobileCompetitionImageSource };
+  return payload.data;
+}
+
 export function CompetitionScheduleDashboard() {
   const [rows, setRows] = useState<CompetitionScheduleRow[]>([]);
+  const [competitionsById, setCompetitionsById] = useState<
+    Record<string, MobileCompetitionImageSource>
+  >({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [edits, setEdits] = useState<Record<string, EditState>>({});
@@ -164,7 +187,18 @@ export function CompetitionScheduleDashboard() {
         throw new Error(payload.error ?? 'Failed to load competitions');
       }
 
+      const competitionResults = await Promise.all(
+        payload.data.map((row) => loadMobileCompetitionImageSource(row.id).catch(() => undefined)),
+      );
+      const nextCompetitionsById: Record<string, MobileCompetitionImageSource> = {};
+      for (const competition of competitionResults) {
+        if (competition?.id) {
+          nextCompetitionsById[competition.id] = competition;
+        }
+      }
+
       setRows(payload.data);
+      setCompetitionsById(nextCompetitionsById);
       const nextEdits: Record<string, EditState> = {};
       payload.data.forEach((row) => {
         nextEdits[row.id] = {
@@ -606,7 +640,7 @@ export function CompetitionScheduleDashboard() {
           return (
             <Card key={row.id}>
               <div className={css.cardIntro}>
-                <ScheduleCompetitionPhoto row={row} />
+                <ScheduleCompetitionPhoto row={row} competition={competitionsById[row.id]} />
                 <h3 className={css.cardTitle}>{row.name}</h3>
                 <div className={css.metaGrid}>
                   <StatPill label="Status" value={formatStatusLabel(row.status)} />

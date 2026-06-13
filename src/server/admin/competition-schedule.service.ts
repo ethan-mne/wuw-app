@@ -52,9 +52,10 @@ export type AdminCompetitionScheduleRow = {
   end_date: Date;
   drawing_date: Date;
   updatedAt: Date;
-  imageUrl: string | null;
-  watchImageUrl: string | null;
   competitionImageUrl: string | null;
+  watch: {
+    images: Array<{ url: string; alt: string }>;
+  };
   announcementSentAt: Date | null;
   scheduleAnnouncementSentAt: Date | null;
 };
@@ -79,16 +80,6 @@ export type UpdateCompetitionScheduleInput = z.infer<
   typeof updateCompetitionScheduleInputSchema
 >;
 
-function resolveScheduleImageUrl(row: {
-  comp_image_url: string | null;
-  Watches: { images_url: Array<{ url: string }> } | null;
-}): string | null {
-  const fromWatch = row.Watches?.images_url[0]?.url?.trim() ?? '';
-  if (fromWatch) return fromWatch;
-  const fromCompetition = row.comp_image_url?.trim() ?? '';
-  return fromCompetition || null;
-}
-
 function mapAdminCompetitionScheduleRow(
   row: {
     id: string;
@@ -103,9 +94,6 @@ function mapAdminCompetitionScheduleRow(
     scheduleAnnouncementSent?: { sentAt: Date } | null;
   },
 ): AdminCompetitionScheduleRow {
-  const watchImageUrl = row.Watches?.images_url[0]?.url?.trim() || null;
-  const competitionImageUrl = row.comp_image_url?.trim() || null;
-
   return {
     id: row.id,
     name: row.name,
@@ -113,9 +101,14 @@ function mapAdminCompetitionScheduleRow(
     end_date: row.end_date,
     drawing_date: row.drawing_date,
     updatedAt: row.updatedAt,
-    imageUrl: resolveScheduleImageUrl(row),
-    watchImageUrl,
-    competitionImageUrl,
+    competitionImageUrl: row.comp_image_url?.trim() || null,
+    watch: {
+      images:
+        row.Watches?.images_url.map((image) => ({
+          url: image.url,
+          alt: `${row.name} image`,
+        })) ?? [],
+    },
     announcementSentAt: row.announcementSent?.sentAt ?? null,
     scheduleAnnouncementSentAt: row.scheduleAnnouncementSent?.sentAt ?? null,
   };

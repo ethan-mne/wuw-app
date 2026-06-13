@@ -124,9 +124,10 @@ export interface AdminCompetitionScheduleRow {
   drawing_date: string;
   end_date: string;
   updatedAt: string;
-  imageUrl: string | null;
-  watchImageUrl: string | null;
   competitionImageUrl: string | null;
+  watch: {
+    images: WatchImage[];
+  };
   announcementSentAt: string | null;
   scheduleAnnouncementSentAt: string | null;
 }

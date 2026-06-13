@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { Card, PageHeader, StatPill } from '../../components/ui';
+import { competitionThumbUrl } from '../../lib/competitionThumbUrl';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { cacheKeys } from '../../lib/dataCache';
-import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { mobileDataService } from '../../services/mobileDataService';
-import type { AdminCompetitionScheduleRow } from '../../types';
+import type { AdminCompetitionScheduleRow, Competition } from '../../types';
 
 type EditState = {
   drawingDate: string;
@@ -85,26 +85,15 @@ function formatDateTime24h(value: string): string {
   }).format(new Date(value));
 }
 
-function scheduleImageSrc(row: Pick<
-  AdminCompetitionScheduleRow,
-  'imageUrl' | 'watchImageUrl' | 'competitionImageUrl'
->): string {
-  for (const candidate of [row.watchImageUrl, row.competitionImageUrl, row.imageUrl]) {
-    const resolved = resolveMediaUrl(candidate);
-    if (resolved) {
-      return resolved;
-    }
-  }
-  return '';
-}
-
 function ScheduleCompetitionPhoto({
   row,
+  competition,
 }: {
-  row: Pick<AdminCompetitionScheduleRow, 'name' | 'imageUrl' | 'watchImageUrl' | 'competitionImageUrl'>;
+  row: AdminCompetitionScheduleRow;
+  competition?: Competition;
 }) {
   const [failed, setFailed] = useState(false);
-  const src = scheduleImageSrc(row);
+  const src = competitionThumbUrl(competition ?? row);
 
   useEffect(() => {
     setFailed(false);
@@ -134,6 +123,7 @@ export function AdminCompetitionSchedulePage() {
   );
 
   const [rows, setRows] = useState<AdminCompetitionScheduleRow[]>([]);
+  const [competitionsById, setCompetitionsById] = useState<Record<string, Competition>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [edits, setEdits] = useState<Record<string, EditState>>({});
@@ -154,7 +144,18 @@ export function AdminCompetitionSchedulePage() {
         const list = await mobileDataService.listAdminCompetitionSchedules();
         if (cancelled) return;
         const filteredList = list.filter((row) => row.status !== 'COMPLETED');
+        const competitionResults = await Promise.all(
+          filteredList.map((row) => mobileDataService.getCompetition(row.id).catch(() => undefined)),
+        );
+        const nextCompetitionsById: Record<string, Competition> = {};
+        for (const competition of competitionResults) {
+          if (competition?.id) {
+            nextCompetitionsById[competition.id] = competition;
+          }
+        }
+        if (cancelled) return;
         setRows(filteredList);
+        setCompetitionsById(nextCompetitionsById);
         const nextEdits: Record<string, EditState> = {};
         filteredList.forEach((row) => {
           const drawing = splitLocalDateTime(toDateTimeLocalValue(row.drawing_date));
@@ -615,7 +616,7 @@ export function AdminCompetitionSchedulePage() {
         return (
           <Card key={row.id}>
             <div className="admin-schedule-card-intro">
-              <ScheduleCompetitionPhoto row={row} />
+              <ScheduleCompetitionPhoto row={row} competition={competitionsById[row.id]} />
               <h3>{row.name}</h3>
               <div className="stats-grid">
                 <StatPill label="Status" value={formatStatusLabel(row.status)} />

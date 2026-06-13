@@ -42,7 +42,8 @@ describe('competition-schedule.service', () => {
 
     const rows = await listCompetitionsForAdminSchedule();
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.imageUrl).toBe('https://cdn.example/watch.jpg');
+    expect(rows[0]?.watch.images[0]?.url).toBe('https://cdn.example/watch.jpg');
+    expect(rows[0]?.competitionImageUrl).toBe('https://cdn.example/comp.jpg');
     expect(rows[0]?.scheduleAnnouncementSentAt).toBeNull();
     expect(db.competition.findMany).toHaveBeenCalledOnce();
     expect(db.competition.findMany).toHaveBeenCalledWith(

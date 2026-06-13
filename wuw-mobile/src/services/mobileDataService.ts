@@ -19,6 +19,7 @@ import type {
   RedeemFreeTicketResult,
   ReferralUsageItem,
   Winner,
+  WatchImage,
 } from '../types';
 
 type ApiDataResponse<T> = {
@@ -425,6 +426,24 @@ function readNullableString(value: unknown): string | null {
   return trimmed || null;
 }
 
+function normalizeWatchImages(raw: unknown, fallbackName: string): WatchImage[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw
+    .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+    .map((item) => {
+      const url = readNullableString(item.url);
+      if (!url) {
+        return null;
+      }
+      const alt = typeof item.alt === 'string' && item.alt.trim() ? item.alt : `${fallbackName} image`;
+      return { url, alt };
+    })
+    .filter((item): item is WatchImage => item !== null);
+}
+
 function normalizeAdminCompetitionScheduleRow(raw: unknown): AdminCompetitionScheduleRow | null {
   if (typeof raw !== 'object' || raw === null) {
     return null;
@@ -449,17 +468,21 @@ function normalizeAdminCompetitionScheduleRow(raw: unknown): AdminCompetitionSch
     return null;
   }
 
-  const watchImageUrl =
-    readNullableString(row.watchImageUrl) ?? readNullableString(row.watch_image_url);
   const competitionImageUrl =
     readNullableString(row.competitionImageUrl)
     ?? readNullableString(row.competition_image_url)
     ?? readNullableString(row.comp_image_url);
-  const imageUrl =
-    readNullableString(row.imageUrl)
-    ?? readNullableString(row.image_url)
-    ?? watchImageUrl
-    ?? competitionImageUrl;
+
+  const watchRaw =
+    typeof row.watch === 'object' && row.watch !== null
+      ? (row.watch as Record<string, unknown>).images
+      : undefined;
+  let watchImages = normalizeWatchImages(watchRaw, name);
+  const legacyWatchImageUrl =
+    readNullableString(row.watchImageUrl) ?? readNullableString(row.watch_image_url);
+  if (watchImages.length === 0 && legacyWatchImageUrl) {
+    watchImages = [{ url: legacyWatchImageUrl, alt: `${name} image` }];
+  }
 
   return {
     id,
@@ -468,9 +491,10 @@ function normalizeAdminCompetitionScheduleRow(raw: unknown): AdminCompetitionSch
     drawing_date: drawingDate,
     end_date: endDate,
     updatedAt,
-    imageUrl,
-    watchImageUrl,
     competitionImageUrl,
+    watch: {
+      images: watchImages,
+    },
     announcementSentAt:
       typeof row.announcementSentAt === 'string' ? row.announcementSentAt : null,
     scheduleAnnouncementSentAt:

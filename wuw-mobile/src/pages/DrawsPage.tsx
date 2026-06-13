@@ -9,8 +9,8 @@ import {
 
 import { formatPastDrawLabel, formatUpcomingDrawLabel } from '../lib/formatDrawScheduleLabel';
 import { formatGbpCompact } from '../lib/formatCurrency';
+import { competitionThumbUrl } from '../lib/competitionThumbUrl';
 import { cacheKeys, getCachedData } from '../lib/dataCache';
-import { resolveMediaUrl } from '../lib/resolveMediaUrl';
 import { useCachedQuery } from '../hooks/useCachedQuery';
 import { defaultLocale, isLocale, withLocale } from '../routes/locales';
 import { mobileDataService, type DrawsTimelineSeed } from '../services/mobileDataService';
@@ -70,19 +70,9 @@ function getCountdownParts(drawIso: string, nowMs: number): {
   };
 }
 
-function thumbUrl(competition: Competition): string {
-  const fromWatch = resolveMediaUrl(competition.watch.images[0]?.url);
-  if (fromWatch) return fromWatch;
-  return resolveMediaUrl(competition.competitionImageUrl ?? '');
-}
-
-interface ThinThumbProps {
-  src: string;
-  alt: string;
-}
-
-function ThinThumb({ src, alt }: ThinThumbProps) {
+function ThinThumb({ competition, alt }: { competition: Competition; alt: string }) {
   const [failed, setFailed] = useState(false);
+  const src = competitionThumbUrl(competition);
   if (!src || failed) {
     return (
       <div className="draws-thumb draws-thumb--fallback" aria-hidden />
@@ -136,7 +126,7 @@ function DrawThinRow({ competition, locale, nowMs, variant }: DrawThinRowProps) 
 
   const rowLeading = (
     <>
-      <ThinThumb src={thumbUrl(competition)} alt={competition.name} />
+      <ThinThumb competition={competition} alt={competition.name} />
       <div className="draws-thin-row-body">
         <span className="draws-thin-row-eyebrow">
           {variant === 'past' ? (
@@ -489,7 +479,7 @@ export function DrawsPage() {
           <article ref={heroAnchorRef} className="draws-hero-anchor">
             <div className="draws-hero">
               <div className="draws-hero-top">
-                <ThinThumb src={thumbUrl(hero)} alt={hero.name} />
+                <ThinThumb competition={hero} alt={hero.name} />
                 <div className="draws-hero-copy">
                   <div className="draws-hero-label-row">
                     <span className="draws-hero-label">Next draw</span>
