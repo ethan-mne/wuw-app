@@ -393,6 +393,7 @@ button {
 
 .text-field {
   width: 100%;
+  min-width: 0;
   min-height: 3.25rem;
   border: 1px solid #cbd5e1;
   border-radius: 1rem;
@@ -415,15 +416,20 @@ button {
   gap: 0.5rem;
   min-width: 0;
   width: 100%;
-  overflow-x: clip;
+  overflow: hidden;
 }
 
 .admin-schedule-date-time-stack .text-field--picker {
+  -webkit-appearance: none;
+  appearance: none;
   display: block;
   box-sizing: border-box;
   width: 100%;
+  inline-size: 100%;
   max-width: 100%;
+  max-inline-size: 100%;
   min-width: 0;
+  min-inline-size: 0;
   min-height: 2.9rem;
   margin: 0;
   padding: 0 1rem;
