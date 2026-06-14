@@ -50,6 +50,8 @@ describe('drawTime', () => {
     expect(dual.london).toContain('London time');
     expect(dual.local).toMatch(/\d/);
     expect(dual.local).toContain('your time');
+    expect(dual.london).not.toMatch(/\b(?:AM|PM)\b/i);
+    expect(dual.local ?? '').not.toMatch(/\b(?:AM|PM)\b/i);
   });
 
   it('omits local time only when device timezone matches London', () => {
