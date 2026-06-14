@@ -16,7 +16,7 @@ import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import { type CheckoutFlowState } from './checkoutFlow';
 
-export function CompetitionDetailPage() {
+function getVipPackDiscount(size: number) {
   if (size >= 50) return 25;
   if (size >= 25) return 20;
   if (size >= 20) return 15;
