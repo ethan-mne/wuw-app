@@ -112,9 +112,10 @@ export function sameWeekInTimeZone(a: Date, b: Date, timeZone: string): boolean 
 
 export function formatTimeInZone(date: Date, locale: Locale, timeZone?: string): string {
   return new Intl.DateTimeFormat(bcp47(locale), {
-    hour: 'numeric',
+    hour: '2-digit',
     minute: '2-digit',
     hour12: false,
+    hourCycle: 'h23',
     ...(timeZone ? { timeZone } : {}),
   }).format(date);
 }
@@ -124,9 +125,10 @@ export function formatFullDateTimeInZone(date: Date, locale: Locale, timeZone?: 
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-    hour: 'numeric',
+    hour: '2-digit',
     minute: '2-digit',
     hour12: false,
+    hourCycle: 'h23',
     ...(timeZone ? { timeZone } : {}),
   }).format(date);
 }
