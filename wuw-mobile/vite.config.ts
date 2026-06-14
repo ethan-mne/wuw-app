@@ -4,6 +4,11 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    // Keep linked workspace package paths under node_modules so peer deps
+    // like react/jsx-runtime resolve from this app during CI builds.
+    preserveSymlinks: true,
+  },
   // Relative asset paths — required for Capacitor WebView on Android.
   base: './',
   server: {
