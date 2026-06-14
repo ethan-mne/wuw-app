@@ -1,6 +1,6 @@
 {
-  "installCommand": "npm ci --include=dev",
-  "buildCommand": "npm run build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm build",
   "build": {
     "env": {
       "NEXT_TELEMETRY_DISABLED": "1"
