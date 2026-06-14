@@ -6,9 +6,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    dir: 'src',
+    include: ['src/**/*.{test,spec}.ts', 'wuw-mobile/src/**/*.{test,spec}.ts'],
     coverage: {
-      include: ['src/**/*'],
+      include: ['src/**/*', 'wuw-mobile/src/**/*'],
       exclude: ['src/env.js'],
     },
   },
