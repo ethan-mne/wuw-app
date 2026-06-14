@@ -94,6 +94,8 @@ function mapAdminCompetitionScheduleRow(
     scheduleAnnouncementSent?: { sentAt: Date } | null;
   },
 ): AdminCompetitionScheduleRow {
+  const competitionImageUrl = row.comp_image_url?.trim();
+
   return {
     id: row.id,
     name: row.name,
@@ -101,7 +103,8 @@ function mapAdminCompetitionScheduleRow(
     end_date: row.end_date,
     drawing_date: row.drawing_date,
     updatedAt: row.updatedAt,
-    competitionImageUrl: row.comp_image_url?.trim() || null,
+    competitionImageUrl:
+      competitionImageUrl === '' ? null : competitionImageUrl ?? null,
     watch: {
       images:
         row.Watches?.images_url.map((image) => ({

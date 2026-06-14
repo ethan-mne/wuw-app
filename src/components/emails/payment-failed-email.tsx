@@ -24,7 +24,7 @@ interface PaymentFailedEmailProps {
 export function PaymentFailedEmail({
   orderNumber,
   competitionName,
-  competitionImage,
+  competitionImage: _competitionImage,
   reason,
   paymentMethod,
 }: PaymentFailedEmailProps) {

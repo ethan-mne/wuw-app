@@ -25,7 +25,7 @@ interface RefundConfirmationEmailProps {
 export function RefundConfirmationEmail({
   orderNumber,
   competitionName,
-  competitionImage,
+  competitionImage: _competitionImage,
   amount,
   currency,
   paymentMethod,

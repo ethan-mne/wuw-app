@@ -2,7 +2,7 @@ import { Column, Hr, Img, Row, Section, Text } from '@react-email/components';
 import { Qrcode } from './qrcode-section';
 
 import { formatPrice } from '@/lib/formaters';
-import { OrderDetailsType, TicketDetailsType } from '@/lib/interfaces';
+import type { OrderDetailsType, TicketDetailsType } from '@/lib/interfaces';
 
 export function TicketDetails({
   competitionImage,

@@ -2,7 +2,6 @@ import { ApnsClient, Host, Notification, Errors, ApnsError } from 'apns2';
 
 import {
   alternateApnsEnvironment,
-  getDefaultApnsEnvironment,
   isApnsEnvironmentMismatch,
   normalizeP8Key,
   type ApnsEnvironment,

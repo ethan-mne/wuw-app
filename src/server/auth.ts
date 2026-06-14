@@ -76,7 +76,7 @@ export const authOptions: NextAuthOptions = {
     signIn: '/api/auth/signin',
   },
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile: _profile }) {
       if (account?.provider === 'google' && user.email) {
         const existingUser = await db.user.findFirst({
           where: {
