@@ -4,6 +4,12 @@ const config: CapacitorConfig = {
   appId: 'com.winuwatch.wuwapp',
   appName: 'Winuwatch',
   webDir: 'dist',
+  ios: {
+    infoPlist: {
+      NSLocationWhenInUseUsageDescription:
+        'Winuwatch uses your location while the app is open to show relevant nearby alerts and improve your experience.',
+    },
+  },
   plugins: {
     SplashScreen: {
       // Auto-hide as fallback so the app never stays stuck on the native icon splash.
