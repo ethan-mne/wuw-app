@@ -485,7 +485,6 @@ export function DrawsPage() {
                   targetIso={drawIsoHero}
                   locale={locale}
                   nowMs={nowMs}
-                  scheduleIso={drawIsoHero}
                   countdownClassName="draws-hero-countdown"
                 />
               ) : null}

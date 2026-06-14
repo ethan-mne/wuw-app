@@ -114,6 +114,7 @@ export function formatTimeInZone(date: Date, locale: Locale, timeZone?: string):
   return new Intl.DateTimeFormat(bcp47(locale), {
     hour: 'numeric',
     minute: '2-digit',
+    hour12: false,
     ...(timeZone ? { timeZone } : {}),
   }).format(date);
 }
@@ -125,6 +126,7 @@ export function formatFullDateTimeInZone(date: Date, locale: Locale, timeZone?: 
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    hour12: false,
     ...(timeZone ? { timeZone } : {}),
   }).format(date);
 }

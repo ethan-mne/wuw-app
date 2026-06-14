@@ -101,7 +101,6 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
                   targetIso={competition.endDate}
                   locale={locale}
                   nowMs={nowMs}
-                  scheduleIso={competition.endDate}
                   countdownClassName="mobile-home-competition-countdown"
                   note={
                     <span>
