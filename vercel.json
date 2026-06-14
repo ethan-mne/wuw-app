@@ -1,6 +1,6 @@
 {
-  "installCommand": "corepack enable && corepack prepare pnpm@9.15.9 --activate && pnpm install --no-frozen-lockfile",
-  "buildCommand": "corepack enable && corepack prepare pnpm@9.15.9 --activate && pnpm build",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build",
   "build": {
     "env": {
       "NEXT_TELEMETRY_DISABLED": "1"

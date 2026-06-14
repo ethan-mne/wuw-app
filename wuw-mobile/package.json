@@ -28,7 +28,7 @@
     "@capacitor/local-notifications": "^8.2.0",
     "@capacitor/push-notifications": "^8.0.3",
     "@capacitor/splash-screen": "^8.0.1",
-    "@wuw/mobile-ui": "workspace:*",
+    "@wuw/mobile-ui": "file:../packages/mobile-ui",
     "@onesignal/capacitor-plugin": "^1.1.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
