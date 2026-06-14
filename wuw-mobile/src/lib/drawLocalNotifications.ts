@@ -98,6 +98,7 @@ export async function scheduleDrawReminder(
   const body = `${input.competitionName} — the draw is in 10 minutes.`;
 
   try {
+    await cancelDrawReminder(input.competitionId);
     await LocalNotifications.schedule({
       notifications: [
         {
