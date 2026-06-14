@@ -28,8 +28,8 @@
     "@capacitor/local-notifications": "^8.2.0",
     "@capacitor/push-notifications": "^8.0.3",
     "@capacitor/splash-screen": "^8.0.1",
-    "@wuw/mobile-ui": "file:../packages/mobile-ui",
     "@onesignal/capacitor-plugin": "^1.1.0",
+    "@wuw/mobile-ui": "file:../packages/mobile-ui",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2"
@@ -48,6 +48,7 @@
     "globals": "^17.5.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vitest": "^4.1.8"
   }
 }
