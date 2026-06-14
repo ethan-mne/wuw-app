@@ -29,7 +29,7 @@
     "@capacitor/push-notifications": "^8.0.3",
     "@capacitor/splash-screen": "^8.0.1",
     "@onesignal/capacitor-plugin": "^1.1.0",
-    "@wuw/mobile-ui": "file:../packages/mobile-ui",
+    "@wuw/mobile-ui": "workspace:*",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2"

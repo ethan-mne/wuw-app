@@ -33,7 +33,7 @@
     "@react-email/components": "^0.0.14",
     "@sentry/nextjs": "^10.46.0",
     "@t3-oss/env-nextjs": "^0.7.3",
-    "@wuw/mobile-ui": "file:packages/mobile-ui",
+    "@wuw/mobile-ui": "workspace:*",
     "@types/uuid": "^9.0.8",
     "apns2": "^12.2.0",
     "country-code-lookup": "^0.1.2",

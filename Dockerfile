@@ -11,7 +11,9 @@ WORKDIR /app
 
 # Copy package files + Prisma schema (postinstall runs prisma generate)
 COPY package.json pnpm-lock.yaml* ./
+COPY pnpm-workspace.yaml ./
 COPY prisma ./prisma
+COPY packages/mobile-ui ./packages/mobile-ui
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
