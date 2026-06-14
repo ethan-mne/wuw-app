@@ -8,7 +8,7 @@ export default defineConfig({
     globals: true,
     include: ['src/**/*.{test,spec}.ts', 'wuw-mobile/src/**/*.{test,spec}.ts'],
     coverage: {
-      include: ['src/**/*'],
+      include: ['src/**/*', 'wuw-mobile/src/**/*'],
       exclude: ['src/env.js'],
     },
   },
