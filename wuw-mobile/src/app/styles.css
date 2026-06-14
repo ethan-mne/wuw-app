@@ -424,10 +424,10 @@ button {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  min-height: 2.9rem;
+  min-height: 3.25rem;
   margin: 0;
-  padding: 0 1rem;
-  overflow: hidden;
+  padding: 0.7rem 1rem;
+  line-height: 1.35;
 }
 
 .admin-schedule-date-time-stack .text-field--picker[type='date'] {
@@ -479,13 +479,14 @@ button {
   min-width: 0;
   max-width: 100%;
   text-align: left;
+  line-height: inherit;
 }
 
 .text-field--picker::-webkit-datetime-edit {
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
   padding: 0;
+  line-height: inherit;
 }
 
 .text-field--picker::-webkit-datetime-edit-fields-wrapper {
