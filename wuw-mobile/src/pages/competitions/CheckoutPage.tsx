@@ -1,10 +1,11 @@
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
+import { DrawDateTimeDualDisplay } from '../../components/CountdownTimer';
 import { SafeImage } from '../../components/SafeImage';
 import { Card } from '../../components/ui';
 import { INFORMATIVE_ONLY_MODE } from '../../config/informativeOnlyMode';
-import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
+import { formatDrawDateTimeDual } from '../../lib/drawTime';
 import { formatGbp } from '../../lib/formatCurrency';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
@@ -354,7 +355,11 @@ export function CheckoutPage() {
             <dl>
               <div>
                 <dt>Draw date</dt>
-                <dd>{formatDrawDateDdMmYyyy(competition.endDate)}</dd>
+                <dd>
+                  <DrawDateTimeDualDisplay
+                    dual={formatDrawDateTimeDual(competition.endDate, locale)}
+                  />
+                </dd>
               </div>
               <div>
                 <dt>Ticket quantity</dt>

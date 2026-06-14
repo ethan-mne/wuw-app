@@ -2,48 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { Card } from '../../components/ui';
+import { CountdownTimer, DrawDateTimeDualDisplay } from '../../components/CountdownTimer';
 import { MobileFooter } from '../../components/MobileFooter';
 import { DrawAlertPanel } from '../../features/draws/DrawAlertViews';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
-import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
+import { formatDrawDateTimeDual } from '../../lib/drawTime';
 import { formatGbp, formatGbpCompact } from '../../lib/formatCurrency';
 import { cacheKeys } from '../../lib/dataCache';
+import { publicCompetitionUrl } from '../../lib/publicSiteUrl';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { INFORMATIVE_ONLY_MODE } from '../../config/informativeOnlyMode';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
 import { type CheckoutFlowState } from './checkoutFlow';
 
-type CountdownParts = {
-  day: string;
-  hour: string;
-  min: string;
-  sec: string;
-};
-
-function toTwoDigits(value: number) {
-  return String(value).padStart(2, '0');
-}
-
-function getCountdownParts(endDate: string, nowMs: number): CountdownParts {
-  const endMs = new Date(endDate).getTime();
-  const remainingMs = Math.max(endMs - nowMs, 0);
-  const totalSeconds = Math.floor(remainingMs / 1000);
-
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return {
-    day: toTwoDigits(days),
-    hour: toTwoDigits(hours),
-    min: toTwoDigits(minutes),
-    sec: toTwoDigits(seconds),
-  };
-}
-
-function getVipPackDiscount(size: number) {
+export function CompetitionDetailPage() {
   if (size >= 50) return 25;
   if (size >= 25) return 20;
   if (size >= 20) return 15;
@@ -165,34 +138,22 @@ export function CompetitionDetailPage() {
       : [{ url: '', alt: watchName || 'Competition watch' }];
   const selectedImage = images[selectedImageIndex] ?? images[0];
   const selectedImageSrc = resolveMediaUrl(selectedImage?.url);
-  const countdown = getCountdownParts(competition.endDate, nowMs);
+  const drawDateTimeDual = formatDrawDateTimeDual(competition.endDate, locale);
   const ticketOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   const vipPackSizes = [15, 20, 25, 50];
 
   return (
     <section className="competition-detail-page">
       <div className="competition-detail-countdown-banner">
-        <div className="competition-detail-countdown" role="timer" aria-live="off">
-          <div>
-            <strong>{countdown.day}</strong>
-            <span>DAY</span>
-          </div>
-          <div>
-            <strong>{countdown.hour}</strong>
-            <span>HOUR</span>
-          </div>
-          <div>
-            <strong>{countdown.min}</strong>
-            <span>MIN</span>
-          </div>
-          <div>
-            <strong>{countdown.sec}</strong>
-            <span>SEC</span>
-          </div>
-        </div>
-        <p className="competition-detail-countdown-note">
-          or until all tickets are sold out. But never after the draw date
-        </p>
+        <CountdownTimer
+          targetIso={competition.endDate}
+          locale={locale}
+          nowMs={nowMs}
+          scheduleIso={competition.endDate}
+          countdownClassName="competition-detail-countdown"
+          noteClassName="competition-detail-countdown-note"
+          note="or until all tickets are sold out. But never after the draw date"
+        />
       </div>
 
       {!INFORMATIVE_ONLY_MODE ? (
@@ -267,7 +228,7 @@ export function CompetitionDetailPage() {
           </div>
         </div>
         <div className="competition-detail-draw">
-          <strong>{formatDrawDateDdMmYyyy(competition.endDate)}</strong>
+          <DrawDateTimeDualDisplay dual={drawDateTimeDual} />
           <span>Draw Date</span>
           <p>or until all tickets are sold out. But never after the draw date</p>
         </div>
@@ -330,10 +291,20 @@ export function CompetitionDetailPage() {
             </button>
           </>
         ) : (
-          <p className="competition-detail-informative-notice" role="status">
-            Prize draws shown here are for information only — ticket purchases and checkout are not
-            available.
-          </p>
+          <>
+            <p className="competition-detail-informative-notice" role="status">
+              Prize draws shown here are for information only — ticket purchases and checkout are not
+              available in the app.
+            </p>
+            <a
+              href={publicCompetitionUrl(locale, competition.id)}
+              className="checkout-flow-button"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Get your ticket
+            </a>
+          </>
         )}
 
         <div className="competition-detail-good-to-know" aria-labelledby="competition-good-to-know-title">

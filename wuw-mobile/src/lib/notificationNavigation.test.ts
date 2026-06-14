@@ -1,0 +1,40 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  competitionDetailPath,
+  extractCompetitionIdFromNotificationPayload,
+} from './notificationNavigation';
+
+describe('notificationNavigation', () => {
+  it('reads competitionId from a flat payload', () => {
+    expect(extractCompetitionIdFromNotificationPayload({ competitionId: 'cmp-1' })).toBe('cmp-1');
+  });
+
+  it('reads competitionId from nested push data', () => {
+    expect(
+      extractCompetitionIdFromNotificationPayload({
+        data: { competitionId: 'cmp-2', type: 'draw_reminder' },
+      }),
+    ).toBe('cmp-2');
+  });
+
+  it('reads competitionId from local notification extra', () => {
+    expect(
+      extractCompetitionIdFromNotificationPayload({
+        extra: { competitionId: 'cmp-3', type: 'draw_reminder' },
+      }),
+    ).toBe('cmp-3');
+  });
+
+  it('reads competitionId from OneSignal additionalData', () => {
+    expect(
+      extractCompetitionIdFromNotificationPayload({
+        additionalData: { competitionId: 'cmp-4', type: 'draw_schedule_updated' },
+      }),
+    ).toBe('cmp-4');
+  });
+
+  it('builds a locale-prefixed competition detail path', () => {
+    expect(competitionDetailPath('cmp-5', 'fr')).toBe('/fr/competitions/cmp-5');
+  });
+});

@@ -1,10 +1,24 @@
 import { Capacitor } from '@capacitor/core';
 import OneSignal from '@onesignal/capacitor-plugin';
 
+import { handleNotificationOpenPayload } from './notificationNavigation';
+
 const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID?.trim() ?? '';
 
 let oneSignalInitialized = false;
 let initPromise: Promise<boolean> | null = null;
+let oneSignalClickListenerInstalled = false;
+
+function installOneSignalClickListener(): void {
+  if (oneSignalClickListenerInstalled) {
+    return;
+  }
+  oneSignalClickListenerInstalled = true;
+
+  OneSignal.Notifications.addEventListener('click', (event) => {
+    handleNotificationOpenPayload(event.notification.additionalData);
+  });
+}
 
 export function hasOneSignalMobileConfig(): boolean {
   return ONESIGNAL_APP_ID.length > 0;
@@ -24,6 +38,7 @@ export async function initOneSignal(): Promise<boolean> {
   initPromise = (async () => {
     try {
       await OneSignal.initialize(ONESIGNAL_APP_ID);
+      installOneSignalClickListener();
       oneSignalInitialized = true;
       return true;
     } catch {

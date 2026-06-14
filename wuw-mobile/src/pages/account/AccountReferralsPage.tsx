@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Card, PageHeader } from '../../components/ui';
 import { AccountDataError, AccountSignInRequired } from '../../features/account/AccountFetchFallback';
@@ -6,16 +6,13 @@ import { AccountNav } from '../../features/account/AccountNav';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
 import { cacheKeys } from '../../lib/dataCache';
+import { buildReferralShareMessage, openWhatsAppShare } from '../../lib/whatsappShare';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { AccountSummary, ReferralUsageItem } from '../../types';
 
 type LoadPhase = 'loading' | 'ok' | 'sign_in_required' | 'error';
 
-const DEFAULT_SITE_URL = 'https://winuwatch.uk';
-
-function buildReferralShareMessage(code: string, siteUrl: string) {
-  return `Join WINUWATCH with my referral code: ${code}\n${siteUrl}`;
-}
+const DEFAULT_SITE_URL = 'https://winuwatch.com';
 
 function resolveReferralsPhase(
   summaryResult: Awaited<ReturnType<typeof mobileDataService.loadAccountSummary>> | undefined,
@@ -69,10 +66,9 @@ export function AccountReferralsPage() {
   const referralCode = summary?.referralCode?.trim() ?? '';
   const canUseCode = Boolean(referralCode);
 
-  const whatsappHref = useMemo(() => {
-    if (!canUseCode) return '';
-    const text = buildReferralShareMessage(referralCode, siteUrl);
-    return `https://wa.me/?text=${encodeURIComponent(text)}`;
+  const shareOnWhatsApp = useCallback(() => {
+    if (!canUseCode) return;
+    void openWhatsAppShare(buildReferralShareMessage(referralCode, siteUrl));
   }, [canUseCode, referralCode, siteUrl]);
 
   const copyCode = useCallback(async () => {
@@ -141,18 +137,14 @@ export function AccountReferralsPage() {
           </div>
           <p className="referral-hint">Share your code with friends. They can use it when they sign up.</p>
           <div className="referral-actions">
-            <a
+            <button
+              type="button"
               className="action-link referral-whatsapp"
-              href={canUseCode ? whatsappHref : '#'}
-              rel="noopener noreferrer"
-              target="_blank"
-              aria-disabled={!canUseCode}
-              onClick={(e) => {
-                if (!canUseCode) e.preventDefault();
-              }}
+              disabled={!canUseCode}
+              onClick={shareOnWhatsApp}
             >
               Share on WhatsApp
-            </a>
+            </button>
           </div>
         </div>
       </Card>

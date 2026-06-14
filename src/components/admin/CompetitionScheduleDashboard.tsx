@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 
 import css from './CompetitionScheduleDashboard.module.css';
 import { competitionThumbUrl } from '@/lib/competitionThumbUrl';
+import {
+  fromAdminScheduleDateTimeLocalToIso,
+  toAdminScheduleDateTimeLocalValue,
+} from '@/lib/competitionScheduleDateTime';
 import { Button, Card, PageHeader, StatPill } from '@wuw/mobile-ui';
 
 type MobileCompetitionImageSource = {
@@ -67,21 +71,6 @@ function formatSchedulePushDeliveryFailureMessage(result: NotificationResponseDa
     return `${result.legacyTokenCount} subscriber(s) still have legacy push tokens. They must reopen the mobile app and re-subscribe to draw alerts.`;
   }
   return 'Schedule push delivery failed, try again';
-}
-
-function toDateTimeLocalValue(value: string): string {
-  const date = new Date(value);
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const year = date.getFullYear();
-  const month = pad(date.getMonth() + 1);
-  const day = pad(date.getDate());
-  const hours = pad(date.getHours());
-  const minutes = pad(date.getMinutes());
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-function toIsoString(localDateTime: string): string {
-  return new Date(localDateTime).toISOString();
 }
 
 function formatStatusLabel(status: CompetitionScheduleRow['status']): string {
@@ -202,8 +191,8 @@ export function CompetitionScheduleDashboard() {
       const nextEdits: Record<string, EditState> = {};
       payload.data.forEach((row) => {
         nextEdits[row.id] = {
-          drawingDate: toDateTimeLocalValue(row.drawing_date),
-          endDate: toDateTimeLocalValue(row.end_date),
+          drawingDate: toAdminScheduleDateTimeLocalValue(row.drawing_date),
+          endDate: toAdminScheduleDateTimeLocalValue(row.end_date),
         };
       });
       setEdits(nextEdits);
@@ -275,8 +264,8 @@ export function CompetitionScheduleDashboard() {
         credentials: 'include',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          drawingDate: toIsoString(currentEdit.drawingDate),
-          endDate: toIsoString(currentEdit.endDate),
+          drawingDate: fromAdminScheduleDateTimeLocalToIso(currentEdit.drawingDate),
+          endDate: fromAdminScheduleDateTimeLocalToIso(currentEdit.endDate),
         }),
       });
 
@@ -626,8 +615,8 @@ export function CompetitionScheduleDashboard() {
         {visibleRows.map((row) => {
           const state = saveState[row.id];
           const rowEdit = edits[row.id];
-          const originalEndDate = toDateTimeLocalValue(row.end_date);
-          const originalDrawingDate = toDateTimeLocalValue(row.drawing_date);
+          const originalEndDate = toAdminScheduleDateTimeLocalValue(row.end_date);
+          const originalDrawingDate = toAdminScheduleDateTimeLocalValue(row.drawing_date);
           const hasScheduleChanges = Boolean(
             rowEdit
             && (
@@ -652,7 +641,7 @@ export function CompetitionScheduleDashboard() {
               </div>
               <div className={css.fieldGrid}>
                 <label className={css.field}>
-                  <span>End date</span>
+                  <span>End date (Israel time)</span>
                   <input
                     className={css.input}
                     type="datetime-local"
@@ -670,7 +659,7 @@ export function CompetitionScheduleDashboard() {
                   />
                 </label>
                 <label className={css.field}>
-                  <span>Draw date</span>
+                  <span>Draw date (Israel time)</span>
                   <input
                     className={css.input}
                     type="datetime-local"

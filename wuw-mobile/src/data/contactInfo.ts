@@ -3,6 +3,8 @@
 export const CONTACT_INFO = {
   instagramUrl: 'https://www.instagram.com/winuwatch/',
   instagramHandle: '@winuwatch',
+  instagramLiveUrl: 'https://www.instagram.com/winuwatch_live_/',
+  instagramLiveHandle: '@winuwatch_live_',
   whatsappE164Digits: '4474888883429',
   whatsappDisplay: '+44 748 888 3429',
   phoneDisplay: '+44 748 888 3429',

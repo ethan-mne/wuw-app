@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import { CountdownTimer } from '../../components/CountdownTimer';
 import { isHomeCompetitionSoldOut, orderHomeCompetitions } from '../../lib/homeCompetitions';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { formatGbpCompact } from '../../lib/formatCurrency';
@@ -46,35 +47,6 @@ function ResponsiveCompetitionImage({ src, alt }: ResponsiveCompetitionImageProp
   );
 }
 
-type CountdownParts = {
-  day: string;
-  hour: string;
-  min: string;
-  sec: string;
-};
-
-function toTwoDigits(value: number) {
-  return String(value).padStart(2, '0');
-}
-
-function getCountdownParts(endDate: string, nowMs: number): CountdownParts {
-  const endMs = new Date(endDate).getTime();
-  const remainingMs = Math.max(endMs - nowMs, 0);
-  const totalSeconds = Math.floor(remainingMs / 1000);
-
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return {
-    day: toTwoDigits(days),
-    hour: toTwoDigits(hours),
-    min: toTwoDigits(minutes),
-    sec: toTwoDigits(seconds),
-  };
-}
-
 export function MobileCompetitionList({ competitions }: MobileCompetitionListProps) {
   const params = useParams();
   const locale = isLocale(params.locale) ? params.locale : defaultLocale;
@@ -100,8 +72,6 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
       </h2>
       {orderedCompetitions.map((competition) => {
         const isClosed = isHomeCompetitionSoldOut(competition);
-        const countdown = getCountdownParts(competition.endDate, nowMs);
-
         return (
           <article className="mobile-home-competition-card" key={competition.id}>
             <Link
@@ -127,25 +97,18 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
               <p className="mobile-home-competition-subtitle">SPECIAL 🔥 Super LOW COST Comp!</p>
 
               <div className="mobile-home-competition-timer" aria-label="Competition countdown">
-                <div className="mobile-home-competition-countdown" role="timer" aria-live="off">
-                  <div>
-                    <strong>{countdown.day}</strong>
-                    <span>DAY</span>
-                  </div>
-                  <div>
-                    <strong>{countdown.hour}</strong>
-                    <span>HOUR</span>
-                  </div>
-                  <div>
-                    <strong>{countdown.min}</strong>
-                    <span>MIN</span>
-                  </div>
-                  <div>
-                    <strong>{countdown.sec}</strong>
-                    <span>SEC</span>
-                  </div>
-                </div>
-                <span>or until all tickets are sold out. But never after the draw date</span>
+                <CountdownTimer
+                  targetIso={competition.endDate}
+                  locale={locale}
+                  nowMs={nowMs}
+                  scheduleIso={competition.endDate}
+                  countdownClassName="mobile-home-competition-countdown"
+                  note={
+                    <span>
+                      or until all tickets are sold out. But never after the draw date
+                    </span>
+                  }
+                />
               </div>
 
               <dl className="mobile-home-competition-stats">

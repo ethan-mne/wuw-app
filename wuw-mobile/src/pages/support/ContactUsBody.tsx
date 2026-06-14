@@ -111,6 +111,23 @@ export function ContactUsBody() {
             </li>
 
             <li className="contact-us-item">
+              <span className="contact-us-icon" aria-hidden>
+                <SvgInstagram />
+              </span>
+              <div className="contact-us-item-body">
+                <strong className="contact-us-label">Watch live draws on Instagram</strong>
+                <a
+                  className="contact-us-value-link"
+                  href={CONTACT_INFO.instagramLiveUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  {CONTACT_INFO.instagramLiveHandle}
+                </a>
+              </div>
+            </li>
+
+            <li className="contact-us-item">
               <span className="contact-us-icon contact-us-icon--whatsapp" aria-hidden>
                 <SvgWhatsApp />
               </span>

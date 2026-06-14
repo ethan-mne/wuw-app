@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Link, useParams } from 'react-router-dom';
 
 import { DrawAlertHeroStrip, DrawThinRowAlertButton } from '../features/draws/DrawAlertViews';
+import { CountdownTimer } from '../components/CountdownTimer';
 import {
   findHeroLiveBufferDraw,
   isDrawAlertEligible,
@@ -43,31 +44,6 @@ function mergeTimelineAscending(
     map.set(c.id, c);
   }
   return [...map.values()].sort((a, b) => drawInstantMs(a) - drawInstantMs(b));
-}
-
-function toTwoDigits(value: number): string {
-  return String(value).padStart(2, '0');
-}
-
-function getCountdownParts(drawIso: string, nowMs: number): {
-  day: string;
-  hour: string;
-  min: string;
-  sec: string;
-} {
-  const endMs = new Date(drawIso).getTime();
-  const remainingMs = Math.max(endMs - nowMs, 0);
-  const totalSeconds = Math.floor(remainingMs / 1000);
-  const days = Math.floor(totalSeconds / 86_400);
-  const hours = Math.floor((totalSeconds % 86_400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return {
-    day: toTwoDigits(days),
-    hour: toTwoDigits(hours),
-    min: toTwoDigits(minutes),
-    sec: toTwoDigits(seconds),
-  };
 }
 
 function ThinThumb({ competition, alt }: { competition: Competition; alt: string }) {
@@ -402,8 +378,7 @@ export function DrawsPage() {
   const hero = upcoming[0];
   const restUpcoming = upcoming.slice(1);
   const drawIsoHero = hero ? hero.drawingDate ?? hero.endDate : '';
-  const countdownHero =
-    hero && drawIsoHero ? getCountdownParts(drawIsoHero, nowMs) : null;
+  const showHeroCountdown = Boolean(hero && drawIsoHero);
 
   useLayoutEffect(() => {
     if (loadingInitial || didSnapHeroRef.current || !hero?.id || !heroAnchorRef.current) {
@@ -505,25 +480,14 @@ export function DrawsPage() {
                 </Link>
               </div>
 
-              {countdownHero ? (
-                <div className="draws-hero-countdown" role="timer" aria-live="off">
-                  <div>
-                    <strong>{countdownHero.day}</strong>
-                    <span>DAY</span>
-                  </div>
-                  <div>
-                    <strong>{countdownHero.hour}</strong>
-                    <span>HOUR</span>
-                  </div>
-                  <div>
-                    <strong>{countdownHero.min}</strong>
-                    <span>MIN</span>
-                  </div>
-                  <div>
-                    <strong>{countdownHero.sec}</strong>
-                    <span>SEC</span>
-                  </div>
-                </div>
+              {showHeroCountdown ? (
+                <CountdownTimer
+                  targetIso={drawIsoHero}
+                  locale={locale}
+                  nowMs={nowMs}
+                  scheduleIso={drawIsoHero}
+                  countdownClassName="draws-hero-countdown"
+                />
               ) : null}
 
               <DrawAlertHeroStrip competition={hero} locale={locale} nowMs={nowMs} />

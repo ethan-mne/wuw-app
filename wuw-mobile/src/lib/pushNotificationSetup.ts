@@ -1,6 +1,8 @@
 import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { PushNotifications } from '@capacitor/push-notifications';
 
+import { handleNotificationOpenPayload } from './notificationNavigation';
 import { hasOneSignalMobileConfig } from './oneSignal';
 import { isApnsDeviceToken } from './pushToken';
 
@@ -109,7 +111,16 @@ export async function setupPushNotificationHandlers(): Promise<void> {
 
   await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
     console.info('[wuw-push] notification tapped', action.notification.title);
+    handleNotificationOpenPayload(action.notification.data);
   });
+
+  try {
+    await LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+      handleNotificationOpenPayload(action.notification.extra ?? action.notification);
+    });
+  } catch (error) {
+    console.warn('[wuw-push] local notification tap listener failed', error);
+  }
 
   if (Capacitor.getPlatform() === 'ios' && !hasOneSignalMobileConfig()) {
     try {

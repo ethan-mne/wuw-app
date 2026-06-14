@@ -3,6 +3,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, PageHeader, StatPill } from '../../components/ui';
 import { competitionThumbUrl } from '../../lib/competitionThumbUrl';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
+import {
+  fromAdminScheduleDateTimeLocalToIso,
+  toAdminScheduleDateTimeLocalValue,
+} from '../../lib/competitionScheduleDateTime';
 import { cacheKeys } from '../../lib/dataCache';
 import { mobileDataService } from '../../services/mobileDataService';
 import type { AdminCompetitionScheduleRow, Competition } from '../../types';
@@ -23,18 +27,6 @@ type SaveState = {
 };
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'NOT_ACTIVE';
-
-function toDateTimeLocalValue(value: string): string {
-  const date = new Date(value);
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
-    date.getHours(),
-  )}:${pad(date.getMinutes())}`;
-}
-
-function toIsoString(localDateTime: string): string {
-  return new Date(localDateTime).toISOString();
-}
 
 function splitLocalDateTime(value: string): { date: string; time: string } {
   const [date = '', time = ''] = value.split('T');
@@ -158,8 +150,8 @@ export function AdminCompetitionSchedulePage() {
         setCompetitionsById(nextCompetitionsById);
         const nextEdits: Record<string, EditState> = {};
         filteredList.forEach((row) => {
-          const drawing = splitLocalDateTime(toDateTimeLocalValue(row.drawing_date));
-          const end = splitLocalDateTime(toDateTimeLocalValue(row.end_date));
+          const drawing = splitLocalDateTime(toAdminScheduleDateTimeLocalValue(row.drawing_date));
+          const end = splitLocalDateTime(toAdminScheduleDateTimeLocalValue(row.end_date));
           nextEdits[row.id] = {
             drawingDate: drawing.date,
             drawingTime: drawing.time,
@@ -268,8 +260,12 @@ export function AdminCompetitionSchedulePage() {
 
     try {
       const updated = await mobileDataService.updateAdminCompetitionSchedule(rowId, {
-        drawingDate: toIsoString(joinLocalDateTime(currentEdit.drawingDate, currentEdit.drawingTime)),
-        endDate: toIsoString(joinLocalDateTime(currentEdit.endDate, currentEdit.endTime)),
+        drawingDate: fromAdminScheduleDateTimeLocalToIso(
+          joinLocalDateTime(currentEdit.drawingDate, currentEdit.drawingTime),
+        ),
+        endDate: fromAdminScheduleDateTimeLocalToIso(
+          joinLocalDateTime(currentEdit.endDate, currentEdit.endTime),
+        ),
       });
 
       setRows((prev) =>
@@ -555,7 +551,7 @@ export function AdminCompetitionSchedulePage() {
       <PageHeader
         eyebrow="Admin"
         title="Competition Schedule"
-        description="Edit end date and draw date for each competition."
+        description="Edit end date and draw date for each competition. Times are entered in Israel time."
       />
       <nav className="segmented-nav" role="tablist" aria-label="Filter competitions by status">
         <button
@@ -599,8 +595,8 @@ export function AdminCompetitionSchedulePage() {
       {visibleRows.map((row) => {
         const state = saveState[row.id];
         const rowEdit = edits[row.id];
-        const originalEnd = splitLocalDateTime(toDateTimeLocalValue(row.end_date));
-        const originalDrawing = splitLocalDateTime(toDateTimeLocalValue(row.drawing_date));
+        const originalEnd = splitLocalDateTime(toAdminScheduleDateTimeLocalValue(row.end_date));
+        const originalDrawing = splitLocalDateTime(toAdminScheduleDateTimeLocalValue(row.drawing_date));
         const hasScheduleChanges = Boolean(
           rowEdit
           && (
@@ -625,7 +621,7 @@ export function AdminCompetitionSchedulePage() {
             </div>
 
             <div className="admin-schedule-field-group">
-              <span className="field-label">End date</span>
+              <span className="field-label">End date (Israel time)</span>
               <div className="admin-schedule-date-time-stack">
                 <input
                   id={`${row.id}-end-date`}
@@ -676,7 +672,7 @@ export function AdminCompetitionSchedulePage() {
             </div>
 
             <div className="admin-schedule-field-group">
-              <span className="field-label">Draw date</span>
+              <span className="field-label">Draw date (Israel time)</span>
               <div className="admin-schedule-date-time-stack">
                 <input
                   id={`${row.id}-draw-date`}

@@ -4,6 +4,7 @@ import type { PluginListenerHandle } from '@capacitor/core';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { MobileShell } from '../components/MobileShell';
+import { NotificationNavigationBridge } from '../components/NotificationNavigationBridge';
 import { AdminRoute } from '../components/AdminRoute';
 import { legalPages, supportPages } from '../data/content';
 import { getMobileSessionToken } from '../lib/mobileSessionToken';
@@ -108,7 +109,9 @@ export default function App() {
   }, []);
 
   return (
-    <Routes>
+    <>
+      <NotificationNavigationBridge />
+      <Routes>
       <Route path="/" element={<Navigate to={`/${defaultLocale}`} replace />} />
       <Route
         path="/dashboard/competitions/schedule"
@@ -168,5 +171,6 @@ export default function App() {
       </Route>
       <Route path="*" element={<Navigate to={`/${defaultLocale}`} replace />} />
     </Routes>
+    </>
   );
 }
