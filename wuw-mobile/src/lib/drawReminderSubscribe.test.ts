@@ -92,6 +92,7 @@ describe('reconcileDrawReminders', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -128,6 +129,39 @@ describe('reconcileDrawReminders', () => {
       unchanged: 1,
       updated: 0,
       created: 0,
+    });
+    expect(scheduleDrawReminderMock).not.toHaveBeenCalled();
+    expect(subscribeDrawAlertMock).not.toHaveBeenCalled();
+  });
+
+  it('does not reschedule repeatedly during the 10-minute reminder window', async () => {
+    const nowMs = Date.parse('2030-06-01T19:55:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(nowMs);
+
+    saveDrawReminderLocally('cmp-window', {
+      competitionName: 'Window draw',
+      fireAtMs: nowMs - 60_000,
+      drawScheduleVersion: SCHEDULE_VERSION,
+    });
+    listReminderTargetCompetitionsMock.mockResolvedValue([
+      {
+        id: 'cmp-window',
+        name: 'Window draw',
+        drawingDate: DRAWING_DATE,
+        endDate: END_DATE,
+        drawScheduleVersion: SCHEDULE_VERSION,
+      },
+    ]);
+
+    const result = await reconcileDrawReminders();
+
+    expect(result).toMatchObject({
+      considered: 1,
+      unchanged: 1,
+      updated: 0,
+      created: 0,
+      failed: 0,
     });
     expect(scheduleDrawReminderMock).not.toHaveBeenCalled();
     expect(subscribeDrawAlertMock).not.toHaveBeenCalled();

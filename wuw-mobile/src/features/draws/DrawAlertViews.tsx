@@ -91,7 +91,7 @@ export function DrawAlertHeroStrip({
       <div className="draws-hero-draw-alert">
         <a
           className="draws-hero-live-instagram"
-          href={CONTACT_INFO.instagramUrl}
+          href={CONTACT_INFO.instagramLiveUrl}
           rel="noreferrer"
           target="_blank"
         >

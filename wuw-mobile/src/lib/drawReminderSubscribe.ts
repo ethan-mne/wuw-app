@@ -1,4 +1,5 @@
 import {
+  DRAW_REMINDER_LEAD_MINUTES,
   drawReminderFireAtMs,
   ensureLocalNotificationPermission,
   cancelDrawReminder,
@@ -154,6 +155,7 @@ export async function reconcileDrawReminders(): Promise<ReconcileDrawRemindersRe
     }
 
     const drawingDateIso = competition.drawingDate ?? competition.endDate;
+    const drawMs = new Date(drawingDateIso).getTime();
     const expectedScheduleVersion = resolveDrawScheduleVersion({
       drawingDateIso,
       endDateIso: competition.endDate,
@@ -168,9 +170,15 @@ export async function reconcileDrawReminders(): Promise<ReconcileDrawRemindersRe
     }
 
     const existing = localByCompetitionId.get(competitionId);
+    const isWithinReminderWindow =
+      Number.isFinite(drawMs)
+      && Date.now() >= drawMs - DRAW_REMINDER_LEAD_MINUTES * 60_000;
     if (
-      existing?.fireAtMs === expectedFireAtMs
-      && existing?.drawScheduleVersion === expectedScheduleVersion
+      existing?.drawScheduleVersion === expectedScheduleVersion
+      && (
+        existing.fireAtMs === expectedFireAtMs
+        || isWithinReminderWindow
+      )
     ) {
       result.unchanged += 1;
       continue;
