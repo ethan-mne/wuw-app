@@ -14,6 +14,7 @@ export const cacheKeys = {
   drawsSeed: (takePast: number, takeFuture: number) => `draws-seed:${takePast}:${takeFuture}`,
   competition: (id: string) => `competition:${id}`,
   accountSummary: 'auth:account-summary',
+  activeEntries: 'auth:active-entries',
   mobileProfile: 'auth:mobile-profile',
   calendarFeedSubscription: 'auth:calendar-feed-subscription',
   orderHistory: 'auth:order-history',

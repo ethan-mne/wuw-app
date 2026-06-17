@@ -11,6 +11,7 @@ import {
 import type {
   AdminCompetitionScheduleRow,
   AccountSummary,
+  ActiveCompetitionEntry,
   CalendarFeedSubscription,
   Competition,
   HomeStats,
@@ -177,6 +178,11 @@ export type LoadAccountSummaryResult =
   | { kind: 'sign_in_required' }
   | { kind: 'error' };
 
+export type LoadActiveEntriesResult =
+  | { kind: 'ok'; data: ActiveCompetitionEntry[] }
+  | { kind: 'sign_in_required' }
+  | { kind: 'error' };
+
 async function loadAccountSummary(): Promise<LoadAccountSummaryResult> {
   if (!API_BASE_URL) {
     return { kind: 'error' };
@@ -205,6 +211,72 @@ async function loadAccountSummary(): Promise<LoadAccountSummaryResult> {
     }
 
     return { kind: 'ok', data: json.data };
+  } catch {
+    return { kind: 'error' };
+  }
+}
+
+function normalizeActiveEntries(raw: unknown): ActiveCompetitionEntry[] | null {
+  if (!Array.isArray(raw)) {
+    return null;
+  }
+
+  const entries: ActiveCompetitionEntry[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'object' || item === null) {
+      return null;
+    }
+    const row = item as Record<string, unknown>;
+    if (
+      typeof row.competitionId !== 'string'
+      || typeof row.competitionName !== 'string'
+      || (row.competitionImageUrl !== null && typeof row.competitionImageUrl !== 'string')
+      || typeof row.drawingDate !== 'string'
+      || typeof row.ticketCount !== 'number'
+    ) {
+      return null;
+    }
+    entries.push({
+      competitionId: row.competitionId,
+      competitionName: row.competitionName,
+      competitionImageUrl: row.competitionImageUrl,
+      drawingDate: row.drawingDate,
+      ticketCount: row.ticketCount,
+    });
+  }
+
+  return entries;
+}
+
+async function loadActiveEntries(): Promise<LoadActiveEntriesResult> {
+  if (!API_BASE_URL) {
+    return { kind: 'error' };
+  }
+
+  try {
+    const response = await fetch(buildMobileApiRequestUrl('/api/mobile/v1/me/active-entries'), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...mobileAuthHeaders(),
+      },
+    });
+
+    if (response.status === 401) {
+      await clearMobileSession();
+      return { kind: 'sign_in_required' };
+    }
+
+    if (!response.ok) {
+      return { kind: 'error' };
+    }
+
+    const json = (await response.json()) as ApiDataResponse<unknown>;
+    const parsed = normalizeActiveEntries(json.data);
+    if (!parsed) {
+      return { kind: 'error' };
+    }
+
+    return { kind: 'ok', data: parsed };
   } catch {
     return { kind: 'error' };
   }
@@ -741,6 +813,7 @@ export const mobileDataService = {
     return response.data;
   },
   loadAccountSummary,
+  loadActiveEntries,
   loadMobileProfile,
   updateMobileProfile,
   getCalendarFeedSubscription: async (): Promise<CalendarFeedSubscription> => {

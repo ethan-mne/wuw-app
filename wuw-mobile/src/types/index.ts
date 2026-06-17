@@ -74,6 +74,14 @@ export interface AccountSummary {
   referralCode: string;
 }
 
+export interface ActiveCompetitionEntry {
+  competitionId: string;
+  competitionName: string;
+  competitionImageUrl: string | null;
+  drawingDate: string;
+  ticketCount: number;
+}
+
 export interface HomeStats {
   instagramFollowers: string;
   amountWon: number;

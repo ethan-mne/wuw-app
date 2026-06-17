@@ -36,3 +36,25 @@ function normalizeApiBaseUrl(value: string): string {
 
 export const API_BASE_URL = normalizeApiBaseUrl(envApiBaseUrl);
 export const DEMO_AUTH_ENABLED = import.meta.env.VITE_DEMO_AUTH_ENABLED === 'true';
+
+/** Resolve API path for fetch — uses same-origin `/api/*` in local browser dev so Vite proxy handles backend calls. */
+export function resolveApiUrl(path: string): string {
+  const isBrowser = typeof window !== 'undefined';
+  const isNative = Capacitor.isNativePlatform();
+  const isLocalhostBrowser = isBrowser && window.location.hostname === 'localhost';
+  const currentOrigin = isBrowser ? window.location.origin : '';
+
+  const shouldForceRelativeApi =
+    !isNative
+    && isBrowser
+    && isLocalhostBrowser
+    && path.startsWith('/api/')
+    && API_BASE_URL
+    && API_BASE_URL !== currentOrigin;
+
+  return shouldForceRelativeApi
+    ? path
+    : API_BASE_URL
+      ? `${API_BASE_URL}${path}`
+      : path;
+}

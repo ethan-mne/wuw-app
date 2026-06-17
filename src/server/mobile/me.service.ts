@@ -2,7 +2,11 @@ import { z } from 'zod';
 import { db } from '@/server/db';
 import { requireMobileSession } from '@/server/mobile/auth.service';
 import { MobileHttpError } from '@/server/mobile/http';
-import type { MobileAccountSummary, MobileProfileUpdateInput } from '@/server/mobile/types';
+import type {
+  MobileAccountSummary,
+  MobileActiveEntryItem,
+  MobileProfileUpdateInput,
+} from '@/server/mobile/types';
 
 const mobileProfileSelect = {
   firstName: true,
@@ -118,4 +122,85 @@ export async function getMobileAccountSummary(): Promise<MobileAccountSummary> {
     activeTickets,
     referralCode: referral?.code ?? '',
   };
+}
+
+export async function listMobileActiveEntries(): Promise<MobileActiveEntryItem[]> {
+  const { email } = await requireMobileSession('email');
+  if (!email) {
+    return [];
+  }
+
+  const now = new Date();
+  const groupedTickets = await db.ticket.groupBy({
+    by: ['competitionId'],
+    where: {
+      Order: {
+        email,
+        status: 'CONFIRMED',
+      },
+      Competition: {
+        status: 'ACTIVE',
+        drawing_date: { gt: now },
+      },
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  const competitionIds = groupedTickets
+    .map((row) => row.competitionId.trim())
+    .filter((id): id is string => id.length > 0);
+  if (competitionIds.length === 0) {
+    return [];
+  }
+
+  const competitions = await db.competition.findMany({
+    where: {
+      id: { in: competitionIds },
+      status: 'ACTIVE',
+      drawing_date: { gt: now },
+    },
+    select: {
+      id: true,
+      name: true,
+      comp_image_url: true,
+      drawing_date: true,
+      Watches: {
+        select: {
+          images_url: {
+            take: 1,
+            select: {
+              url: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const competitionById = new Map(
+    competitions.map((competition) => [competition.id, competition]),
+  );
+
+  return groupedTickets
+    .map((row) => {
+      const competitionId = row.competitionId.trim();
+      const competition = competitionById.get(competitionId);
+      if (!competition) {
+        return null;
+      }
+      const watchImageUrl = competition.Watches?.images_url[0]?.url?.trim();
+      const competitionImageUrl =
+        competition.comp_image_url?.trim() || watchImageUrl || null;
+      return {
+        competitionId,
+        competitionName: competition.name,
+        competitionImageUrl,
+        drawingDate: competition.drawing_date.toISOString(),
+        ticketCount: row._count._all,
+      };
+    })
+    .filter((entry): entry is MobileActiveEntryItem => entry !== null)
+    .sort((a, b) => new Date(a.drawingDate).getTime() - new Date(b.drawingDate).getTime());
 }

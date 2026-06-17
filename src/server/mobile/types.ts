@@ -51,6 +51,14 @@ export type MobileAccountSummary = {
   referralCode: string;
 };
 
+export type MobileActiveEntryItem = {
+  competitionId: string;
+  competitionName: string;
+  competitionImageUrl: string | null;
+  drawingDate: string;
+  ticketCount: number;
+};
+
 export type MobileProfileUpdateInput = {
   firstname: string;
   lastname: string;

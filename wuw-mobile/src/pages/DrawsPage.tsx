@@ -90,6 +90,26 @@ interface DrawThinRowProps {
   variant: 'past' | 'future';
 }
 
+const LOCAL_TIME_SPLIT = ' · ';
+
+function DrawThinRowScheduleTime({ label }: { label: string }) {
+  const splitAt = label.indexOf(LOCAL_TIME_SPLIT);
+  if (splitAt === -1) {
+    return (
+      <p className="draws-thin-row-time">
+        <span className="draws-thin-row-time-line">{label}</span>
+      </p>
+    );
+  }
+
+  return (
+    <p className="draws-thin-row-time">
+      <span className="draws-thin-row-time-line">{label.slice(0, splitAt)}</span>
+      <span className="draws-thin-row-time-line">{label.slice(splitAt + LOCAL_TIME_SPLIT.length)}</span>
+    </p>
+  );
+}
+
 function DrawThinRow({ competition, locale, nowMs, variant }: DrawThinRowProps) {
   const drawIso = competition.drawingDate ?? competition.endDate;
   const isClosed = competition.remainingTickets === 0;
@@ -100,21 +120,18 @@ function DrawThinRow({ competition, locale, nowMs, variant }: DrawThinRowProps) 
   const to = withLocale(locale, `competitions/${competition.id}`);
   const showAlert = variant === 'future' && isDrawAlertEligible(competition, nowMs);
 
-  const rowLeading = (
+  const rowText = (
     <>
-      <ThinThumb competition={competition} alt={competition.name} />
-      <div className="draws-thin-row-body">
-        <span className="draws-thin-row-eyebrow">
-          {variant === 'past' ? (
-            <>
-              Past draw<span aria-hidden> · </span>
-            </>
-          ) : null}
-          {isClosed ? 'Sold out' : `${formatGbpCompact(competition.ticketPrice)} entry`}
-        </span>
-        <h3 className="draws-thin-row-title">{competition.name}</h3>
-        <p className="draws-thin-row-time">{label}</p>
-      </div>
+      <span className="draws-thin-row-eyebrow">
+        {variant === 'past' ? (
+          <>
+            Past draw<span aria-hidden> · </span>
+          </>
+        ) : null}
+        {isClosed ? 'Sold out' : `${formatGbpCompact(competition.ticketPrice)} entry`}
+      </span>
+      <h3 className="draws-thin-row-title">{competition.name}</h3>
+      <DrawThinRowScheduleTime label={label} />
     </>
   );
 
@@ -124,7 +141,8 @@ function DrawThinRow({ competition, locale, nowMs, variant }: DrawThinRowProps) 
         className={`draws-thin-row draws-thin-row--${variant}${isClosed ? ' draws-thin-row--closed' : ''}`}
         to={to}
       >
-        {rowLeading}
+        <ThinThumb competition={competition} alt={competition.name} />
+        <div className="draws-thin-row-body">{rowText}</div>
         <span className="draws-thin-row-chevron" aria-hidden>
           →
         </span>
@@ -137,13 +155,26 @@ function DrawThinRow({ competition, locale, nowMs, variant }: DrawThinRowProps) 
       className={`draws-thin-row-card draws-thin-row-card--${variant}${isClosed ? ' draws-thin-row-card--closed' : ''}`}
     >
       <div className="draws-thin-row-card-main">
-        <Link className="draws-thin-row-card-leading" to={to}>
-          {rowLeading}
-        </Link>
-        <DrawThinRowAlertButton competition={competition} locale={locale} nowMs={nowMs} />
-        <Link className="draws-thin-row-card-chevron" to={to} aria-label={`${competition.name} — open details`}>
-          <span aria-hidden>→</span>
-        </Link>
+        <div className="draws-thin-row-card-leading">
+          <Link
+            className="draws-thin-row-card-thumb-link"
+            to={to}
+            aria-label={`${competition.name} — open details`}
+          >
+            <ThinThumb competition={competition} alt={competition.name} />
+          </Link>
+          <div className="draws-thin-row-body">
+            <Link className="draws-thin-row-card-text-link" to={to}>
+              {rowText}
+            </Link>
+          </div>
+        </div>
+        <div className="draws-thin-row-card-actions">
+          <DrawThinRowAlertButton competition={competition} locale={locale} nowMs={nowMs} />
+          <Link className="draws-thin-row-card-chevron" to={to} aria-label={`${competition.name} — open details`}>
+            <span aria-hidden>→</span>
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -453,43 +484,51 @@ export function DrawsPage() {
         <>
           <article ref={heroAnchorRef} className="draws-hero-anchor">
             <div className="draws-hero">
-              <div className="draws-hero-top">
+              <Link
+                className="draws-hero-media"
+                to={withLocale(locale, `competitions/${hero.id}`)}
+                aria-label={`${hero.name} — open details`}
+              >
                 <ThinThumb competition={hero} alt={hero.name} />
-                <div className="draws-hero-copy">
-                  <div className="draws-hero-label-row">
-                    <span className="draws-hero-label">Next draw</span>
-                    {heroSoldOut ? (
-                      <span className="draws-hero-sold-out">Sold out</span>
-                    ) : null}
+              </Link>
+              <div className="draws-hero-body">
+                <div className="draws-hero-top">
+                  <div className="draws-hero-copy">
+                    <div className="draws-hero-label-row">
+                      <span className="draws-hero-label">Next draw</span>
+                      {heroSoldOut ? (
+                        <span className="draws-hero-sold-out">Sold out</span>
+                      ) : null}
+                    </div>
+                    <h3 className="draws-hero-title">{hero.name}</h3>
+                    <p className="draws-hero-datetime">
+                      {formatUpcomingDrawLabel(
+                        hero.drawingDate ?? hero.endDate,
+                        locale,
+                        new Date(nowMs),
+                      )}
+                    </p>
                   </div>
-                  <h3 className="draws-hero-title">{hero.name}</h3>
-                  <p className="draws-hero-datetime">
-                    {formatUpcomingDrawLabel(
-                      hero.drawingDate ?? hero.endDate,
-                      locale,
-                      new Date(nowMs),
-                    )}
-                  </p>
+                  <Link
+                    className="draws-hero-chevron"
+                    to={withLocale(locale, `competitions/${hero.id}`)}
+                    aria-label={`${hero.name} — open details`}
+                  >
+                    <span aria-hidden>→</span>
+                  </Link>
                 </div>
-                <Link
-                  className="draws-hero-chevron"
-                  to={withLocale(locale, `competitions/${hero.id}`)}
-                  aria-label={`${hero.name} — open details`}
-                >
-                  <span aria-hidden>→</span>
-                </Link>
+
+                {showHeroCountdown ? (
+                  <CountdownTimer
+                    targetIso={drawIsoHero}
+                    locale={locale}
+                    nowMs={nowMs}
+                    countdownClassName="draws-hero-countdown"
+                  />
+                ) : null}
+
+                <DrawAlertHeroStrip competition={hero} locale={locale} nowMs={nowMs} />
               </div>
-
-              {showHeroCountdown ? (
-                <CountdownTimer
-                  targetIso={drawIsoHero}
-                  locale={locale}
-                  nowMs={nowMs}
-                  countdownClassName="draws-hero-countdown"
-                />
-              ) : null}
-
-              <DrawAlertHeroStrip competition={hero} locale={locale} nowMs={nowMs} />
             </div>
           </article>
 

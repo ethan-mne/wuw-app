@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../lib/config';
+import { API_BASE_URL, resolveApiUrl } from '../lib/config';
 
 /** Mirrors server `SendOTPResult` from send-otp-mail.ts */
 export type SendOTPResult =
@@ -44,7 +44,7 @@ export async function sendLoginOtp(email: string): Promise<SendLoginOtpOutcome> 
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/api/mobile/v1/auth/send-otp`, {
+    response = await fetch(resolveApiUrl('/api/mobile/v1/auth/send-otp'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -87,7 +87,7 @@ export async function verifyMobileOtp(
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/api/mobile/v1/auth/verify-otp`, {
+    response = await fetch(resolveApiUrl('/api/mobile/v1/auth/verify-otp'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ otpId, otp }),
@@ -131,7 +131,7 @@ export async function demoLogin(email: string): Promise<DemoLoginOutcome> {
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/api/mobile/v1/auth/demo-login`, {
+    response = await fetch(resolveApiUrl('/api/mobile/v1/auth/demo-login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),

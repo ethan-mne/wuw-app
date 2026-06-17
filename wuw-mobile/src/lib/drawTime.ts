@@ -183,3 +183,8 @@ export function formatDrawDateTimeDual(iso: string, locale: Locale): DrawDateTim
     local: `${localTime} ${labels.yourTime}`,
   };
 }
+
+export function formatDrawDateTimeDualInline(iso: string, locale: Locale): string {
+  const dual = formatDrawDateTimeDual(iso, locale);
+  return dual.local ? `${dual.london} · ${dual.local}` : dual.london;
+}

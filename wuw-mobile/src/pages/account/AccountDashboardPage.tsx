@@ -1,16 +1,19 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { Card, PageHeader, StatPill } from '../../components/ui';
+import { CountdownTimer } from '../../components/CountdownTimer';
+import { PageHeader, StatPill } from '../../components/ui';
 import { AccountDataError, AccountSignInRequired } from '../../features/account/AccountFetchFallback';
 import { MobileLoyaltyProgram } from '../../features/account/MobileLoyaltyProgram';
 import { AccountNav } from '../../features/account/AccountNav';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
+import { formatDrawDateTimeDualInline } from '../../lib/drawTime';
 import { cacheKeys } from '../../lib/dataCache';
 import { clearMobileSession } from '../../lib/mobileSessionToken';
+import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
-import type { AccountSummary } from '../../types';
+import type { AccountSummary, ActiveCompetitionEntry, Locale } from '../../types';
 
 type LoadPhase = 'loading' | 'ok' | 'sign_in_required' | 'error';
 
@@ -27,20 +30,122 @@ function phaseFromResult(
   return result.kind;
 }
 
+function entriesPhaseFromResult(
+  result: Awaited<ReturnType<typeof mobileDataService.loadActiveEntries>> | undefined,
+  isLoading: boolean,
+): LoadPhase {
+  if (!result) {
+    return isLoading ? 'loading' : 'error';
+  }
+  if (result.kind === 'ok') {
+    return 'ok';
+  }
+  return result.kind;
+}
+
+function UpcomingDrawThumb({ imageUrl, alt }: { imageUrl: string | null; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = resolveMediaUrl(imageUrl);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!src || failed) {
+    return <span className="account-upcoming-draws-next-media-fallback" aria-hidden />;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+function UpcomingDrawCard({
+  entry,
+  locale,
+  nowMs,
+  isNext,
+}: {
+  entry: ActiveCompetitionEntry;
+  locale: Locale;
+  nowMs: number;
+  isNext: boolean;
+}) {
+  return (
+    <div className="account-upcoming-draws-next">
+      <div className="account-upcoming-draws-next-main">
+        <Link
+          className="account-upcoming-draws-next-media"
+          to={withLocale(locale, `competitions/${entry.competitionId}`)}
+          aria-label={`${entry.competitionName} — open details`}
+        >
+          <UpcomingDrawThumb
+            imageUrl={entry.competitionImageUrl}
+            alt={entry.competitionName}
+          />
+        </Link>
+        <div className="account-upcoming-draws-next-copy">
+          {isNext ? <p className="status-label">Next draw</p> : null}
+          <Link
+            className="account-upcoming-draws-next-title"
+            to={withLocale(locale, `competitions/${entry.competitionId}`)}
+          >
+            {entry.competitionName}
+          </Link>
+          <p className="account-upcoming-draws-next-meta">
+            {formatDrawDateTimeDualInline(entry.drawingDate, locale)} · {entry.ticketCount}{' '}
+            ticket{entry.ticketCount === 1 ? '' : 's'}
+          </p>
+          <CountdownTimer
+            targetIso={entry.drawingDate}
+            locale={locale}
+            nowMs={nowMs}
+            countdownClassName="draws-hero-countdown"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AccountDashboardPage() {
   const params = useParams();
   const navigate = useNavigate();
   const locale = isLocale(params.locale) ? params.locale : defaultLocale;
   const [signingOut, setSigningOut] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const {
     data: result,
     isLoading,
     refetch,
   } = useCachedQuery(cacheKeys.accountSummary, () => mobileDataService.loadAccountSummary());
+  const {
+    data: activeEntriesResult,
+    isLoading: activeEntriesLoading,
+    refetch: refetchActiveEntries,
+  } = useCachedQuery(cacheKeys.activeEntries, () => mobileDataService.loadActiveEntries());
 
   const phase = phaseFromResult(result, isLoading);
+  const entriesPhase = entriesPhaseFromResult(activeEntriesResult, activeEntriesLoading);
   const summary: AccountSummary | undefined =
     result?.kind === 'ok' ? result.data : undefined;
+  const activeEntries: ActiveCompetitionEntry[] =
+    activeEntriesResult?.kind === 'ok' ? activeEntriesResult.data : [];
+  const shouldShowUpcomingDrawsSection =
+    entriesPhase === 'loading' || entriesPhase === 'error' || activeEntries.length > 0;
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const onSignOut = () => {
     setSigningOut(true);
@@ -85,7 +190,7 @@ export function AccountDashboardPage() {
         description="Mobile equivalent of the web account dashboard."
       />
       <AccountNav />
-      <Card>
+      <section className="card account-dashboard-card account-dashboard-summary-card">
         <h3>Hello {summary.userName}</h3>
         <div className="stats-grid">
           <StatPill label="Wincoins" value={summary.points} />
@@ -99,7 +204,48 @@ export function AccountDashboardPage() {
         >
           {signingOut ? 'Signing out…' : 'Sign out'}
         </button>
-      </Card>
+      </section>
+      {shouldShowUpcomingDrawsSection ? (
+        <section className="card account-dashboard-card account-upcoming-draws-card">
+          <div className="account-upcoming-draws-header">
+            <h3>Upcoming draws</h3>
+            <p className="account-upcoming-draws-subtitle">
+              Competitions where you already have confirmed tickets.
+            </p>
+          </div>
+          {entriesPhase === 'loading' ? (
+            <div className="home-competitions-loading account-upcoming-draws-loading" role="status" aria-live="polite">
+              <span className="home-competitions-loading-spinner" aria-hidden />
+              <span className="sr-only">Loading upcoming draws…</span>
+            </div>
+          ) : null}
+          {entriesPhase === 'error' ? (
+            <div className="account-upcoming-draws-error">
+              <p>Could not load your upcoming draws right now.</p>
+              <button
+                type="button"
+                className="action-link secondary"
+                onClick={() => refetchActiveEntries()}
+              >
+                Retry
+              </button>
+            </div>
+          ) : null}
+          {entriesPhase === 'ok' && activeEntries.length > 0 ? (
+            <div className="account-upcoming-draws-content">
+              {activeEntries.map((entry, index) => (
+                <UpcomingDrawCard
+                  key={entry.competitionId}
+                  entry={entry}
+                  locale={locale}
+                  nowMs={nowMs}
+                  isNext={index === 0}
+                />
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
       <MobileLoyaltyProgram wincoins={summary.points} />
     </section>
   );

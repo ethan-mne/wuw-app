@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { CONTACT_INFO } from '../../data/contactInfo';
@@ -159,7 +160,48 @@ export function DrawAlertHeroStrip({
   );
 }
 
-/** Compact inline reminder on upcoming draw rows (between title and chevron). */
+function DrawAlertErrorModal({
+  message,
+  open,
+  onClose,
+}: {
+  message: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!open || !message) {
+    return null;
+  }
+
+  return (
+    <div className="draw-alert-error-backdrop" role="presentation" onClick={onClose}>
+      <div
+        className="draw-alert-error-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="draw-alert-error-title"
+        aria-describedby="draw-alert-error-message"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h3 id="draw-alert-error-title" className="draw-alert-error-title">
+          Could not set reminder
+        </h3>
+        <p id="draw-alert-error-message" className="draw-alert-error-message">
+          {message}
+        </p>
+        <button
+          type="button"
+          className="checkout-flow-button checkout-flow-button--light draw-alert-error-close"
+          onClick={onClose}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Compact bell reminder control in the upcoming draw row corner. */
 export function DrawThinRowAlertButton({
   competition,
   locale,
@@ -172,6 +214,7 @@ export function DrawThinRowAlertButton({
   const navigate = useNavigate();
   const eligible = isDrawAlertEligible(competition, nowMs);
   const p = useDrawAlertPrefs(competition, eligible);
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
 
   if (!eligible) {
     return null;
@@ -180,8 +223,18 @@ export function DrawThinRowAlertButton({
   const session = getMobileSessionToken();
   const loadingGate = Boolean(session) && p.alertPrefsLoading;
   const remindLabel = 'Get a reminder on this device about 10 minutes before the live draw';
+  const closeErrorModal = () => {
+    setErrorModalOpen(false);
+    p.setError('');
+  };
 
-  const btnClass = 'draws-thin-row-remind-btn draws-thin-row-remind-btn--inline';
+  useEffect(() => {
+    if (p.error) {
+      setErrorModalOpen(true);
+    }
+  }, [p.error]);
+
+  const btnClass = 'draws-thin-row-remind-btn draws-thin-row-remind-btn--icon';
 
   if (p.hasTicket) {
     return (
@@ -189,13 +242,14 @@ export function DrawThinRowAlertButton({
         className="draws-thin-row-remind-inline draws-thin-row-remind-inline--tick"
         title="We will remind you before this draw"
       >
-        ✓
+        <span aria-hidden>🔔</span>
+        <span className="sr-only">Reminder enabled</span>
       </span>
     );
   }
 
   return (
-    <div className="draws-thin-row-remind-inline draws-thin-row-remind-inline--stacked">
+    <div className="draws-thin-row-remind-inline">
       {loadingGate ? (
         <button
           type="button"
@@ -213,14 +267,15 @@ export function DrawThinRowAlertButton({
           className={`${btnClass} draws-thin-row-remind-btn--secondary`}
           disabled={p.busy}
           aria-label="Turn off draw reminder for this competition"
-          title={p.error || 'Turn off reminder'}
+          title="Turn off reminder"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             void p.unsubscribe();
           }}
         >
-          Off
+          <span aria-hidden>🔔</span>
+          <span className="sr-only">Turn off reminder</span>
         </button>
       ) : (
         <button
@@ -228,7 +283,7 @@ export function DrawThinRowAlertButton({
           className={btnClass}
           disabled={p.busy}
           aria-label={remindLabel}
-          title={p.error || remindLabel}
+          title={remindLabel}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -239,14 +294,15 @@ export function DrawThinRowAlertButton({
             void p.subscribe();
           }}
         >
-          {session ? 'Remind me' : 'Sign in'}
+          <span aria-hidden>🔕</span>
+          <span className="sr-only">{session ? 'Turn on reminder' : 'Sign in for reminder'}</span>
         </button>
       )}
-      {p.error ? (
-        <p className="draws-thin-row-remind-error" role="alert">
-          {p.error}
-        </p>
-      ) : null}
+      <DrawAlertErrorModal
+        message={p.error}
+        open={errorModalOpen}
+        onClose={closeErrorModal}
+      />
     </div>
   );
 }
