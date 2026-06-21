@@ -589,7 +589,7 @@ export type SendAdminCompetitionNotificationResult = {
 };
 
 export type SendAdminCompetitionScheduleNotificationResult = {
-  kind: 'sent' | 'already_sent' | 'no_recipients' | 'delivery_failed';
+  kind: 'sent' | 'no_recipients' | 'delivery_failed';
   competitionId: string;
   competitionName: string;
   sentAt?: string;

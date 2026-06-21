@@ -77,6 +77,85 @@ function formatDateTime24h(value: string): string {
   }).format(new Date(value));
 }
 
+function SchedulePushConfirmModal({
+  row,
+  open,
+  confirming,
+  onCancel,
+  onConfirm,
+}: {
+  row: AdminCompetitionScheduleRow | null;
+  open: boolean;
+  confirming: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!open || !row) {
+    return null;
+  }
+
+  const previouslySent = Boolean(row.scheduleAnnouncementSentAt);
+
+  return (
+    <div
+      className="draw-alert-error-backdrop"
+      role="presentation"
+      onClick={confirming ? undefined : onCancel}
+    >
+      <div
+        className="draw-alert-error-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="schedule-push-confirm-title"
+        aria-describedby="schedule-push-confirm-message"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h3 id="schedule-push-confirm-title" className="draw-alert-error-title">
+          {previouslySent ? 'Send schedule update push again?' : 'Send schedule update push?'}
+        </h3>
+        <p
+          className="draw-alert-error-message"
+          style={{
+            marginBottom: '0.35rem',
+            padding: '0.65rem 0.75rem',
+            borderRadius: '0.75rem',
+            fontWeight: 700,
+            background: previouslySent ? '#ecfdf3' : '#f1f5f9',
+            color: previouslySent ? '#137333' : '#475569',
+          }}
+        >
+          {previouslySent
+            ? `Last sent: ${formatDateTime24h(row.scheduleAnnouncementSentAt!)}`
+            : 'Not sent yet'}
+        </p>
+        <p id="schedule-push-confirm-message" className="draw-alert-error-message">
+          {previouslySent
+            ? `This will send another push notification to draw-alert subscribers for "${row.name}".`
+            : `This will notify draw-alert subscribers that the schedule for "${row.name}" has changed.`}
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className="checkout-flow-button checkout-flow-button--light"
+            disabled={confirming}
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="checkout-flow-button"
+            disabled={confirming}
+            onClick={onConfirm}
+          >
+            {confirming ? 'Sending...' : previouslySent ? 'Send again' : 'Send push'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ScheduleCompetitionPhoto({
   row,
   competition,
@@ -121,6 +200,8 @@ export function AdminCompetitionSchedulePage() {
   const [edits, setEdits] = useState<Record<string, EditState>>({});
   const [saveState, setSaveState] = useState<Record<string, SaveState>>({});
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ACTIVE');
+  const [schedulePushConfirmRow, setSchedulePushConfirmRow] =
+    useState<AdminCompetitionScheduleRow | null>(null);
 
   useEffect(() => {
     if (profileLoading || profileResult?.kind !== 'ok' || !profileResult.data.isAdmin) {
@@ -458,30 +539,6 @@ export function AdminCompetitionSchedulePage() {
         return;
       }
 
-      if (result.kind === 'already_sent') {
-        setRows((prev) =>
-          prev.map((item) =>
-            item.id === row.id
-              ? {
-                  ...item,
-                  scheduleAnnouncementSentAt: result.sentAt ?? item.scheduleAnnouncementSentAt,
-                }
-              : item,
-          ),
-        );
-        setSaveState((prev) => ({
-          ...prev,
-          [row.id]: {
-            saving: prev[row.id]?.saving ?? false,
-            notifyingCompetition: prev[row.id]?.notifyingCompetition ?? false,
-            notifyingSchedule: false,
-            message: 'Schedule push already sent for this competition',
-            isError: false,
-          },
-        }));
-        return;
-      }
-
       if (result.kind === 'no_recipients') {
         setSaveState((prev) => ({
           ...prev,
@@ -607,7 +664,6 @@ export function AdminCompetitionSchedulePage() {
           ),
         );
         const canNotifyCompetition = row.status === 'ACTIVE' && !row.announcementSentAt;
-        const canNotifySchedule = !row.scheduleAnnouncementSentAt;
 
         return (
           <Card key={row.id}>
@@ -747,15 +803,12 @@ export function AdminCompetitionSchedulePage() {
                   (state?.saving ?? false)
                   || (state?.notifyingCompetition ?? false)
                   || (state?.notifyingSchedule ?? false)
-                  || !canNotifySchedule
                 }
-                onClick={() => void notifyScheduleRow(row)}
+                onClick={() => setSchedulePushConfirmRow(row)}
               >
                 {state?.notifyingSchedule
                   ? 'Sending schedule push...'
-                  : row.scheduleAnnouncementSentAt
-                    ? 'Schedule push already sent'
-                    : 'Send schedule update push'}
+                  : 'Send schedule update push'}
               </button>
               <button
                 type="button"
@@ -780,6 +833,24 @@ export function AdminCompetitionSchedulePage() {
           </Card>
         );
       })}
+      <SchedulePushConfirmModal
+        row={schedulePushConfirmRow}
+        open={schedulePushConfirmRow !== null}
+        confirming={
+          schedulePushConfirmRow
+            ? (saveState[schedulePushConfirmRow.id]?.notifyingSchedule ?? false)
+            : false
+        }
+        onCancel={() => setSchedulePushConfirmRow(null)}
+        onConfirm={() => {
+          if (!schedulePushConfirmRow) {
+            return;
+          }
+          void notifyScheduleRow(schedulePushConfirmRow).finally(() => {
+            setSchedulePushConfirmRow(null);
+          });
+        }}
+      />
     </section>
   );
 }

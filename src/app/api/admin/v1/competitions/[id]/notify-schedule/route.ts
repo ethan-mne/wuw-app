@@ -29,8 +29,6 @@ export async function POST(_request: Request, { params }: RouteContext) {
     switch (result.kind) {
       case 'sent':
         return NextResponse.json({ data: result });
-      case 'already_sent':
-        return NextResponse.json({ data: result }, { status: 409 });
       case 'no_recipients':
         return NextResponse.json({ data: result }, { status: 200 });
       case 'delivery_failed':

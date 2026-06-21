@@ -83,12 +83,6 @@ export type SendCompetitionScheduleAnnouncementResult =
     sentAt: Date;
   }
   | {
-    kind: 'already_sent';
-    competitionId: string;
-    competitionName: string;
-    sentAt: Date;
-  }
-  | {
     kind: 'no_recipients';
     competitionId: string;
     competitionName: string;
@@ -112,16 +106,6 @@ async function loadCompetitionOrThrow(competitionId: string): Promise<Competitio
     throw new MobileHttpError('Competition not found', 404);
   }
   return row;
-}
-
-async function getScheduleAnnouncementSentAt(competitionId: string): Promise<Date | null> {
-  const rows = await db.$queryRaw<Array<{ sentAt: Date }>>`
-    SELECT sentAt
-    FROM competition_schedule_announcement_sent
-    WHERE competitionId = ${competitionId}
-    LIMIT 1
-  `;
-  return rows[0]?.sentAt ?? null;
 }
 
 export async function sendCompetitionAnnouncement(params: {
@@ -263,15 +247,6 @@ export async function sendCompetitionScheduleAnnouncement(params: {
   }
 
   const competition = await loadCompetitionOrThrow(competitionId);
-  const existingSentAt = await getScheduleAnnouncementSentAt(competition.id);
-  if (existingSentAt) {
-    return {
-      kind: 'already_sent',
-      competitionId: competition.id,
-      competitionName: competition.name,
-      sentAt: existingSentAt,
-    };
-  }
   if (!isOneSignalConfigured()) {
     throw new MobileHttpError('OneSignal is not configured on the server', 503);
   }
@@ -309,21 +284,6 @@ export async function sendCompetitionScheduleAnnouncement(params: {
     };
   }
 
-  const sentAt = new Date();
-  const inserted = await db.$executeRaw`
-    INSERT IGNORE INTO competition_schedule_announcement_sent (id, competitionId, sentByUserId, sentAt)
-    VALUES (${randomUUID()}, ${competition.id}, ${params.sentByUserId}, ${sentAt})
-  `;
-  if (inserted === 0) {
-    const latestSentAt = await getScheduleAnnouncementSentAt(competition.id);
-    return {
-      kind: 'already_sent',
-      competitionId: competition.id,
-      competitionName: competition.name,
-      sentAt: latestSentAt ?? sentAt,
-    };
-  }
-
   const pushResult = await sendOneSignalPushMulticast({
     subscriptionIds,
     title: 'Draw schedule updated',
@@ -349,10 +309,6 @@ export async function sendCompetitionScheduleAnnouncement(params: {
   }
 
   if (pushResult.successCount === 0) {
-    await db.$executeRaw`
-      DELETE FROM competition_schedule_announcement_sent
-      WHERE competitionId = ${competition.id}
-    `;
     return {
       kind: 'delivery_failed',
       competitionId: competition.id,
@@ -362,6 +318,13 @@ export async function sendCompetitionScheduleAnnouncement(params: {
       errorMessage: pushResult.errorSummary,
     };
   }
+
+  const sentAt = new Date();
+  await db.$executeRaw`
+    INSERT INTO competition_schedule_announcement_sent (id, competitionId, sentByUserId, sentAt)
+    VALUES (${randomUUID()}, ${competition.id}, ${params.sentByUserId}, ${sentAt})
+    ON DUPLICATE KEY UPDATE sentByUserId = VALUES(sentByUserId), sentAt = VALUES(sentAt)
+  `;
 
   return {
     kind: 'sent',
