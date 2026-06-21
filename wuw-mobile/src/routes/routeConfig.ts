@@ -1,7 +1,7 @@
 export const coreRoutes = [
   { label: 'Home', path: '' },
   { label: 'Draws', path: 'draws' },
-  { label: 'Profile', path: 'account/profile' },
+  { label: 'Profile', path: 'account/dashboard' },
   { label: 'Contact', path: 'contact-us' },
 ] as const;
 

@@ -216,6 +216,12 @@ export function DrawThinRowAlertButton({
   const p = useDrawAlertPrefs(competition, eligible);
   const [errorModalOpen, setErrorModalOpen] = useState(false);
 
+  useEffect(() => {
+    if (p.error) {
+      setErrorModalOpen(true);
+    }
+  }, [p.error]);
+
   if (!eligible) {
     return null;
   }
@@ -228,13 +234,7 @@ export function DrawThinRowAlertButton({
     p.setError('');
   };
 
-  useEffect(() => {
-    if (p.error) {
-      setErrorModalOpen(true);
-    }
-  }, [p.error]);
-
-  const btnClass = 'draws-thin-row-remind-btn draws-thin-row-remind-btn--icon';
+  const btnClass = 'draws-thin-row-remind-btn draws-thin-row-remind-btn--inline';
 
   if (p.hasTicket) {
     return (
@@ -242,7 +242,7 @@ export function DrawThinRowAlertButton({
         className="draws-thin-row-remind-inline draws-thin-row-remind-inline--tick"
         title="We will remind you before this draw"
       >
-        <span aria-hidden>🔔</span>
+        ✓
         <span className="sr-only">Reminder enabled</span>
       </span>
     );
@@ -274,8 +274,7 @@ export function DrawThinRowAlertButton({
             void p.unsubscribe();
           }}
         >
-          <span aria-hidden>🔔</span>
-          <span className="sr-only">Turn off reminder</span>
+          Off
         </button>
       ) : (
         <button
@@ -294,8 +293,7 @@ export function DrawThinRowAlertButton({
             void p.subscribe();
           }}
         >
-          <span aria-hidden>🔕</span>
-          <span className="sr-only">{session ? 'Turn on reminder' : 'Sign in for reminder'}</span>
+          {session ? 'Remind me' : 'Sign in'}
         </button>
       )}
       <DrawAlertErrorModal

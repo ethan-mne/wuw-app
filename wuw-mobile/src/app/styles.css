@@ -4311,7 +4311,7 @@ a.checkout-flow-button {
 }
 
 .draws-thin-row-card {
-  --draws-thin-row-height: 8.5rem;
+  --draws-thin-row-height: 9.5rem;
   --draws-thin-row-thumb-width: 6.25rem;
   height: var(--draws-thin-row-height);
   border: 1px solid rgba(148, 163, 184, 0.26);
@@ -4358,7 +4358,7 @@ a.checkout-flow-button {
   flex: 1;
   width: 100%;
   height: 100%;
-  border-radius: 0;
+  border-radius: 0.65rem 0 0 0.65rem;
   overflow: hidden;
 }
 
@@ -4370,7 +4370,6 @@ a.checkout-flow-button {
   display: block;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
   text-decoration: none;
   color: inherit;
 }
@@ -4382,20 +4381,25 @@ a.checkout-flow-button {
 .draws-thin-row-card-leading .draws-thin-row-body {
   flex: 1;
   min-width: 0;
-  padding: 0.5rem 0;
+  padding: 0.45rem 0.5rem 0.65rem 0;
   justify-content: flex-start;
-  overflow: hidden;
 }
 
 .draws-thin-row-card .draws-thin-row-title {
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: unset;
 }
 
 .draws-thin-row-body .draws-thin-row-remind-inline {
   margin-top: auto;
-  justify-content: flex-start;
-  align-items: flex-start;
+  justify-content: flex-end;
+  align-items: flex-end;
   width: 100%;
+  padding-top: 0.25rem;
+}
+
+.draws-thin-row-card .draws-thin-row-body .draws-thin-row-remind-inline {
+  width: 100%;
+  margin-right: 0;
 }
 
 .draws-thin-row-card-actions {
@@ -4415,7 +4419,9 @@ a.checkout-flow-button {
   align-self: flex-end;
   justify-content: center;
   min-width: 1.75rem;
-  margin-right: 0;
+  margin-top: 0.15rem;
+  margin-right: 0.15rem;
+  padding: 0.2rem;
   font-size: 1rem;
   color: #94a3b8;
   text-decoration: none;
@@ -4556,7 +4562,7 @@ a.checkout-flow-button {
 }
 
 .draws-thin-row {
-  --draws-thin-row-height: 6.5rem;
+  --draws-thin-row-height: 7.25rem;
   --draws-thin-row-thumb-width: 6.25rem;
   display: flex;
   align-items: stretch;
@@ -4589,7 +4595,7 @@ a.checkout-flow-button {
   align-self: stretch;
   width: var(--draws-thin-row-thumb-width);
   height: 100%;
-  border-radius: 0;
+  border-radius: 0.65rem 0 0 0.65rem;
   overflow: hidden;
 }
 
@@ -4604,7 +4610,6 @@ a.checkout-flow-button {
   justify-content: center;
   min-width: 0;
   padding: 0.65rem 0;
-  overflow: hidden;
 }
 
 .draws-thin-row-eyebrow {
@@ -4622,16 +4627,13 @@ a.checkout-flow-button {
   font-size: 0.86rem;
   font-weight: 800;
   line-height: 1.28;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
+  display: block;
+  overflow: visible;
+  text-wrap: balance;
 }
 
 .draws-thin-row-time {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
+  display: block;
   margin: 0.15rem 0 0;
   font-size: 0.75rem;
   color: #475569;

@@ -102,10 +102,13 @@ function DrawThinRowScheduleTime({ label }: { label: string }) {
     );
   }
 
+  const firstLine = label.slice(0, splitAt);
+  const secondLine = label.slice(splitAt + LOCAL_TIME_SPLIT.length);
+
   return (
     <p className="draws-thin-row-time">
-      <span className="draws-thin-row-time-line">{label.slice(0, splitAt)}</span>
-      <span className="draws-thin-row-time-line">{label.slice(splitAt + LOCAL_TIME_SPLIT.length)}</span>
+      <span className="draws-thin-row-time-line">{firstLine} ·</span>
+      <span className="draws-thin-row-time-line">{secondLine}</span>
     </p>
   );
 }
@@ -164,16 +167,14 @@ function DrawThinRow({ competition, locale, nowMs, variant }: DrawThinRowProps) 
             <ThinThumb competition={competition} alt={competition.name} />
           </Link>
           <div className="draws-thin-row-body">
+            <Link className="draws-thin-row-card-chevron" to={to} aria-label={`${competition.name} — open details`}>
+              <span aria-hidden>→</span>
+            </Link>
             <Link className="draws-thin-row-card-text-link" to={to}>
               {rowText}
             </Link>
+            <DrawThinRowAlertButton competition={competition} locale={locale} nowMs={nowMs} />
           </div>
-        </div>
-        <div className="draws-thin-row-card-actions">
-          <DrawThinRowAlertButton competition={competition} locale={locale} nowMs={nowMs} />
-          <Link className="draws-thin-row-card-chevron" to={to} aria-label={`${competition.name} — open details`}>
-            <span aria-hidden>→</span>
-          </Link>
         </div>
       </div>
     </div>
