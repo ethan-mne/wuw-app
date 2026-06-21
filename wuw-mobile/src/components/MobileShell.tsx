@@ -34,7 +34,7 @@ export function MobileShell() {
       <nav className="bottom-nav" aria-label="Main mobile navigation">
         {coreRoutes.map((route) => {
           const to = withLocale(locale, route.path);
-          if (route.path === 'account/profile' || route.path === 'account/dashboard') {
+          if (route.path === 'account/dashboard') {
             const profileActive = isProfileBucketActive(location.pathname, locale);
             return (
               <Link
