@@ -4124,7 +4124,12 @@ a.checkout-flow-button {
 }
 
 .draws-hero-media .draws-thumb img {
-  transform: scale(1.15);
+  position: absolute;
+  top: -7.5%;
+  left: -7.5%;
+  width: 115%;
+  max-width: none;
+  height: 115%;
 }
 
 .draws-hero-body {
@@ -4140,6 +4145,7 @@ a.checkout-flow-button {
 }
 
 .draws-thumb {
+  position: relative;
   flex-shrink: 0;
   width: 3.85rem;
   height: 3.85rem;
@@ -4363,7 +4369,12 @@ a.checkout-flow-button {
 }
 
 .draws-thin-row-card-thumb-link .draws-thumb img {
-  transform: scale(1.15);
+  position: absolute;
+  top: -7.5%;
+  left: -7.5%;
+  width: 115%;
+  max-width: none;
+  height: 115%;
 }
 
 .draws-thin-row-card-text-link {
@@ -4600,7 +4611,12 @@ a.checkout-flow-button {
 }
 
 .draws-thin-row .draws-thumb img {
-  transform: scale(1.15);
+  position: absolute;
+  top: -7.5%;
+  left: -7.5%;
+  width: 115%;
+  max-width: none;
+  height: 115%;
 }
 
 .draws-thin-row-body {
