@@ -128,7 +128,6 @@ export function AccountDashboardPage() {
   const {
     data: activeEntriesResult,
     isLoading: activeEntriesLoading,
-    refetch: refetchActiveEntries,
   } = useCachedQuery(cacheKeys.activeEntries, () => mobileDataService.loadActiveEntries());
 
   const phase = phaseFromResult(result, isLoading);
@@ -138,7 +137,7 @@ export function AccountDashboardPage() {
   const activeEntries: ActiveCompetitionEntry[] =
     activeEntriesResult?.kind === 'ok' ? activeEntriesResult.data : [];
   const shouldShowUpcomingDrawsSection =
-    entriesPhase === 'loading' || entriesPhase === 'error' || activeEntries.length > 0;
+    entriesPhase === 'loading' || activeEntries.length > 0;
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -217,18 +216,6 @@ export function AccountDashboardPage() {
             <div className="home-competitions-loading account-upcoming-draws-loading" role="status" aria-live="polite">
               <span className="home-competitions-loading-spinner" aria-hidden />
               <span className="sr-only">Loading upcoming draws…</span>
-            </div>
-          ) : null}
-          {entriesPhase === 'error' ? (
-            <div className="account-upcoming-draws-error">
-              <p>Could not load your upcoming draws right now.</p>
-              <button
-                type="button"
-                className="action-link secondary"
-                onClick={() => refetchActiveEntries()}
-              >
-                Retry
-              </button>
             </div>
           ) : null}
           {entriesPhase === 'ok' && activeEntries.length > 0 ? (
