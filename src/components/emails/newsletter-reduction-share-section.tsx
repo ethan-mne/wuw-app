@@ -109,14 +109,6 @@ const container = {
   borderBottomWidth: '2px',
 };
 
-const whatsappButton = {
-  width: '271px',
-  height: '65px',
-  border: 'solid 1px white',
-  borderRadius: '50px',
-  margin: '30px auto',
-};
-
 const codeButton = {
   width: '366px',
   height: '77px',

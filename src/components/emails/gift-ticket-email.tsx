@@ -14,12 +14,12 @@ import { TicketDetails } from './ticket-details';
 import { CustomButton } from './custom-button';
 import { baseUrl } from './base-url';
 import { GiftSection } from './gift-section';
-import { ConfirmationEmailProps } from '@/lib/interfaces';
+import type { ConfirmationEmailProps } from '@/lib/interfaces';
 
 export function GiftTicketEmail({
   message,
   userName,
-  code,
+  code: _code,
   ticketDetails,
 }: ConfirmationEmailProps) {
   return (

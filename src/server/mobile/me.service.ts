@@ -192,7 +192,7 @@ export async function listMobileActiveEntries(): Promise<MobileActiveEntryItem[]
       }
       const watchImageUrl = competition.Watches?.images_url[0]?.url?.trim();
       const competitionImageUrl =
-        competition.comp_image_url?.trim() || watchImageUrl || null;
+        competition.comp_image_url?.trim() ?? watchImageUrl ?? null;
       return {
         competitionId,
         competitionName: competition.name,
