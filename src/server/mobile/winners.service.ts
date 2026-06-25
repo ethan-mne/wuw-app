@@ -1,4 +1,5 @@
 import { db } from '@/server/db';
+import { getCachedMobileWinnersHome } from '@/server/cache/mobile-read-cache';
 import { getPublicHomeWinners } from '@/server/public-home-data';
 import type { MobileWinnersResponse } from '@/server/mobile/types';
 
@@ -17,6 +18,31 @@ export function parseWinnersPagination(url: string) {
 }
 
 export async function listMobileWinners(skip: number, take: number): Promise<MobileWinnersResponse> {
+  if (skip === 0 && take <= 8) {
+    const cached = await getCachedMobileWinnersHome();
+    if (cached.data.length > 0) {
+      return cached;
+    }
+
+    const publicWinners = await getPublicHomeWinners();
+    const paged = publicWinners.slice(skip, skip + take);
+    const fallbackData = paged
+      .filter((winner): winner is Exclude<(typeof paged)[number], { src: string }> => 'id' in winner)
+      .map((winner) => ({
+        id: String(winner.id),
+        name: winner.name || 'Winner',
+        prize: winner.watch || 'Competition prize',
+        location: '',
+        imageUrl: winner.img ?? '',
+        drawDate: winner.date,
+      }));
+
+    return {
+      data: fallbackData,
+      hasMore: skip + paged.length < publicWinners.length,
+    };
+  }
+
   const select = {
     id: true,
     name: true,

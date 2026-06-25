@@ -1,4 +1,5 @@
 import { db } from '@/server/db';
+import { invalidateMobileCompetitionReadCache } from '@/server/cache/mobile-read-cache';
 import type { Order } from '@prisma/client';
 import { sendConfirmationEmail } from '@/lib/sendConfirmationEmail';
 
@@ -118,5 +119,6 @@ export async function HandelConfirmedORder(payment: Order) {
     }),
   ]);
   console.log('📝 Updated order:', order);
+  invalidateMobileCompetitionReadCache(FirstTicket.competitionId);
   return order;
 }

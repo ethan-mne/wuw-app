@@ -2,10 +2,11 @@ import { CompetitionStatus } from '@/lib/prisma-enums';
 import { db } from '@/server/db';
 import {
   mapCompetitionToMobileDto,
+  mapCompetitionToMobileListDto,
   type MobileCompetitionDto,
 } from './mapper';
 
-/** Loaded rows for list + detail; remaining tickets use confirmed ticket count. */
+/** Full watch + gallery — competition detail only. */
 const mobileCompetitionCoreSelect = {
   id: true,
   name: true,
@@ -42,8 +43,35 @@ const mobileCompetitionCoreSelect = {
   },
 } as const;
 
-const mobileCompetitionSelect = {
-  ...mobileCompetitionCoreSelect,
+/** Home list + draws timeline: brand/model + one thumbnail URL. */
+const mobileCompetitionListWatchSelect = {
+  brand: true,
+  model: true,
+  images_url: {
+    take: 1,
+    orderBy: { createdAt: 'asc' as const },
+    select: {
+      url: true,
+    },
+  },
+} as const;
+
+const mobileCompetitionListSelect = {
+  id: true,
+  name: true,
+  start_date: true,
+  total_tickets: true,
+  ticket_price: true,
+  price: true,
+  cash_alternative: true,
+  max_winners: true,
+  end_date: true,
+  drawing_date: true,
+  status: true,
+  comp_image_url: true,
+  Watches: {
+    select: mobileCompetitionListWatchSelect,
+  },
   _count: {
     select: {
       Ticket: {
@@ -109,13 +137,13 @@ export async function listCompetitionsForMobile(): Promise<MobileCompetitionDto[
           ...mobileCompetitionActiveWhere(),
           ...mobileCompetitionStartedWhere(now),
         },
-    select: mobileCompetitionSelect,
+    select: mobileCompetitionListSelect,
     orderBy: {
       end_date: 'asc',
     },
   });
 
-  return competitions.map(mapCompetitionToMobileDto);
+  return competitions.map(mapCompetitionToMobileListDto);
 }
 
 /** Cutoff for paging older draws — same window as timeline seed for consistency. */
@@ -212,7 +240,7 @@ export async function getDrawTimelineSeed(
         gte: cutoff,
       },
     },
-    select: mobileCompetitionSelect,
+    select: mobileCompetitionListSelect,
     orderBy: { drawing_date: 'desc' },
     take: probePast ? takePast + 1 : takePast,
   });
@@ -224,7 +252,7 @@ export async function getDrawTimelineSeed(
       ...mobileCompetitionStartedWhere(now),
       drawing_date: { gt: now },
     },
-    select: mobileCompetitionSelect,
+    select: mobileCompetitionListSelect,
     orderBy: { drawing_date: 'asc' },
     take: probeFuture ? takeFuture + 1 : takeFuture,
   });
@@ -235,8 +263,8 @@ export async function getDrawTimelineSeed(
   const futureSlice = futureRaw.slice(0, takeFuture);
 
   return {
-    past: [...pastSlice].reverse().map(mapCompetitionToMobileDto),
-    upcoming: futureSlice.map(mapCompetitionToMobileDto),
+    past: [...pastSlice].reverse().map(mapCompetitionToMobileListDto),
+    upcoming: futureSlice.map(mapCompetitionToMobileListDto),
     hasMorePast,
     hasMoreFuture,
   };
@@ -262,7 +290,7 @@ export async function getDrawTimelinePageBefore(
         gte: cutoff,
       },
     },
-    select: mobileCompetitionSelect,
+    select: mobileCompetitionListSelect,
     orderBy: { drawing_date: 'desc' },
     take: take + 1,
   });
@@ -270,7 +298,7 @@ export async function getDrawTimelinePageBefore(
   const hasMore = rows.length > take;
   const slice = rows.slice(0, take);
   return {
-    items: [...slice].reverse().map(mapCompetitionToMobileDto),
+    items: [...slice].reverse().map(mapCompetitionToMobileListDto),
     hasMore,
   };
 }
@@ -291,7 +319,7 @@ export async function getDrawTimelinePageAfter(
       ...mobileCompetitionStartedWhere(now),
       drawing_date: { gt: cursorExclusive },
     },
-    select: mobileCompetitionSelect,
+    select: mobileCompetitionListSelect,
     orderBy: { drawing_date: 'asc' },
     take: take + 1,
   });
@@ -299,7 +327,7 @@ export async function getDrawTimelinePageAfter(
   const hasMore = rows.length > take;
   const slice = rows.slice(0, take);
   return {
-    items: slice.map(mapCompetitionToMobileDto),
+    items: slice.map(mapCompetitionToMobileListDto),
     hasMore,
   };
 }

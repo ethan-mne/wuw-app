@@ -1,9 +1,11 @@
 import { order_paymentMethod, order_status } from '@/lib/prisma-enums';
 import type { CompetitionInterface } from '@/lib/interfaces';
 import { sendConfirmationEmail } from '@/lib/sendConfirmationEmail';
+import { invalidateMobileCompetitionReadCache } from '@/server/cache/mobile-read-cache';
 import { db } from '@/server/db';
 import { requireMobileSession } from '@/server/mobile/auth.service';
 import {
+  hasCompetitionTicketStock,
   isCompetitionCheapestForFreeTicket,
   resolveCheapestRedeemableCompetitionIds,
 } from '@/server/mobile/free-ticket-eligibility';
@@ -12,25 +14,45 @@ import type { MobileRedeemFreeTicketResult } from '@/server/mobile/types';
 
 export const WINCOIN_FREE_TICKET_COST = 100;
 
-const competitionSelectForEmail = {
+const competitionSelectForRedeem = {
   id: true,
   name: true,
+  ticket_price: true,
+  total_tickets: true,
+  status: true,
   start_date: true,
   end_date: true,
-  total_tickets: true,
-  max_winners: true,
-  price: true,
-  ticket_price: true,
-  remaining_tickets: true,
-  status: true,
   comp_image_url: true,
-  cash_alternative: true,
-  Watches: {
-    include: {
-      images_url: true,
-    },
-  },
 } as const;
+
+function toConfirmationEmailCompetition(
+  competition: {
+    id: string;
+    name: string;
+    end_date: Date;
+    ticket_price: number;
+    status: string;
+    comp_image_url: string | null;
+  },
+): CompetitionInterface {
+  const imageUrl = competition.comp_image_url?.trim() ?? '';
+  return {
+    id: competition.id,
+    total_tickets: 0,
+    max_winners: 1,
+    name: competition.name,
+    end_date: competition.end_date,
+    price: 0,
+    ticket_price: competition.ticket_price,
+    remaining_tickets: 0,
+    status: competition.status,
+    comp_image_url: competition.comp_image_url,
+    cash_alternative: null,
+    Watches: imageUrl
+      ? ({ images_url: [{ url: imageUrl }] } as CompetitionInterface['Watches'])
+      : null,
+  };
+}
 
 function assertProfileComplete(user: {
   firstName: string | null;
@@ -101,7 +123,7 @@ export async function redeemFreeTicket(
   const now = new Date();
   const competition = await db.competition.findUnique({
     where: { id: trimmedId },
-    select: competitionSelectForEmail,
+    select: competitionSelectForRedeem,
   });
 
   if (!competition) {
@@ -151,20 +173,7 @@ export async function redeemFreeTicket(
       );
     }
 
-    const competitionUpdate = await tx.competition.updateMany({
-      where: {
-        id: trimmedId,
-        status: 'ACTIVE',
-        remaining_tickets: { gt: 0 },
-        start_date: { lte: now },
-        end_date: { gte: now },
-      },
-      data: {
-        remaining_tickets: { decrement: 1 },
-      },
-    });
-
-    if (competitionUpdate.count === 0) {
+    if (!(await hasCompetitionTicketStock(tx, competition))) {
       throw new MobileHttpError('This competition is sold out.', 400);
     }
 
@@ -191,9 +200,19 @@ export async function redeemFreeTicket(
       data: {
         orderId: order.id,
         competitionId: trimmedId,
-        ticketPrice: competition.ticket_price,
+        ticketPrice: 0,
         reduction: 0,
         affiliation_reduction: 0,
+      },
+    });
+
+    await tx.competition.updateMany({
+      where: {
+        id: trimmedId,
+        remaining_tickets: { gt: 0 },
+      },
+      data: {
+        remaining_tickets: { decrement: 1 },
       },
     });
 
@@ -209,7 +228,7 @@ export async function redeemFreeTicket(
     await sendConfirmationEmail({
       identifier: user.email,
       order_id: orderId,
-      competition: competition as CompetitionInterface,
+      competition: toConfirmationEmailCompetition(competition),
       buyer_name: buyerName,
       isFree: true,
       paymentMethod: order_paymentMethod.WINCOIN,
@@ -217,6 +236,8 @@ export async function redeemFreeTicket(
   } catch (error) {
     console.error('Failed to send free ticket confirmation email:', error);
   }
+
+  invalidateMobileCompetitionReadCache(trimmedId);
 
   return {
     orderId,

@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom';
 
 import { AppLaunchRedirect } from './AppLaunchRedirect';
@@ -21,13 +22,20 @@ function isProfileBucketActive(pathname: string, locale: Locale): boolean {
 export function MobileShell() {
   const params = useParams();
   const location = useLocation();
+  const contentRef = useRef<HTMLElement>(null);
   const locale: Locale = isLocale(params.locale) ? params.locale : defaultLocale;
+
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+    contentRef.current?.scrollTo({ top: 0, left: 0 });
+  }, [location.pathname]);
+
   return (
     <div className="mobile-shell">
       <AppLaunchRedirect />
       <MobileHomeHeader />
 
-      <main className="mobile-content">
+      <main ref={contentRef} className="mobile-content">
         <Outlet />
       </main>
 

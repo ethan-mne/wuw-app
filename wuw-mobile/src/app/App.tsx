@@ -9,6 +9,10 @@ import { AdminRoute } from '../components/AdminRoute';
 import { legalPages, supportPages } from '../data/content';
 import { getMobileSessionToken } from '../lib/mobileSessionToken';
 import { reconcileDrawReminders } from '../lib/drawReminderSubscribe';
+import {
+  consumePendingNotificationType,
+  wasOpenedFromCompetitionNewNotification,
+} from '../lib/notificationNavigation';
 import { initOneSignal } from '../lib/oneSignal';
 import { setupPushNotificationHandlers } from '../lib/pushNotificationSetup';
 import { mobileDataService } from '../services/mobileDataService';
@@ -35,6 +39,7 @@ import { WinnersPage } from '../pages/winners/WinnersPage';
 import { defaultLocale } from '../routes/locales';
 
 const DRAW_SCHEDULE_UPDATED_EVENT = 'wuw-draw-schedule-updated';
+const STARTUP_RECONCILE_DELAY_MS = 4_000;
 
 export default function App() {
   useEffect(() => {
@@ -58,9 +63,14 @@ export default function App() {
   useEffect(() => {
     let disposed = false;
     let appStateListener: PluginListenerHandle | null = null;
+    let startupReconcileTimer: ReturnType<typeof setTimeout> | null = null;
 
     const reconcileWhenLoggedIn = async (source: 'startup' | 'session' | 'app_active') => {
       if (!getMobileSessionToken()) {
+        return;
+      }
+      if (source === 'startup' && wasOpenedFromCompetitionNewNotification()) {
+        consumePendingNotificationType();
         return;
       }
       const result = await reconcileDrawReminders().catch(() => null);
@@ -77,7 +87,11 @@ export default function App() {
       );
     };
 
-    void reconcileWhenLoggedIn('startup');
+    startupReconcileTimer = window.setTimeout(() => {
+      if (!disposed) {
+        void reconcileWhenLoggedIn('startup');
+      }
+    }, STARTUP_RECONCILE_DELAY_MS);
     const onSession = () => {
       void reconcileWhenLoggedIn('session');
     };
@@ -101,6 +115,9 @@ export default function App() {
 
     return () => {
       disposed = true;
+      if (startupReconcileTimer != null) {
+        window.clearTimeout(startupReconcileTimer);
+      }
       window.removeEventListener('wuw-mobile-session', onSession);
       if (appStateListener) {
         void appStateListener.remove();

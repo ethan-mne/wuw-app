@@ -8,6 +8,7 @@ import {
   runCompetitionCreateSideEffects,
   runCompetitionUpdateSideEffects,
 } from '@/server/notifications/competition-events';
+import { invalidateMobileCompetitionReadCache } from '@/server/cache/mobile-read-cache';
 
 const DB_LATENCY_THRESHOLD_MS = 500;
 
@@ -57,6 +58,7 @@ const createPrismaClient = () => {
               : undefined;
           const competitionId = idFromResult ?? idFromArgs;
           if (competitionId) {
+            invalidateMobileCompetitionReadCache(competitionId);
             try {
               await runCompetitionCreateSideEffects(base, competitionId);
             } catch (error) {
@@ -78,6 +80,7 @@ const createPrismaClient = () => {
           const result = await query(args);
 
           if (previous) {
+            invalidateMobileCompetitionReadCache(previous.id);
             try {
               await runCompetitionUpdateSideEffects(base, previous);
             } catch (error) {

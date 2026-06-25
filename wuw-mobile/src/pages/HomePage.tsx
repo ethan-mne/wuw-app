@@ -15,6 +15,7 @@ import { MobileHowToPlay } from '../features/home/MobileHowToPlay';
 import { useCachedQuery } from '../hooks/useCachedQuery';
 
 import { cacheKeys } from '../lib/dataCache';
+import { PUBLIC_HOME_QUERY_MAX_AGE_MS } from '../lib/publicHomeQuery';
 
 import { mobileDataService } from '../services/mobileDataService';
 
@@ -49,6 +50,8 @@ export function HomePage() {
 
     () => mobileDataService.listCompetitions(),
 
+    { maxAgeMs: PUBLIC_HOME_QUERY_MAX_AGE_MS },
+
   );
 
 
@@ -57,10 +60,13 @@ export function HomePage() {
 
     mobileDataService.listWinners({ skip: 0, take: WINNERS_PAGE_SIZE }),
 
+    { maxAgeMs: PUBLIC_HOME_QUERY_MAX_AGE_MS },
+
   );
 
   const { data: homeStats } = useCachedQuery(cacheKeys.homeStats, () =>
     mobileDataService.getHomeStats(),
+    { maxAgeMs: PUBLIC_HOME_QUERY_MAX_AGE_MS },
   );
 
 

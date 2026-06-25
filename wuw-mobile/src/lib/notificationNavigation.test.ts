@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   competitionDetailPath,
   extractCompetitionIdFromNotificationPayload,
+  extractNotificationTypeFromPayload,
+  wasOpenedFromCompetitionNewNotification,
 } from './notificationNavigation';
 
 describe('notificationNavigation', () => {
@@ -36,5 +38,19 @@ describe('notificationNavigation', () => {
 
   it('builds a locale-prefixed competition detail path', () => {
     expect(competitionDetailPath('cmp-5', 'fr')).toBe('/fr/competitions/cmp-5');
+  });
+
+  it('reads notification type from nested push data', () => {
+    expect(
+      extractNotificationTypeFromPayload({
+        data: { competitionId: 'cmp-2', type: 'competition_new' },
+      }),
+    ).toBe('competition_new');
+  });
+
+  it('detects competition_new open intent', () => {
+    sessionStorage.setItem('wuw_pending_notification_type', 'competition_new');
+    expect(wasOpenedFromCompetitionNewNotification()).toBe(true);
+    sessionStorage.removeItem('wuw_pending_notification_type');
   });
 });

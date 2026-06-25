@@ -8,12 +8,14 @@ import { DrawAlertPanel } from '../../features/draws/DrawAlertViews';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { formatDrawDateTimeDual } from '../../lib/drawTime';
 import { formatGbp, formatGbpCompact } from '../../lib/formatCurrency';
-import { cacheKeys } from '../../lib/dataCache';
+import { cacheKeys, getCachedData } from '../../lib/dataCache';
+import { PUBLIC_HOME_QUERY_MAX_AGE_MS } from '../../lib/publicHomeQuery';
 import { publicCompetitionUrl } from '../../lib/publicSiteUrl';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { INFORMATIVE_ONLY_MODE } from '../../config/informativeOnlyMode';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import { mobileDataService } from '../../services/mobileDataService';
+import type { Competition } from '../../types';
 import { type CheckoutFlowState } from './checkoutFlow';
 
 function getVipPackDiscount(size: number) {
@@ -64,10 +66,18 @@ export function CompetitionDetailPage() {
   const navigate = useNavigate();
   const locale = isLocale(params.locale) ? params.locale : defaultLocale;
   const competitionId = params.id ?? '';
+  const competitionFromList = useMemo(() => {
+    const list = getCachedData<Competition[]>(cacheKeys.competitions);
+    return list?.find((item) => item.id === competitionId);
+  }, [competitionId]);
   const { data: competition, isLoading: loading } = useCachedQuery(
     cacheKeys.competition(competitionId),
     () => mobileDataService.getCompetition(competitionId),
-    { enabled: Boolean(competitionId) },
+    {
+      enabled: Boolean(competitionId),
+      maxAgeMs: PUBLIC_HOME_QUERY_MAX_AGE_MS,
+      placeholderData: competitionFromList,
+    },
   );
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);

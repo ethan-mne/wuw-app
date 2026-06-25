@@ -25,6 +25,18 @@ export function getCachedData<T>(key: string): T | undefined {
   return cache.get(key)?.data as T | undefined;
 }
 
+export function getCachedFetchedAt(key: string): number | undefined {
+  return cache.get(key)?.fetchedAt;
+}
+
+export function isCachedDataFresh(key: string, maxAgeMs: number): boolean {
+  const fetchedAt = getCachedFetchedAt(key);
+  if (fetchedAt == null) {
+    return false;
+  }
+  return Date.now() - fetchedAt < maxAgeMs;
+}
+
 export function setCachedData<T>(key: string, data: T): void {
   cache.set(key, { data, fetchedAt: Date.now() });
 }

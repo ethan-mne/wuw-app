@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { SafeImage } from '../../components/SafeImage';
 import { formatDrawDateDdMmYyyy } from '../../lib/formatDrawDate';
 import { formatGbp } from '../../lib/formatCurrency';
-import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
+import { competitionThumbUrl } from '../../lib/competitionThumbUrl';
 import { JoinNextCompetitionLink } from '../../components/JoinNextCompetitionLink';
 import type { Competition, Winner } from '../../types';
 
@@ -65,7 +65,7 @@ export function MobileCommunityWon({
         <div className="mobile-community-won-strip" role="list">
           {past.length > 0
             ? past.map((c) => {
-                const img = resolveMediaUrl(c.watch.images[0]?.url);
+                const img = competitionThumbUrl(c);
                 const title = `${c.watch.brand} ${c.watch.model}`.trim();
                 return (
                   <article key={c.id} className="mobile-community-won-card" role="listitem">

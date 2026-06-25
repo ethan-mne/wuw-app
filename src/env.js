@@ -72,6 +72,9 @@ export const env = createEnv({
     APNS_PRODUCTION: z.string().optional(),
     ONESIGNAL_APP_ID: z.string().optional(),
     ONESIGNAL_REST_API_KEY: z.string().optional(),
+    /** Optional Upstash Redis REST API for shared mobile read cache (L2). */
+    UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
   },
   /**
    * Specify your client-side environment variables schema here. This way you can ensure the app
@@ -148,6 +151,8 @@ export const env = createEnv({
     APNS_PRODUCTION: process.env.APNS_PRODUCTION,
     ONESIGNAL_APP_ID: process.env.ONESIGNAL_APP_ID,
     ONESIGNAL_REST_API_KEY: process.env.ONESIGNAL_REST_API_KEY,
+    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

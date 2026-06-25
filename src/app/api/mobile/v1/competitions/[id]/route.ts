@@ -4,6 +4,8 @@ import { MobileHttpError } from '@/server/mobile/http';
 
 export const dynamic = 'force-dynamic';
 
+const COMPETITION_DETAIL_CACHE_CONTROL = 'public, max-age=15, stale-while-revalidate=30';
+
 type RouteContext = {
   params: {
     id: string;
@@ -18,7 +20,14 @@ export async function GET(_: Request, { params }: RouteContext) {
     }
 
     const competition = await getMobileCompetitionById(id);
-    return NextResponse.json({ data: competition });
+    return NextResponse.json(
+      { data: competition },
+      {
+        headers: {
+          'Cache-Control': COMPETITION_DETAIL_CACHE_CONTROL,
+        },
+      },
+    );
   } catch (error) {
     if (error instanceof MobileHttpError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

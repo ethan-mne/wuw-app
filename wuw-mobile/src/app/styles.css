@@ -46,16 +46,20 @@ img {
 html,
 body,
 #root {
-  min-height: 100%;
+  height: 100%;
   margin: 0;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 body {
   min-width: 320px;
-  min-height: 100dvh;
-  overscroll-behavior-y: auto;
+  overscroll-behavior: none;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
 }
 
 button {
@@ -79,14 +83,27 @@ button {
 
 .mobile-shell {
   display: flex;
-  min-height: 100dvh;
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
   flex-direction: column;
   background: #ffffff;
   padding-top: env(safe-area-inset-top);
-  padding-bottom: max(5.5rem, env(safe-area-inset-bottom));
   max-width: 100%;
-  overflow-x: hidden;
-  overflow-y: visible;
+  overflow: hidden;
+}
+
+/* Strip below the floating nav (safe area + bottom offset) */
+.mobile-shell::after {
+  content: '';
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 49;
+  height: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  background: #090909;
+  pointer-events: none;
 }
 
 .mobile-header {
@@ -119,6 +136,8 @@ button {
   overflow-y: auto;
   overflow-x: clip;
   min-width: 0;
+  overflow-anchor: none;
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .home-page {
@@ -1035,6 +1054,33 @@ button.action-link.referral-copy-btn {
   color: #64748b;
   font-size: 0.88rem;
   font-weight: 650;
+}
+
+.account-redeem-success-card {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.account-redeem-success-card .status-label {
+  margin: 0;
+}
+
+.account-redeem-success-card h3 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.account-redeem-success-card p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.account-redeem-success-card .checkout-flow-secondary-actions {
+  margin-top: 0.65rem;
+}
+
+.account-redeem-success-card .action-link {
+  width: 100%;
 }
 
 .account-sign-out {

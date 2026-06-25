@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { CompetitionStatus } from '@prisma/client';
 
 import { db } from '@/server/db';
+import { prewarmMobileCompetitionReadCache, prewarmMobileDrawsReadCache } from '@/server/cache/mobile-read-cache';
 import { MobileHttpError } from '@/server/mobile/http';
 import { filterOneSignalSubscriptionIds } from '@/server/mobile/push-token-validation';
 import {
@@ -187,6 +188,9 @@ export async function sendCompetitionAnnouncement(params: {
     }
     throw error;
   }
+
+  await prewarmMobileCompetitionReadCache(competition.id);
+  await prewarmMobileDrawsReadCache();
 
   const pushResult = await sendOneSignalPushMulticast({
     subscriptionIds,

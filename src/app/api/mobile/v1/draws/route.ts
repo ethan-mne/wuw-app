@@ -9,6 +9,13 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+const DRAWS_CACHE_CONTROL = 'public, max-age=30, stale-while-revalidate=60';
+
+function withDrawsCacheHeaders(response: NextResponse): NextResponse {
+  response.headers.set('Cache-Control', DRAWS_CACHE_CONTROL);
+  return response;
+}
+
 const MIN_TAKE = 1;
 const MAX_TAKE = 40;
 const DEFAULT_PAGE_TAKE = 15;
@@ -52,7 +59,9 @@ export async function GET(req: NextRequest) {
       cursor,
       pageTake,
     );
-    return NextResponse.json({ data: { items, hasMore } });
+    return withDrawsCacheHeaders(
+      NextResponse.json({ data: { items, hasMore } }),
+    );
   }
 
   if (after != null) {
@@ -64,16 +73,20 @@ export async function GET(req: NextRequest) {
       cursor,
       pageTake,
     );
-    return NextResponse.json({ data: { items, hasMore } });
+    return withDrawsCacheHeaders(
+      NextResponse.json({ data: { items, hasMore } }),
+    );
   }
 
   const seed = await getMobileDrawsTimelineSeed(takePast, takeFuture);
-  return NextResponse.json({
-    data: {
-      past: seed.past,
-      upcoming: seed.upcoming,
-      hasMorePast: seed.hasMorePast,
-      hasMoreFuture: seed.hasMoreFuture,
-    },
-  });
+  return withDrawsCacheHeaders(
+    NextResponse.json({
+      data: {
+        past: seed.past,
+        upcoming: seed.upcoming,
+        hasMorePast: seed.hasMorePast,
+        hasMoreFuture: seed.hasMoreFuture,
+      },
+    }),
+  );
 }

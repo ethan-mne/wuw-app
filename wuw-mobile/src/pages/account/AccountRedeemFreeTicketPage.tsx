@@ -71,6 +71,10 @@ export function AccountRedeemFreeTicketPage() {
       }
       if (result.kind === 'invalid') {
         setError(result.message);
+        if (result.message.toLowerCase().includes('sold out')) {
+          invalidateCachedData(cacheKeys.competitions);
+          void refetchCompetitions();
+        }
         return;
       }
       setError('Something went wrong. Try again.');
@@ -104,7 +108,7 @@ export function AccountRedeemFreeTicketPage() {
     return (
       <section className="page-stack page-content-pad">
         <PageHeader eyebrow="Account" title="Free ticket redeemed" />
-        <Card>
+        <Card className="account-redeem-success-card">
           <p className="status-label">Success</p>
           <h3>{success.competitionName}</h3>
           <p>
@@ -112,12 +116,14 @@ export function AccountRedeemFreeTicketPage() {
             <strong>{success.orderId.slice(0, 8)}</strong>
           </p>
           <p>You now have {success.remainingWincoins} Wincoins.</p>
-          <Link className="action-link primary" to={withLocale(locale, 'account/history')}>
-            View ticket history
-          </Link>
-          <Link className="action-link secondary" to={withLocale(locale, 'account/dashboard')}>
-            Back to dashboard
-          </Link>
+          <div className="checkout-flow-secondary-actions">
+            <Link className="action-link primary" to={withLocale(locale, 'account/history')}>
+              View ticket history
+            </Link>
+            <Link className="action-link secondary" to={withLocale(locale, 'account/dashboard')}>
+              Back to dashboard
+            </Link>
+          </div>
         </Card>
       </section>
     );
@@ -128,7 +134,7 @@ export function AccountRedeemFreeTicketPage() {
       <PageHeader
         eyebrow="Account"
         title="Redeem free ticket"
-        description="Free tickets apply to our lowest entry-price competitions only. 100 Wincoins = 1 free ticket."
+        description="Free tickets apply to the lowest entry-price competitions with tickets available. If the cheapest comp is sold out, the next price tier is shown. 100 Wincoins = 1 free ticket."
       />
 
       {!canRedeem ? (
@@ -186,9 +192,7 @@ export function AccountRedeemFreeTicketPage() {
                 ) : null}
                 <h3>{title}</h3>
                 <p className="account-redeem-meta">
-                  {formatGbp(competition.ticketPrice)} per ticket · {competition.remainingTickets}{' '}
-                  ticket
-                  {competition.remainingTickets === 1 ? '' : 's'} left
+                  {formatGbp(competition.ticketPrice)} per ticket
                 </p>
                 <button
                   type="button"

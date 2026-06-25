@@ -13,6 +13,7 @@ import { formatGbpCompact } from '../lib/formatCurrency';
 import { competitionThumbUrl } from '../lib/competitionThumbUrl';
 import { cacheKeys, getCachedData } from '../lib/dataCache';
 import { useCachedQuery } from '../hooks/useCachedQuery';
+import { PUBLIC_HOME_QUERY_MAX_AGE_MS } from '../lib/publicHomeQuery';
 import { defaultLocale, isLocale, withLocale } from '../routes/locales';
 import { mobileDataService, type DrawsTimelineSeed } from '../services/mobileDataService';
 import type { Competition, Locale } from '../types';
@@ -191,6 +192,7 @@ export function DrawsPage() {
       takePast: DRAW_PAST_LIMIT,
       takeFuture: DRAW_FUTURE_PAGE_SIZE,
     }),
+    { maxAgeMs: PUBLIC_HOME_QUERY_MAX_AGE_MS },
   );
 
   const [timeline, setTimeline] = useState<Competition[]>(() => {

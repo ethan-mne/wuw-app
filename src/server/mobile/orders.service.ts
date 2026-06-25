@@ -52,6 +52,7 @@ export async function listMobileOrderHistory(): Promise<MobileOrderHistoryItem[]
         },
       },
       coupon: true,
+      totalPrice: true,
       createdAt: true,
     },
   });
@@ -67,7 +68,7 @@ export async function listMobileOrderHistory(): Promise<MobileOrderHistoryItem[]
       competitionName: competition?.name ?? '',
       competitionImageUrl,
       ticketQuantity: order._count.Ticket,
-      ticketPrice: ticket?.ticketPrice ?? 0,
+      ticketPrice: order.totalPrice === 0 ? 0 : (ticket?.ticketPrice ?? 0),
       couponCode: order.coupon ?? undefined,
       orderedAt: order.createdAt.toISOString(),
     };

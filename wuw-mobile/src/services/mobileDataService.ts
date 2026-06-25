@@ -1,5 +1,6 @@
 import { apiClient } from './apiClient';
 import { API_BASE_URL } from '../lib/config';
+import { cacheKeys, fetchWithCache } from '../lib/dataCache';
 import { clearMobileSession, getMobileSessionToken, mobileAuthHeaders } from '../lib/mobileSessionToken';
 import { Capacitor } from '@capacitor/core';
 import {
@@ -938,8 +939,12 @@ export const mobileDataService = {
     }
 
     const [competitions, orders] = await Promise.all([
-      mobileDataService.listCompetitions().catch(() => [] as Competition[]),
-      mobileDataService.listOrderHistory().catch(() => [] as OrderSummary[]),
+      fetchWithCache(cacheKeys.competitions, () => mobileDataService.listCompetitions()).catch(
+        () => [] as Competition[],
+      ),
+      fetchWithCache(cacheKeys.orderHistory, () => mobileDataService.listOrderHistory()).catch(
+        () => [] as OrderSummary[],
+      ),
     ]);
 
     const competitionById = new Map<string, DrawReminderTargetCompetition>();

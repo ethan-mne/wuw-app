@@ -127,9 +127,7 @@ export function AccountHistoryPage() {
               <h3>{title}</h3>
               <div className="account-history-meta">
                 {order.ticketQuantity} ticket{order.ticketQuantity === 1 ? '' : 's'}
-                {order.ticketPrice > 0
-                  ? ` · ${formatGbp(Number(order.ticketPrice))} each`
-                  : null}
+                {` · ${formatGbp(Number(order.ticketPrice))} each`}
                 {order.couponCode ? ` · Code ${order.couponCode}` : null}
               </div>
             </section>

@@ -4,17 +4,22 @@ import {
   fetchWithCache,
   getCachedData,
   invalidateCachedData,
+  isCachedDataFresh,
   setCachedData,
 } from '../lib/dataCache';
 
-type UseCachedQueryOptions = {
+type UseCachedQueryOptions<T> = {
   enabled?: boolean;
+  /** Skip background refetch while cached data is younger than this (ms). */
+  maxAgeMs?: number;
+  /** Shown while loading when no cached entry exists yet. */
+  placeholderData?: T;
 };
 
 export function useCachedQuery<T>(
   key: string,
   fetcher: () => Promise<T>,
-  options: UseCachedQueryOptions = {},
+  options: UseCachedQueryOptions<T> = {},
 ): {
   data: T | undefined;
   isLoading: boolean;
@@ -24,12 +29,20 @@ export function useCachedQuery<T>(
   invalidate: () => void;
   refetch: () => void;
 } {
-  const { enabled = true } = options;
+  const { enabled = true, maxAgeMs, placeholderData } = options;
   const fetcherRef = useRef(fetcher);
   fetcherRef.current = fetcher;
 
-  const [data, setData] = useState<T | undefined>(() => getCachedData<T>(key));
-  const [isLoading, setIsLoading] = useState(() => enabled && getCachedData<T>(key) === undefined);
+  const [data, setData] = useState<T | undefined>(() => {
+    const cached = getCachedData<T>(key);
+    return cached ?? placeholderData;
+  });
+  const [isLoading, setIsLoading] = useState(() => {
+    if (!enabled) {
+      return false;
+    }
+    return getCachedData<T>(key) === undefined && placeholderData === undefined;
+  });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<unknown>();
   const [fetchVersion, setFetchVersion] = useState(0);
@@ -60,13 +73,28 @@ export function useCachedQuery<T>(
     }
 
     let cancelled = false;
-    const hasCachedData = getCachedData<T>(key) !== undefined;
+    const cached = getCachedData<T>(key);
+    const hasCachedData = cached !== undefined;
 
-    if (!hasCachedData) {
+    if (hasCachedData) {
+      setData(cached);
+    } else if (placeholderData !== undefined) {
+      setData(placeholderData);
+    }
+
+    if (maxAgeMs != null && hasCachedData && isCachedDataFresh(key, maxAgeMs)) {
+      setIsLoading(false);
+      setIsRefreshing(false);
+      setError(undefined);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (!hasCachedData && placeholderData === undefined) {
       setIsLoading(true);
     } else {
       setIsRefreshing(true);
-      setData(getCachedData<T>(key));
     }
 
     void fetchWithCache(key, () => fetcherRef.current())
@@ -81,6 +109,9 @@ export function useCachedQuery<T>(
         if (cancelled) {
           return;
         }
+        if (getCachedData<T>(key) === undefined && placeholderData !== undefined) {
+          setData(placeholderData);
+        }
         setError(err);
       })
       .finally(() => {
@@ -94,10 +125,12 @@ export function useCachedQuery<T>(
     return () => {
       cancelled = true;
     };
-  }, [key, enabled, fetchVersion]);
+  }, [key, enabled, fetchVersion, maxAgeMs, placeholderData]);
+
+  const resolvedData = data ?? (getCachedData<T>(key) === undefined ? placeholderData : undefined);
 
   return {
-    data,
+    data: resolvedData,
     isLoading,
     isRefreshing,
     error,

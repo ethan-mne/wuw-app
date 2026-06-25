@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { CountdownTimer } from '../../components/CountdownTimer';
+import { competitionThumbUrl } from '../../lib/competitionThumbUrl';
 import { isHomeCompetitionSoldOut, orderHomeCompetitions } from '../../lib/homeCompetitions';
-import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 import { formatGbpCompact } from '../../lib/formatCurrency';
 import { defaultLocale, isLocale, withLocale } from '../../routes/locales';
 import type { Competition } from '../../types';
@@ -72,6 +72,7 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
       </h2>
       {orderedCompetitions.map((competition) => {
         const isClosed = isHomeCompetitionSoldOut(competition);
+        const subtitle = competition.watch.brand.trim();
         return (
           <article className="mobile-home-competition-card" key={competition.id}>
             <Link
@@ -79,8 +80,8 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
               to={withLocale(locale, `competitions/${competition.id}`)}
             >
               <ResponsiveCompetitionImage
-                src={resolveMediaUrl(competition.watch.images[0]?.url)}
-                alt={competition.watch.images[0]?.alt || competition.name}
+                src={competitionThumbUrl(competition)}
+                alt={competition.name}
               />
               {isClosed ? (
                 <>
@@ -94,7 +95,9 @@ export function MobileCompetitionList({ competitions }: MobileCompetitionListPro
 
             <div className="mobile-home-competition-body">
               <h3 className="mobile-home-competition-title">{competition.name.toUpperCase()}</h3>
-              <p className="mobile-home-competition-subtitle">SPECIAL 🔥 Super LOW COST Comp!</p>
+              {subtitle ? (
+                <p className="mobile-home-competition-subtitle">{subtitle}</p>
+              ) : null}
 
               <div className="mobile-home-competition-timer" aria-label="Competition countdown">
                 <CountdownTimer
