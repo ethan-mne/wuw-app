@@ -63,7 +63,7 @@ export default function App() {
   useEffect(() => {
     let disposed = false;
     let appStateListener: PluginListenerHandle | null = null;
-    let startupReconcileTimer: ReturnType<typeof setTimeout> | null = null;
+    let startupReconcileTimer: number | null = null;
 
     const reconcileWhenLoggedIn = async (source: 'startup' | 'session' | 'app_active') => {
       if (!getMobileSessionToken()) {
