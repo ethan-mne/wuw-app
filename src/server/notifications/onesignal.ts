@@ -24,6 +24,33 @@ const ONESIGNAL_API_URL = 'https://api.onesignal.com/notifications';
 const ONESIGNAL_SUBSCRIPTIONS_CHUNK = 2_000;
 const ONESIGNAL_V2_APP_KEY_PREFIX = 'os_v2_app_';
 
+const DEFAULT_PUSH_THROTTLE_COMPETITION_NEW = 15;
+const DEFAULT_PUSH_THROTTLE_DRAW_SCHEDULE = 25;
+
+export type PushThrottleKind = 'competition_new' | 'draw_schedule_updated';
+
+function parsePositiveInt(raw: string | undefined): number | undefined {
+  const trimmed = raw?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
+  }
+  return parsed;
+}
+
+export function resolvePushThrottleRatePerMinute(kind: PushThrottleKind): number {
+  const envKey = kind === 'competition_new'
+    ? 'PUSH_THROTTLE_COMPETITION_NEW'
+    : 'PUSH_THROTTLE_DRAW_SCHEDULE';
+  const fallback = kind === 'competition_new'
+    ? DEFAULT_PUSH_THROTTLE_COMPETITION_NEW
+    : DEFAULT_PUSH_THROTTLE_DRAW_SCHEDULE;
+  return parsePositiveInt(process.env[envKey]) ?? fallback;
+}
+
 export type OneSignalRestApiKeyFormat =
   | 'missing'
   | 'v2_app_key'
@@ -198,6 +225,7 @@ async function sendOneSignalChunk(params: {
   title: string;
   body: string;
   data: Record<string, string>;
+  throttleRatePerMinute?: number;
 }): Promise<OneSignalMulticastResult> {
   const config = getOneSignalConfig();
   if (!config) {
@@ -228,6 +256,9 @@ async function sendOneSignalChunk(params: {
           en: params.body,
         },
         data: params.data,
+        ...(params.throttleRatePerMinute != null && params.throttleRatePerMinute > 0
+          ? { throttle_rate_per_minute: params.throttleRatePerMinute }
+          : {}),
       }),
     });
 
@@ -314,6 +345,7 @@ export async function sendOneSignalPushMulticast(params: {
   title: string;
   body: string;
   data: Record<string, string>;
+  throttleRatePerMinute?: number;
 }): Promise<OneSignalMulticastResult> {
   const normalized = [...new Set(
     params.subscriptionIds
@@ -346,6 +378,7 @@ export async function sendOneSignalPushMulticast(params: {
       title: params.title,
       body: params.body,
       data: params.data,
+      throttleRatePerMinute: params.throttleRatePerMinute,
     });
     merged.successCount += one.successCount;
     merged.failureCount += one.failureCount;

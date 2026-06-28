@@ -7,6 +7,7 @@ import { MobileHttpError } from '@/server/mobile/http';
 import { filterOneSignalSubscriptionIds } from '@/server/mobile/push-token-validation';
 import {
   isOneSignalConfigured,
+  resolvePushThrottleRatePerMinute,
   sendOneSignalPushMulticast,
 } from '@/server/notifications/onesignal';
 
@@ -200,6 +201,7 @@ export async function sendCompetitionAnnouncement(params: {
       type: 'competition_new',
       competitionId: competition.id,
     },
+    throttleRatePerMinute: resolvePushThrottleRatePerMinute('competition_new'),
   });
 
   let invalidSubscriptionsRemoved = 0;
@@ -298,6 +300,7 @@ export async function sendCompetitionScheduleAnnouncement(params: {
       drawingDate: competition.drawing_date.toISOString(),
       endDate: competition.end_date.toISOString(),
     },
+    throttleRatePerMinute: resolvePushThrottleRatePerMinute('draw_schedule_updated'),
   });
 
   let invalidSubscriptionsRemoved = 0;

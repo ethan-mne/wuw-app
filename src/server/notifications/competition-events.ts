@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 
-import { sendOneSignalPushMulticast } from '@/server/notifications/onesignal';
+import { resolvePushThrottleRatePerMinute, sendOneSignalPushMulticast } from '@/server/notifications/onesignal';
 
 type CompetitionEventRow = {
   id: string;
@@ -54,6 +54,7 @@ export async function notifyCompetitionCreated(
       type: 'competition_new',
       competitionId: competition.id,
     },
+    throttleRatePerMinute: resolvePushThrottleRatePerMinute('competition_new'),
   });
 }
 
@@ -95,6 +96,7 @@ export async function notifyCompetitionScheduleUpdated(
       drawingDate: competition.drawing_date.toISOString(),
       endDate: competition.end_date.toISOString(),
     },
+    throttleRatePerMinute: resolvePushThrottleRatePerMinute('draw_schedule_updated'),
   });
 }
 

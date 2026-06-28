@@ -72,6 +72,10 @@ export const env = createEnv({
     APNS_PRODUCTION: z.string().optional(),
     ONESIGNAL_APP_ID: z.string().optional(),
     ONESIGNAL_REST_API_KEY: z.string().optional(),
+    /** OneSignal push delivery throttle (messages/min) for competition_new notifications. */
+    PUSH_THROTTLE_COMPETITION_NEW: z.coerce.number().int().positive().optional(),
+    /** OneSignal push delivery throttle (messages/min) for draw_schedule_updated notifications. */
+    PUSH_THROTTLE_DRAW_SCHEDULE: z.coerce.number().int().positive().optional(),
     /** Optional Upstash Redis REST API for shared mobile read cache (L2). */
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
@@ -151,6 +155,8 @@ export const env = createEnv({
     APNS_PRODUCTION: process.env.APNS_PRODUCTION,
     ONESIGNAL_APP_ID: process.env.ONESIGNAL_APP_ID,
     ONESIGNAL_REST_API_KEY: process.env.ONESIGNAL_REST_API_KEY,
+    PUSH_THROTTLE_COMPETITION_NEW: process.env.PUSH_THROTTLE_COMPETITION_NEW,
+    PUSH_THROTTLE_DRAW_SCHEDULE: process.env.PUSH_THROTTLE_DRAW_SCHEDULE,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
   },

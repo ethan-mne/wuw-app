@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   describeOneSignalRestApiKeyFormat,
   normalizeOneSignalRestApiKey,
+  resolvePushThrottleRatePerMinute,
   sendOneSignalPushMulticast,
 } from '@/server/notifications/onesignal';
 
@@ -17,6 +18,112 @@ describe('OneSignal REST API key normalization', () => {
   it('detects v2 app keys vs legacy keys', () => {
     expect(describeOneSignalRestApiKeyFormat('os_v2_app_abc123')).toBe('v2_app_key');
     expect(describeOneSignalRestApiKeyFormat('a-very-long-legacy-rest-api-key-value')).toBe('legacy');
+  });
+});
+
+describe('resolvePushThrottleRatePerMinute', () => {
+  const originalCompetitionNew = process.env.PUSH_THROTTLE_COMPETITION_NEW;
+  const originalDrawSchedule = process.env.PUSH_THROTTLE_DRAW_SCHEDULE;
+
+  afterEach(() => {
+    if (originalCompetitionNew === undefined) {
+      delete process.env.PUSH_THROTTLE_COMPETITION_NEW;
+    } else {
+      process.env.PUSH_THROTTLE_COMPETITION_NEW = originalCompetitionNew;
+    }
+    if (originalDrawSchedule === undefined) {
+      delete process.env.PUSH_THROTTLE_DRAW_SCHEDULE;
+    } else {
+      process.env.PUSH_THROTTLE_DRAW_SCHEDULE = originalDrawSchedule;
+    }
+  });
+
+  it('returns defaults when env vars are unset', () => {
+    delete process.env.PUSH_THROTTLE_COMPETITION_NEW;
+    delete process.env.PUSH_THROTTLE_DRAW_SCHEDULE;
+    expect(resolvePushThrottleRatePerMinute('competition_new')).toBe(15);
+    expect(resolvePushThrottleRatePerMinute('draw_schedule_updated')).toBe(25);
+  });
+
+  it('reads env overrides when valid', () => {
+    process.env.PUSH_THROTTLE_COMPETITION_NEW = '30';
+    process.env.PUSH_THROTTLE_DRAW_SCHEDULE = '40';
+    expect(resolvePushThrottleRatePerMinute('competition_new')).toBe(30);
+    expect(resolvePushThrottleRatePerMinute('draw_schedule_updated')).toBe(40);
+  });
+
+  it('falls back to defaults for invalid env values', () => {
+    process.env.PUSH_THROTTLE_COMPETITION_NEW = '0';
+    process.env.PUSH_THROTTLE_DRAW_SCHEDULE = 'not-a-number';
+    expect(resolvePushThrottleRatePerMinute('competition_new')).toBe(15);
+    expect(resolvePushThrottleRatePerMinute('draw_schedule_updated')).toBe(25);
+  });
+});
+
+describe('sendOneSignalPushMulticast throttle payload', () => {
+  const originalFetch = globalThis.fetch;
+  const originalAppId = process.env.ONESIGNAL_APP_ID;
+  const originalRestApiKey = process.env.ONESIGNAL_REST_API_KEY;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    if (originalAppId === undefined) {
+      delete process.env.ONESIGNAL_APP_ID;
+    } else {
+      process.env.ONESIGNAL_APP_ID = originalAppId;
+    }
+    if (originalRestApiKey === undefined) {
+      delete process.env.ONESIGNAL_REST_API_KEY;
+    } else {
+      process.env.ONESIGNAL_REST_API_KEY = originalRestApiKey;
+    }
+  });
+
+  it('includes throttle_rate_per_minute when throttleRatePerMinute is set', async () => {
+    let requestBody: Record<string, unknown> = {};
+    globalThis.fetch = (async (_url, init) => {
+      requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({ id: 'notif-1', recipients: 1 }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }) as typeof fetch;
+
+    process.env.ONESIGNAL_APP_ID = '724df40e-025f-4620-959d-0aa22cbf529b';
+    process.env.ONESIGNAL_REST_API_KEY = 'test-rest-api-key';
+
+    await sendOneSignalPushMulticast({
+      subscriptionIds: [SAMPLE_ONESIGNAL],
+      title: 'New competition is live',
+      body: 'Test competition is now available.',
+      data: { type: 'competition_new', competitionId: 'comp-1' },
+      throttleRatePerMinute: 15,
+    });
+
+    expect(requestBody.throttle_rate_per_minute).toBe(15);
+  });
+
+  it('omits throttle_rate_per_minute when throttleRatePerMinute is not set', async () => {
+    let requestBody: Record<string, unknown> = {};
+    globalThis.fetch = (async (_url, init) => {
+      requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({ id: 'notif-2', recipients: 1 }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }) as typeof fetch;
+
+    process.env.ONESIGNAL_APP_ID = '724df40e-025f-4620-959d-0aa22cbf529b';
+    process.env.ONESIGNAL_REST_API_KEY = 'test-rest-api-key';
+
+    await sendOneSignalPushMulticast({
+      subscriptionIds: [SAMPLE_ONESIGNAL],
+      title: 'Draw starting soon',
+      body: 'Test draw reminder',
+      data: { type: 'draw_reminder', competitionId: 'comp-1' },
+    });
+
+    expect(requestBody).not.toHaveProperty('throttle_rate_per_minute');
   });
 });
 
