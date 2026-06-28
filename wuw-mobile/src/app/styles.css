@@ -93,19 +93,6 @@ button {
   overflow: hidden;
 }
 
-/* Strip below the floating nav (safe area + bottom offset) */
-.mobile-shell::after {
-  content: '';
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 49;
-  height: max(0.75rem, env(safe-area-inset-bottom, 0px));
-  background: #090909;
-  pointer-events: none;
-}
-
 .mobile-header {
   padding: 0.75rem 0 1rem;
 }
