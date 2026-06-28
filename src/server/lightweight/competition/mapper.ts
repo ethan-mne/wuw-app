@@ -92,7 +92,10 @@ export type MobileCompetitionDto = {
   };
 };
 
-function computeDrawScheduleVersion(competition: CompetitionWithWatch): string {
+function computeDrawScheduleVersion(competition: {
+  end_date: Date;
+  drawing_date: Date;
+}): string {
   return `v1:${competition.drawing_date.toISOString()}|${competition.end_date.toISOString()}`;
 }
 
