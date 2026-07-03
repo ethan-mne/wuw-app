@@ -163,6 +163,39 @@ describe('sendOneSignalPushMulticast response parsing', () => {
     }
   });
 
+  it('treats notification id with recipients 0 as success (throttled queue)', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          id: 'notif-throttled',
+          recipients: 0,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )) as typeof fetch;
+
+    process.env.ONESIGNAL_APP_ID = '724df40e-025f-4620-959d-0aa22cbf529b';
+    process.env.ONESIGNAL_REST_API_KEY = 'test-rest-api-key';
+
+    try {
+      const result = await sendOneSignalPushMulticast({
+        subscriptionIds: [SAMPLE_ONESIGNAL, 'aba264c0-d051-4f46-9c3b-941b1c3437ce'],
+        title: 'New competition is live',
+        body: 'Test competition is now available.',
+        data: { type: 'competition_new', competitionId: 'comp-1' },
+        throttleRatePerMinute: 15,
+      });
+
+      expect(result.successCount).toBe(2);
+      expect(result.failureCount).toBe(0);
+      expect(result.notificationId).toBe('notif-throttled');
+    } finally {
+      globalThis.fetch = originalFetch;
+      delete process.env.ONESIGNAL_APP_ID;
+      delete process.env.ONESIGNAL_REST_API_KEY;
+    }
+  });
+
   it('rejects legacy FCM tokens before calling OneSignal when filtered upstream', async () => {
     const originalFetch = globalThis.fetch;
     let fetchCalled = false;

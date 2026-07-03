@@ -297,15 +297,17 @@ async function sendOneSignalChunk(params: {
     }
 
     const invalidSet = new Set(invalidSubscriptionIds);
-    const recipients =
+    const eligibleCount = params.subscriptionIds.length - invalidSet.size;
+    const reportedRecipients =
       typeof json.recipients === 'number' && json.recipients >= 0
         ? json.recipients
-        : params.subscriptionIds.length - invalidSet.size;
+        : undefined;
 
-    const successCount = Math.max(
-      0,
-      Math.min(params.subscriptionIds.length - invalidSet.size, recipients),
-    );
+    // Throttled (or queued) notifications return notification id with recipients: 0.
+    // OneSignal still accepted the send; do not treat that as delivery_failed upstream.
+    const successCount = reportedRecipients != null && reportedRecipients > 0
+      ? Math.min(eligibleCount, reportedRecipients)
+      : eligibleCount;
     const failureCount = params.subscriptionIds.length - successCount;
     const results = params.subscriptionIds.map((token) => ({
       tokenPrefix: tokenPrefix(token),
