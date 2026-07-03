@@ -41,7 +41,15 @@ function parsePositiveInt(raw: string | undefined): number | undefined {
   return parsed;
 }
 
-export function resolvePushThrottleRatePerMinute(kind: PushThrottleKind): number {
+function isPushThrottleEnabled(): boolean {
+  const raw = process.env.PUSH_THROTTLE_ENABLED?.trim().toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'yes';
+}
+
+export function resolvePushThrottleRatePerMinute(kind: PushThrottleKind): number | undefined {
+  if (!isPushThrottleEnabled()) {
+    return undefined;
+  }
   const envKey = kind === 'competition_new'
     ? 'PUSH_THROTTLE_COMPETITION_NEW'
     : 'PUSH_THROTTLE_DRAW_SCHEDULE';

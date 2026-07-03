@@ -22,10 +22,16 @@ describe('OneSignal REST API key normalization', () => {
 });
 
 describe('resolvePushThrottleRatePerMinute', () => {
+  const originalEnabled = process.env.PUSH_THROTTLE_ENABLED;
   const originalCompetitionNew = process.env.PUSH_THROTTLE_COMPETITION_NEW;
   const originalDrawSchedule = process.env.PUSH_THROTTLE_DRAW_SCHEDULE;
 
   afterEach(() => {
+    if (originalEnabled === undefined) {
+      delete process.env.PUSH_THROTTLE_ENABLED;
+    } else {
+      process.env.PUSH_THROTTLE_ENABLED = originalEnabled;
+    }
     if (originalCompetitionNew === undefined) {
       delete process.env.PUSH_THROTTLE_COMPETITION_NEW;
     } else {
@@ -38,21 +44,30 @@ describe('resolvePushThrottleRatePerMinute', () => {
     }
   });
 
-  it('returns defaults when env vars are unset', () => {
+  it('returns undefined when throttling is disabled', () => {
+    delete process.env.PUSH_THROTTLE_ENABLED;
+    expect(resolvePushThrottleRatePerMinute('competition_new')).toBeUndefined();
+    expect(resolvePushThrottleRatePerMinute('draw_schedule_updated')).toBeUndefined();
+  });
+
+  it('returns defaults when enabled and env vars are unset', () => {
+    process.env.PUSH_THROTTLE_ENABLED = 'true';
     delete process.env.PUSH_THROTTLE_COMPETITION_NEW;
     delete process.env.PUSH_THROTTLE_DRAW_SCHEDULE;
     expect(resolvePushThrottleRatePerMinute('competition_new')).toBe(15);
     expect(resolvePushThrottleRatePerMinute('draw_schedule_updated')).toBe(25);
   });
 
-  it('reads env overrides when valid', () => {
+  it('reads env overrides when enabled and valid', () => {
+    process.env.PUSH_THROTTLE_ENABLED = 'true';
     process.env.PUSH_THROTTLE_COMPETITION_NEW = '30';
     process.env.PUSH_THROTTLE_DRAW_SCHEDULE = '40';
     expect(resolvePushThrottleRatePerMinute('competition_new')).toBe(30);
     expect(resolvePushThrottleRatePerMinute('draw_schedule_updated')).toBe(40);
   });
 
-  it('falls back to defaults for invalid env values', () => {
+  it('falls back to defaults for invalid env values when enabled', () => {
+    process.env.PUSH_THROTTLE_ENABLED = 'true';
     process.env.PUSH_THROTTLE_COMPETITION_NEW = '0';
     process.env.PUSH_THROTTLE_DRAW_SCHEDULE = 'not-a-number';
     expect(resolvePushThrottleRatePerMinute('competition_new')).toBe(15);

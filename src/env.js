@@ -73,6 +73,8 @@ export const env = createEnv({
     APNS_PRODUCTION: z.string().optional(),
     ONESIGNAL_APP_ID: z.string().optional(),
     ONESIGNAL_REST_API_KEY: z.string().optional(),
+    /** OneSignal push delivery throttle (messages/min). Requires PUSH_THROTTLE_ENABLED and a paid OneSignal plan with throttling. */
+    PUSH_THROTTLE_ENABLED: z.enum(['true', 'false']).default('false'),
     /** OneSignal push delivery throttle (messages/min) for competition_new notifications. */
     PUSH_THROTTLE_COMPETITION_NEW: z.coerce.number().int().positive().optional(),
     /** OneSignal push delivery throttle (messages/min) for draw_schedule_updated notifications. */
@@ -157,6 +159,7 @@ export const env = createEnv({
     APNS_PRODUCTION: process.env.APNS_PRODUCTION,
     ONESIGNAL_APP_ID: process.env.ONESIGNAL_APP_ID,
     ONESIGNAL_REST_API_KEY: process.env.ONESIGNAL_REST_API_KEY,
+    PUSH_THROTTLE_ENABLED: process.env.PUSH_THROTTLE_ENABLED,
     PUSH_THROTTLE_COMPETITION_NEW: process.env.PUSH_THROTTLE_COMPETITION_NEW,
     PUSH_THROTTLE_DRAW_SCHEDULE: process.env.PUSH_THROTTLE_DRAW_SCHEDULE,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
