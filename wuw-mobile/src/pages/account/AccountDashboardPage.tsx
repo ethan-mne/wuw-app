@@ -193,7 +193,6 @@ export function AccountDashboardPage() {
         <h3>Hello {summary.userName}</h3>
         <div className="stats-grid">
           <StatPill label="Wincoins" value={summary.points} />
-          <StatPill label="Tickets" value={summary.activeTickets} />
         </div>
         <button
           type="button"

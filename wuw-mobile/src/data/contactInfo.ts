@@ -5,9 +5,9 @@ export const CONTACT_INFO = {
   instagramHandle: '@winuwatch',
   instagramLiveUrl: 'https://www.instagram.com/winuwatch_live_/',
   instagramLiveHandle: '@winuwatch_live_',
-  whatsappE164Digits: '4474888883429',
-  whatsappDisplay: '+44 748 888 3429',
-  phoneDisplay: '+44 748 888 3429',
+  whatsappE164Digits: '447488863429',
+  whatsappDisplay: '+44 748 886 3429',
+  phoneDisplay: '+44 748 886 3429',
   email: 'contact@winuwatch.uk',
   addressLines: ['50 Princes street, Ipswich, Suffolk, IP1 1RJ, UK'] as const,
 } as const;

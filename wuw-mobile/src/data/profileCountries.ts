@@ -8,6 +8,17 @@ export type ProfileCountry = {
 /** Common countries for profile & phone prefix picker (dial without +). */
 export const PROFILE_COUNTRIES: ProfileCountry[] = [
   { iso: 'FR', name: 'France', dial: '33', flag: '🇫🇷' },
+  { iso: 'GP', name: 'Guadeloupe', dial: '590', flag: '🇫🇷' },
+  { iso: 'MQ', name: 'Martinique', dial: '596', flag: '🇫🇷' },
+  { iso: 'GF', name: 'French Guiana', dial: '594', flag: '🇫🇷' },
+  { iso: 'RE', name: 'Reunion', dial: '262', flag: '🇫🇷' },
+  { iso: 'YT', name: 'Mayotte', dial: '262', flag: '🇫🇷' },
+  { iso: 'PM', name: 'Saint Pierre and Miquelon', dial: '508', flag: '🇫🇷' },
+  { iso: 'BL', name: 'Saint Barthelemy', dial: '590', flag: '🇫🇷' },
+  { iso: 'MF', name: 'Saint Martin (French part)', dial: '590', flag: '🇫🇷' },
+  { iso: 'NC', name: 'New Caledonia', dial: '687', flag: '🇫🇷' },
+  { iso: 'PF', name: 'French Polynesia', dial: '689', flag: '🇫🇷' },
+  { iso: 'WF', name: 'Wallis and Futuna', dial: '681', flag: '🇫🇷' },
   { iso: 'GB', name: 'United Kingdom', dial: '44', flag: '🇬🇧' },
   { iso: 'DE', name: 'Germany', dial: '49', flag: '🇩🇪' },
   { iso: 'ES', name: 'Spain', dial: '34', flag: '🇪🇸' },
